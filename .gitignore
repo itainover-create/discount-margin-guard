@@ -1,0 +1,4 @@
+node_modules/
+.env
+*.pdf
+audit_report.txt

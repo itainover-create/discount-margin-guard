@@ -1,0 +1,16 @@
+{
+  "name": "discount-margin-guard",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Profit Guard Auditor for Shopify",
+  "main": "index.js",
+  "dependencies": {
+    "@google/generative-ai": "^0.24.1",
+    "dotenv": "^17.3.1",
+    "pdfkit": "^0.17.2"
+  },
+  "scripts": {
+  "start": "node index.js",
+  "audit": "node index.js"
+ }
+}
