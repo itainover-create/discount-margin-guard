@@ -1,5 +1,5 @@
 // app/routes/app._index.jsx
-import { useLoaderData } from "react-router"; // וודא שזה בדיוק כך, בלי @
+import { useLoaderData } from "react-router"; 
 import { authenticate } from "../shopify.server";
 import { 
   Page, 
