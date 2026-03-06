@@ -1,4 +1,4 @@
-import { useLoaderData } from "@react-router/react";
+import { useLoaderData } from "@react-router";
 import { authenticate } from "../shopify.server";
 import { 
   Page, 
