@@ -10,7 +10,7 @@
     "pdfkit": "^0.17.2"
   },
   "scripts": {
-  "start": "node index.js",
-  "audit": "node index.js"
- }
+    "start": "node index.js",
+    "audit": "node index.js"
+  }
 }

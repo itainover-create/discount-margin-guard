@@ -1,5 +1,6 @@
- Profit Guard: AI Strategic AuditorEmbedded Intelligence for E-commerce Profitability.
- Profit Guard is a RAG-based tool designed to expose the "hidden bleeding" in Shopify stores. 
- It calculates the Real Product Margin by isolating pass-through costs like shipping.
- The Core LogicThe system applies the following engineering formula to every order:$$RealProductProfit = (TotalRevenue - Shipping) - COGS - TransactionFees$$FeaturesShopify GraphQL Integration: Direct data extraction.
- AI Strategic Analysis: Powered by Gemini 2.5 Flash for root-cause diagnosis.Automated PDF Reporting: Professional executive summaries for store owners.
+Profit Guard: AI Strategic Auditor
+Embedded Intelligence for E-commerce Profitability
+Profit Guard is a RAG-based tool that identifies hidden losses in Shopify stores. 
+By isolating pass-through costs (shipping) and calculating real transaction fees, it exposes the Real Product Margin.
+Core Engineering LogicThe system calculates the actual profitability of every order using: $$RealProductProfit = (TotalRevenue - Shipping) - COGS - TransactionFees$$Key FeaturesFinancial Audit: Automatic extraction of Shopify order data.
+Gemini AI Analysis: Strategic diagnosis of root causes for losses (e.g., COGS vs. Pricing).Executive PDF Reports: High-quality, automated reporting for decision-makers.

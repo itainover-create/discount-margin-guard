@@ -1,0 +1,25 @@
+# shopify.app.toml המעודכן עבור Profit Guard
+
+client_id = "7b99db8bdff80b9a19e448dddacf78d3"
+name = "profit-guard"
+application_url = "https://example.com"
+embedded = true
+
+[build]
+automatically_update_urls_on_dev = true
+include_config_on_deploy = true
+
+[webhooks]
+api_version = "2026-04"
+
+# ה-Webhooks מנוטרלים כרגע כדי למנוע שגיאות ב-Localhost
+# [[webhooks.subscriptions]]
+# topics = [ "app/uninstalled" ]
+# uri = "/webhooks/app/uninstalled"
+
+[access_scopes]
+# אלו ההרשאות המדויקות שאנחנו צריכים ל-Sacred Query
+scopes = "read_orders,read_products"
+
+[auth]
+redirect_urls = [ "https://example.com/api/auth" ]

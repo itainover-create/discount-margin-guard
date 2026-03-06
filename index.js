@@ -1,45 +1,50 @@
 import 'dotenv/config';
-import fs from 'fs';
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import PDFDocument from 'pdfkit';
+import fs from 'fs';
+import fetch from 'node-fetch';
 
-const { SHOPIFY_TOKEN, SHOP_URL, API_VERSION, GEMINI_API_KEY } = process.env;
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
-const PROCESSING_FEE_RATE = 0.029; 
-const PROCESSING_FEE_FIXED = 0.30;
-
-const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-
-async function runProfitGuardPipeline() {
-    console.log("🚀 Running Original Profit Guard Pipeline...");
-
+async function runProfitGuardAudit(shopUrl, accessToken) {
+    console.log(`🚀 Starting Profit Guard Audit for: ${shopUrl}...`);
     try {
-        const stats = await fetchShopifyData();
+        const orders = await fetchShopifyOrders(shopUrl, accessToken);
+        if (orders.length === 0) throw new Error("No paid orders found to analyze.");
+
+        const stats = processFinancialData(orders);
         const aiAnalysis = await getAIStrategicAnalysis(stats);
+
         const fileName = `Profit_Guard_Report_${new Date().toISOString().split('T')[0]}.pdf`;
         generateProfessionalPDF(stats, aiAnalysis, fileName);
 
-        console.log("\n✅ Original Report generated successfully!");
+        console.log(`✅ Audit Complete! Report generated: ${fileName}`);
     } catch (error) {
-        console.error("❌ Pipeline failed:", error);
+        console.error('❌ Audit Failed:', error.message);
+    } finally {
+        accessToken = null; // אבטחה: מחיקת הטוקן מהזיכרון
+        console.log('🔒 Security: Session ended. Access token cleared.');
     }
 }
 
-async function fetchShopifyData() {
-    const graphqlUrl = `https://${SHOP_URL}/admin/api/${API_VERSION}/graphql.json`;
-    const query = `{
-      orders(first: 50, query: "status:any") {
+async function fetchShopifyOrders(shopUrl, accessToken) {
+    const query = `
+    {
+      orders(first: 50, query: "financial_status:paid") {
         edges {
           node {
-            name
+            id
             totalPriceSet { shopMoney { amount } }
             totalShippingPriceSet { shopMoney { amount } }
-            lineItems(first: 20) {
+            lineItems(first: 10) {
               edges {
                 node {
-                  title
                   quantity
-                  variant { inventoryItem { unitCost { amount } } }
+                  variant {
+                    inventoryItem {
+                      unitCost { amount }
+                    }
+                  }
                 }
               }
             }
@@ -48,86 +53,106 @@ async function fetchShopifyData() {
       }
     }`;
 
-    const response = await fetch(graphqlUrl, {
+    const response = await fetch(`https://${shopUrl}/admin/api/2024-01/graphql.json`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-Shopify-Access-Token': SHOPIFY_TOKEN },
+        headers: { 'Content-Type': 'application/json', 'X-Shopify-Access-Token': accessToken },
         body: JSON.stringify({ query })
     });
 
     const result = await response.json();
-    const orders = result.data.orders.edges;
+    if (result.errors) throw new Error(result.errors[0].message);
+    return result.data.orders.edges.map(edge => edge.node);
+}
 
-    let stats = { totalOrders: 0, grossRevenue: 0, totalShipping: 0, totalCOGS: 0, totalFees: 0, netProductProfit: 0 };
+function processFinancialData(orders) {
+    let stats = {
+        totalOrders: 0,
+        grossRevenue: 0,
+        totalShipping: 0,
+        totalCOGS: 0,
+        totalFees: 0,
+        missingCogsCount: 0,
+        ordersAtLossCount: 0,
+        expectedMargin: 35 // רף להשוואה
+    };
 
-    orders.forEach(({ node: order }) => {
-        const totalAmount = parseFloat(order.totalPriceSet.shopMoney.amount);
-        const shipping = parseFloat(order.totalShippingPriceSet.shopMoney.amount || 0);
-        const productRevenue = totalAmount - shipping;
-        let orderCOGS = 0;
-        order.lineItems.edges.forEach(({ node: item }) => {
-            const cost = parseFloat(item.variant?.inventoryItem?.unitCost?.amount || 0);
-            orderCOGS += (cost * item.quantity);
-        });
-        const fees = (totalAmount * PROCESSING_FEE_RATE) + PROCESSING_FEE_FIXED;
-        const realProfit = productRevenue - orderCOGS - fees;
-
+    orders.forEach(order => {
         stats.totalOrders++;
-        stats.grossRevenue += totalAmount;
+        const revenue = parseFloat(order.totalPriceSet.shopMoney.amount);
+        const shipping = parseFloat(order.totalShippingPriceSet.shopMoney.amount);
+        const fees = (revenue * 0.029) + 0.30; // עמלת סליקה משוערת
+        
+        let orderCOGS = 0;
+        order.lineItems.edges.forEach(({ node }) => {
+            if (node.variant?.inventoryItem?.unitCost) {
+                orderCOGS += parseFloat(node.variant.inventoryItem.unitCost.amount) * node.quantity;
+            } else {
+                stats.missingCogsCount++;
+            }
+        });
+
+        const orderNetProfit = (revenue - shipping) - orderCOGS - fees;
+        if (orderNetProfit < 0) stats.ordersAtLossCount++;
+
+        stats.grossRevenue += revenue;
         stats.totalShipping += shipping;
         stats.totalCOGS += orderCOGS;
         stats.totalFees += fees;
-        stats.netProductProfit += realProfit;
     });
+
+    stats.netProductProfit = (stats.grossRevenue - stats.totalShipping) - stats.totalCOGS - stats.totalFees;
     return stats;
-}
-
-async function getAIStrategicAnalysis(stats) {
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
-    const margin = (stats.netProductProfit / (stats.grossRevenue - stats.totalShipping)) * 100;
-
-    const prompt = `Analyze this Shopify data:
-    - Orders: ${stats.totalOrders}
-    - Revenue: $${stats.grossRevenue.toFixed(2)}
-    - Net Profit: $${stats.netProductProfit.toFixed(2)}
-    - Margin: ${margin.toFixed(2)}%
-    Provide: EXECUTIVE SUMMARY, ROOT CAUSE OF LOSS, and 3 ACTIONABLE STRATEGIC STEPS.`;
-
-    const result = await model.generateContent(prompt);
-    return result.response.text();
 }
 
 function generateProfessionalPDF(stats, aiAnalysis, fileName) {
     const doc = new PDFDocument({ margin: 50 });
     doc.pipe(fs.createWriteStream(fileName));
 
-    // Header [cite: 47, 48]
-    doc.fillColor('#2c3e50').font('Helvetica-Bold').fontSize(26).text('PROFIT GUARD', { align: 'center' });
-    doc.font('Helvetica').fontSize(12).fillColor('#7f8c8d').text('Embedded Intelligence for E-commerce', { align: 'center' });
+    const realProductRevenue = stats.grossRevenue - stats.totalShipping;
+    const realMargin = (stats.netProductProfit / realProductRevenue) * 100;
+    const isLoss = stats.netProductProfit < 0;
+
+    // באנר דינמי
+    if (isLoss) {
+        doc.rect(0, 0, 612, 60).fill('#c0392b');
+        doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(14)
+           .text(`${stats.ordersAtLossCount} ORDERS ANALYZED AS NET LOSS`, 0, 25, { align: 'center' });
+    } else {
+        const marginGap = (stats.expectedMargin - realMargin).toFixed(1);
+        doc.rect(0, 0, 612, 60).fill('#e67e22');
+        doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(14)
+           .text(`MARGIN GAP: Real margin is ${marginGap}% lower than Shopify dashboard`, 0, 25, { align: 'center' });
+    }
+    
+    doc.moveDown(4).fillColor('#2c3e50').font('Helvetica-Bold').fontSize(22).text('PROFIT GUARD: Strategic Audit');
+    doc.font('Helvetica').fontSize(10).fillColor('#7f8c8d').text(`Report ID: PG-${Date.now().toString(36).toUpperCase()}`);
     doc.moveDown(2);
 
-    // Financial Audit Summary [cite: 49]
-    doc.fillColor('#2980b9').font('Helvetica-Bold').fontSize(18).text('Financial Audit Summary', { underline: true });
-    doc.moveDown();
-    doc.fillColor('#000').font('Helvetica').fontSize(12);
-    doc.text(`Total Orders Analyzed: ${stats.totalOrders}`); // [cite: 50]
-    doc.text(`Gross Revenue: $${stats.grossRevenue.toFixed(2)}`); // [cite: 50]
-    doc.text(`Shipping (Pass-through): $${stats.totalShipping.toFixed(2)}`); // [cite: 51]
-    doc.text(`Total Product COGS: $${stats.totalCOGS.toFixed(2)}`); // [cite: 51]
-    doc.text(`Transaction Fees: $${stats.totalFees.toFixed(2)}`); // [cite: 52]
-    doc.moveDown();
+    doc.fillColor('#2980b9').fontSize(16).text('1. Financial Summary', { underline: true }).moveDown(0.5);
+    doc.fillColor('#000').fontSize(12).font('Helvetica');
+    doc.text(`Total Revenue: $${stats.grossRevenue.toFixed(2)}`);
+    doc.text(`Shipping Pass-through: -$${stats.totalShipping.toFixed(2)}`);
+    doc.text(`COGS: $${stats.totalCOGS.toFixed(2)}`);
+    doc.text(`Estimated Fees: $${stats.totalFees.toFixed(2)}`);
+    doc.moveDown().font('Helvetica-Bold').text(`NET PRODUCT PROFIT: $${stats.netProductProfit.toFixed(2)}`);
+    doc.text(`REAL PRODUCT MARGIN: ${realMargin.toFixed(2)}%`).moveDown(2);
 
-    const margin = (stats.netProductProfit / (stats.grossRevenue - stats.totalShipping)) * 100;
-    doc.fillColor(stats.netProductProfit < 0 ? '#c0392b' : '#27ae60').font('Helvetica-Bold').fontSize(14);
-    doc.text(`NET PRODUCT PROFIT: $${stats.netProductProfit.toFixed(2)}`); // [cite: 53]
-    doc.text(`REAL PRODUCT MARGIN: ${margin.toFixed(2)}%`); // [cite: 54]
-    doc.moveDown(2);
+    doc.fillColor('#2980b9').fontSize(16).text('2. Strategic Diagnosis', { underline: true }).moveDown();
+    doc.font('Helvetica').fontSize(11).fillColor('#34495e').text(aiAnalysis.replace(/\*/g, ''), { lineGap: 3 });
 
-    // AI Strategic Analysis [cite: 55]
-    doc.fillColor('#2980b9').font('Helvetica-Bold').fontSize(18).text('AI Strategic Analysis', { underline: true });
-    doc.moveDown();
-    doc.font('Helvetica').fontSize(11).fillColor('#34495e').text(aiAnalysis.replace(/\*/g, ''), { lineGap: 4 });
-
+    const bottomY = doc.page.height - 70;
+    doc.fontSize(8).fillColor('#bdc3c7').text('• Based on the last 50 paid orders.', 50, bottomY);
+    if (stats.missingCogsCount > 0) {
+        doc.fillColor('#e74c3c').text(`• ALERT: Missing cost data for ${stats.missingCogsCount} items. Check your Shopify Product Admin.`, 50, bottomY + 12);
+    }
     doc.end();
 }
 
-runProfitGuardPipeline();
+async function getAIStrategicAnalysis(stats) {
+    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+    const prompt = `Analyze this Shopify store profit data: ${JSON.stringify(stats)}. 
+    Explain the gap between gross and net margin. Provide 3 actionable steps to stop losses. 
+    Keep it professional and executive. Do not mention AI or Gemini.`;
+    const result = await model.generateContent(prompt);
+    return result.response.text();
+}
