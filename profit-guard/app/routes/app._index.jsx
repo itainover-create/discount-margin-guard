@@ -1,4 +1,5 @@
-import { useLoaderData } from "@react-router";
+// app/routes/app._index.jsx
+import { useLoaderData } from "react-router"; // וודא שזה בדיוק כך, בלי @
 import { authenticate } from "../shopify.server";
 import { 
   Page, 
@@ -15,7 +16,6 @@ import {
 export const loader = async ({ request }) => {
   const { admin } = await authenticate.admin(request);
 
-  // Sacred Query: שליפת נתונים לזיהוי Stacking והפסדים
   const response = await admin.graphql(
     `#graphql
     query getAuditData {
@@ -51,28 +51,14 @@ export const loader = async ({ request }) => {
   const data = await response.json();
   const orders = data.data.orders.edges.map(e => e.node);
 
-  // לוגיקת ה-Shock Report (חישוב ב-Backend)
   const report = orders.map(order => {
     const stackingCount = order.discountApplications.edges.length;
     const items = order.lineItems.edges.map(({ node }) => {
       const price = parseFloat(node.discountedUnitPriceSet.shopMoney.amount);
       const cost = node.variant?.inventoryItem?.unitCost ? parseFloat(node.variant.inventoryItem.unitCost.amount) : null;
-      return { 
-        title: node.title, 
-        price, 
-        cost, 
-        isLoss: cost ? price < cost : false 
-      };
+      return { title: node.title, price, cost, isLoss: cost ? price < cost : false };
     });
-
-    const hasLoss = items.some(i => i.isLoss);
-    return { 
-      id: order.id,
-      name: order.name, 
-      stacking: stackingCount > 1, 
-      hasLoss, 
-      items 
-    };
+    return { id: order.id, name: order.name, stacking: stackingCount > 1, hasLoss: items.some(i => i.isLoss) };
   });
 
   return { report };
@@ -85,7 +71,6 @@ export default function Index() {
   return (
     <Page title="Profit Guard: Shock Report">
       <Layout>
-        {/* Banner סיכום הלם */}
         <Layout.Section>
           {criticalOrders.length > 0 ? (
             <Banner title={`Found ${criticalOrders.length} critical profit leaks`} status="critical">
@@ -97,43 +82,25 @@ export default function Index() {
             </Banner>
           )}
         </Layout.Section>
-
-        {/* רשימת ההזמנות הבעייתיות */}
         <Layout.Section>
           <Card padding="0">
             <ResourceList
               resourceName={{ singular: 'order', plural: 'orders' }}
               items={report}
-              renderItem={(order) => {
-                const isCritical = order.hasLoss || order.stacking;
-                
-                return (
-                  <ResourceList.Item
-                    id={order.id}
-                    accessibilityLabel={`Details for order ${order.name}`}
-                    persistActions
-                  >
-                    <Box padding="400">
-                      <BlockStack gap="200">
-                        <Text variant="bodyMd" fontWeight="bold">
-                          Order {order.name}
-                        </Text>
-                        <div style={{ display: 'flex', gap: '8px' }}>
-                          {order.hasLoss && (
-                            <Badge tone="critical">🛑 Loss on Product</Badge>
-                          )}
-                          {order.stacking && (
-                            <Badge tone="warning">⚠️ Stacking Detected</Badge>
-                          )}
-                          {!isCritical && (
-                            <Badge tone="success">Healthy</Badge>
-                          )}
-                        </div>
-                      </BlockStack>
-                    </Box>
-                  </ResourceList.Item>
-                );
-              }}
+              renderItem={(order) => (
+                <ResourceList.Item id={order.id}>
+                  <Box padding="400">
+                    <BlockStack gap="200">
+                      <Text variant="bodyMd" fontWeight="bold">Order {order.name}</Text>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        {order.hasLoss && <Badge tone="critical">🛑 Loss on Product</Badge>}
+                        {order.stacking && <Badge tone="warning">⚠️ Stacking Detected</Badge>}
+                        {!(order.hasLoss || order.stacking) && <Badge tone="success">Healthy</Badge>}
+                      </div>
+                    </BlockStack>
+                  </Box>
+                </ResourceList.Item>
+              )}
             />
           </Card>
         </Layout.Section>
