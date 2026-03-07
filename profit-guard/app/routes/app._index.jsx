@@ -105,9 +105,9 @@ export default function Index() {
     if (stats.hasAnyLoss) {
       return (
         <Banner title="CRITICAL MARGIN LOSS" tone="critical" icon={AlertCircleIcon}>
-          <Box paddingBlockStart="300">
-            <Text variant="headingMd" as="p">
-              Real loss of <Text variant="headingLg" as="span" tone="critical">${stats.totalLoss}</Text> detected. 
+          <Box paddingBlockStart="400" paddingBlockEnd="200">
+            <Text variant="headingLg" as="p">
+              Real loss of <Text variant="headingXl" as="span" tone="critical">${stats.totalLoss}</Text> detected. 
               Items sold below cost!
             </Text>
           </Box>
@@ -117,8 +117,8 @@ export default function Index() {
     if (stats.hasAnyStacking) {
       return (
         <Banner title="DISCOUNT STACKING WARNING" tone="warning" icon={InfoIcon}>
-          <Box paddingBlockStart="300">
-            <Text variant="headingMd" as="p">
+          <Box paddingBlockStart="400" paddingBlockEnd="200">
+            <Text variant="headingLg" as="p">
               No direct losses found, but multiple discounts are active. This may erode your future margins.
             </Text>
           </Box>
@@ -127,27 +127,25 @@ export default function Index() {
     }
     return (
       <Banner title="System Audit Healthy" tone="success">
-        <Text variant="headingMd" as="p">No pricing anomalies or margin leaks found in your recent orders.</Text>
+        <Text variant="headingLg" as="p">No pricing anomalies or margin leaks found in your recent orders.</Text>
       </Banner>
     );
   };
 
   return (
     <AppProvider i18n={enTranslations}>
-      <Page title="Profit Guard: Live Audit" compactTitle>
+      <Page compactTitle>
         <Layout>
-          {/* Header Stats - Synced to Page Title size and color */}
+          {/* Custom Symmetric Header */}
           <Layout.Section>
-            <Box paddingBlockEnd="500">
+            <Box paddingBlockStart="400" paddingBlockEnd="600">
               <InlineStack align="space-between" blockAlign="center">
+                <Text variant="headingXl" as="h1" fontWeight="bold">
+                  Profit Guard: Live Audit
+                </Text>
                 <Text variant="headingXl" as="h2" fontWeight="bold">
                   Data Reliability: {stats.coverage}% Cost Coverage
                 </Text>
-                {stats.mode !== "full" && (
-                  <Button variant="plain" url={`https://admin.shopify.com/store/${shopName}/products`} target="_blank">
-                    Add missing costs
-                  </Button>
-                )}
               </InlineStack>
             </Box>
             {renderBanner()}
@@ -175,20 +173,20 @@ export default function Index() {
                             <Button icon={ExternalIcon} url={adminUrl} target="_blank" size="large">View</Button>
                           </InlineStack>
 
-                          {/* Analysis Box - All Black, Bold and Balanced */}
-                          <Box padding="500" background="bg-surface-secondary" borderRadius="300">
-                            <BlockStack gap="300">
-                              <Text variant="headingMd" fontWeight="bold">Analysis:</Text>
-                              <Text variant="headingMd" fontWeight="medium">• Applied Discounts: {order.appliedDiscounts.join(' + ') || 'None'}</Text>
+                          {/* Analysis Box - Large Black Fonts */}
+                          <Box padding="600" background="bg-surface-secondary" borderRadius="300">
+                            <BlockStack gap="400">
+                              <Text variant="headingLg" fontWeight="bold">Analysis:</Text>
+                              <Text variant="headingLg" fontWeight="bold">• Applied Discounts: {order.appliedDiscounts.join(' + ') || 'None'}</Text>
                               
                               {order.details.map((item, i) => (
                                 <Box key={i}>
                                   {item.isLoss ? (
-                                    <Text variant="headingMd" tone="critical" fontWeight="bold">
+                                    <Text variant="headingLg" tone="critical" fontWeight="bold">
                                       • {item.title}: Loss (${item.price} vs cost ${item.cost})
                                     </Text>
                                   ) : (
-                                    <Text variant="headingMd" fontWeight="medium">
+                                    <Text variant="headingLg" fontWeight="bold">
                                       • {item.title}: {item.discountPct}% off
                                     </Text>
                                   )}
@@ -205,8 +203,10 @@ export default function Index() {
               />
             </Card>
           </Layout.Section>
-        </Layout>
-      </Page>
-    </AppProvider>
-  );
-}
+
+          {stats.mode !== "full" && (
+            <Layout.Section>
+              <Box paddingBlockStart="600" paddingBlockEnd="600">
+                <InlineStack align="center" gap="400">
+                  <Text variant="headingLg" fontWeight="bold">Missing cost data for some products.</Text>
+                  <Button variant="plain" url={`https://admin.shopify.com/store/${shopName}/products`} target="_blank" size="large">Add missing costs</
