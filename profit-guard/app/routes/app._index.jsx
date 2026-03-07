@@ -111,8 +111,8 @@ export const loader = async ({ request }) => {
 export default function Index() {
   const { report, shopName, stats } = useLoaderData();
 
-  const renderBanner = () => {
-    // Mode 1: Real Loss Detected (Critical)
+ const renderBanner = () => {
+    // מצב 1: הפסד קריטי (תמיד בעדיפות עליונה)
     if (stats.hasAnyLoss) {
       return (
         <Banner title="CRITICAL MARGIN LOSS" tone="critical" icon={AlertCircleIcon}>
@@ -126,33 +126,37 @@ export default function Index() {
       );
     }
     
-    // Mode 2: No loss but Stacking exists (Warning)
+    // מצב 2 + 3 משולב: כפל מבצעים + חוסר בנתוני עלות (השינוי המבוקש)
     if (stats.hasAnyStacking) {
+      const missingDataNudge = stats.mode === "discount_only" 
+        ? " Note: Product costs are missing—we cannot determine if these stacks cause actual losses."
+        : "";
+
       return (
         <Banner title="DISCOUNT STACKING WARNING" tone="warning" icon={InfoIcon}>
           <Box paddingBlockStart="300" paddingBlockEnd="100">
             <Text variant="headingLg" as="p">
-              No direct losses found, but multiple discounts are active. This may erode your future margins.
+              Multiple discounts are active, which may erode your margins.{' '}
+              <Text variant="headingLg" as="span" fontWeight="bold">{missingDataNudge}</Text>
             </Text>
           </Box>
         </Banner>
       );
     }
 
-    // Mode 3: Proactive Engagement (The "Opportunity" State)
+    // מצב 3 "נקי": אין בעיות אבל חסר מידע (Retention)
     if (stats.mode === "discount_only") {
       return (
         <Banner title="Audit Complete: No Stacking Detected" tone="info">
           <Box paddingBlockStart="300">
             <Text variant="headingLg" as="p">
-              No discount stacks found in recent orders. <Text fontWeight="bold" as="span">Product costs are missing</Text>—add costs now to monitor if future discounts erode your margins.
+              No discount stacks found. <Text fontWeight="bold" as="span">Product costs are missing</Text>—add costs now to monitor if future discounts erode your margins.
             </Text>
           </Box>
         </Banner>
       );
     }
 
-    // Mode 4: Fully healthy with full data
     return (
       <Banner title="System Audit Healthy" tone="success">
         <Text variant="headingLg" as="p">No pricing anomalies or margin leaks found in your recent orders.</Text>
