@@ -2,7 +2,7 @@
 
 client_id = "7b99db8bdff80b9a19e448dddacf78d3"
 name = "profit-guard"
-application_url = "https://example.com"
+application_url = "https://discount-margin-guard.onrender.com"
 embedded = true
 
 [build]
@@ -21,5 +21,10 @@ api_version = "2026-04"
 # אלו ההרשאות המדויקות שאנחנו צריכים ל-Sacred Query
 scopes = "read_orders,read_products"
 
+application_url = "https://discount-margin-guard.onrender.com"
+
 [auth]
-redirect_urls = [ "https://example.com/api/auth" ]
+redirect_urls = [
+  "https://discount-margin-guard.onrender.com/api/auth",
+  "https://discount-margin-guard.onrender.com/api/auth/callback"
+]
