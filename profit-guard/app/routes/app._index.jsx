@@ -105,7 +105,7 @@ export default function Index() {
     if (stats.hasAnyLoss) {
       return (
         <Banner title="CRITICAL MARGIN LOSS DETECTED" tone="critical" icon={AlertCircleIcon}>
-          <Box paddingBlockStart="200">
+          <Box paddingBlockStart="300">
             <Text variant="headingLg" as="p">
               Found a real loss of <Text variant="headingXl" as="span" tone="critical">${stats.totalLoss}</Text> in your last 20 orders. 
               Products are being sold below cost!
@@ -117,7 +117,7 @@ export default function Index() {
     if (stats.hasAnyStacking) {
       return (
         <Banner title="DISCOUNT STACKING WARNING" tone="warning" icon={InfoIcon}>
-          <Box paddingBlockStart="200">
+          <Box paddingBlockStart="300">
             <Text variant="headingLg" as="p">
               No direct losses found, but customers are using multiple discounts. This may erode your future margins.
             </Text>
@@ -127,7 +127,7 @@ export default function Index() {
     }
     return (
       <Banner title="System Audit Complete" tone="success">
-        <Text variant="headingMd" as="p">No pricing anomalies found in your recent orders.</Text>
+        <Text variant="headingLg" as="p">No pricing anomalies or margin leaks found in your recent orders.</Text>
       </Banner>
     );
   };
@@ -201,4 +201,13 @@ export default function Index() {
               <Box paddingBlockStart="600" paddingBlockEnd="600">
                 <InlineStack align="center" gap="400">
                   <Text variant="bodyLg" tone="subdued">Missing cost data for some products.</Text>
-                  <Button variant="plain" url={`https://admin.shopify.com/store/${shopName}/products`} target="_blank
+                  <Button variant="plain" url={`https://admin.shopify.com/store/${shopName}/products`} target="_blank" size="large">Add Unit Costs Now</Button>
+                </InlineStack>
+              </Box>
+            </Layout.Section>
+          )}
+        </Layout>
+      </Page>
+    </AppProvider>
+  );
+}
