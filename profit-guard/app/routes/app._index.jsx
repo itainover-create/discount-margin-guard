@@ -88,15 +88,31 @@ export const loader = async ({ request }) => {
   });
 
   const coverage = totalItems > 0 ? (itemsWithCost / totalItems) : 0;
-  const coveragePct = (coverage * 100).toFixed(0);
+  let mode = "full";
+  if (coverage < 0.3) mode = "discount_only";
+  else if (coverage < 0.9) mode = "hybrid";
 
-  return { report, shopName, stats: { coverage: coveragePct, totalLoss: totalLoss.toFixed(2), hasAnyLoss: totalLoss > 0, hasAnyStacking: report.some(o => o.stacking) } };
+  const hasAnyLoss = totalLoss > 0;
+  const hasAnyStacking = report.some(o => o.stacking);
+
+  return { 
+    report, 
+    shopName, 
+    stats: { 
+      coverage: (coverage * 100).toFixed(0), 
+      totalLoss: totalLoss.toFixed(2), 
+      mode, 
+      hasAnyLoss, 
+      hasAnyStacking 
+    } 
+  };
 };
 
 export default function Index() {
   const { report, shopName, stats } = useLoaderData();
 
   const renderBanner = () => {
+    // Mode 1: Real Loss Detected (Critical)
     if (stats.hasAnyLoss) {
       return (
         <Banner title="CRITICAL MARGIN LOSS" tone="critical" icon={AlertCircleIcon}>
@@ -109,6 +125,8 @@ export default function Index() {
         </Banner>
       );
     }
+    
+    // Mode 2: No loss but Stacking exists (Warning)
     if (stats.hasAnyStacking) {
       return (
         <Banner title="DISCOUNT STACKING WARNING" tone="warning" icon={InfoIcon}>
@@ -120,6 +138,21 @@ export default function Index() {
         </Banner>
       );
     }
+
+    // Mode 3: Proactive Engagement (The "Opportunity" State)
+    if (stats.mode === "discount_only") {
+      return (
+        <Banner title="Audit Complete: No Stacking Detected" tone="info">
+          <Box paddingBlockStart="300">
+            <Text variant="headingLg" as="p">
+              No discount stacks found in recent orders. <Text fontWeight="bold" as="span">Product costs are missing</Text>—add costs now to monitor if future discounts erode your margins.
+            </Text>
+          </Box>
+        </Banner>
+      );
+    }
+
+    // Mode 4: Fully healthy with full data
     return (
       <Banner title="System Audit Healthy" tone="success">
         <Text variant="headingLg" as="p">No pricing anomalies or margin leaks found in your recent orders.</Text>
@@ -131,7 +164,7 @@ export default function Index() {
     <AppProvider i18n={enTranslations}>
       <Page narrowWidth>
         <Layout>
-          {/* SYMMETRIC HEADER SECTION */}
+          {/* SYMMETRIC HEADER - Custom Implementation */}
           <Layout.Section>
             <Box paddingBlockStart="600" paddingBlockEnd="800">
               <InlineStack align="space-between" blockAlign="center">
@@ -168,14 +201,14 @@ export default function Index() {
                             <Button icon={ExternalIcon} url={adminUrl} target="_blank" size="large">View</Button>
                           </InlineStack>
 
-                          {/* ANALYSIS BOX - LARGE BLACK BOLD TEXT */}
+                          {/* ANALYSIS BOX - High Contrast Bold Text */}
                           <Box padding="600" background="bg-surface-secondary" borderRadius="300">
                             <BlockStack gap="400">
-                              <Text variant="headingMd" fontWeight="bold">Analysis:</Text>
-                              <Text variant="headingMd" fontWeight="bold">• Applied Discounts: {order.appliedDiscounts.join(' + ') || 'None'}</Text>
+                              <Text variant="headingLg" fontWeight="bold">Analysis:</Text>
+                              <Text variant="headingLg" fontWeight="bold">• Applied Discounts: {order.appliedDiscounts.join(' + ') || 'None'}</Text>
                               {order.details.map((item, i) => (
                                 <Box key={i}>
-                                  <Text variant="headingMd" fontWeight="bold" tone={item.isLoss ? "critical" : "default"}>
+                                  <Text variant="headingLg" fontWeight="bold" tone={item.isLoss ? "critical" : "default"}>
                                     • {item.title}: {item.isLoss ? `Loss ($${item.price} vs cost $${item.cost})` : `${item.discountPct}% off`}
                                   </Text>
                                 </Box>
