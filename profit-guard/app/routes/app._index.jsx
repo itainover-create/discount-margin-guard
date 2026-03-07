@@ -102,37 +102,43 @@ export default function Index() {
   const { report, shopName, stats } = useLoaderData();
 
   const renderBanner = () => {
-    // Mode 1: Real loss detected - Red Banner
     if (stats.hasAnyLoss) {
       return (
-        <Banner title="Critical Margin Loss Detected" tone="critical" icon={AlertCircleIcon}>
-          <Text variant="bodyLg" as="p">
-            We found a real loss of <b>${stats.totalLoss}</b> in your last 20 orders. Products are being sold below cost!
-          </Text>
+        <Banner title="CRITICAL MARGIN LOSS DETECTED" tone="critical" icon={AlertCircleIcon}>
+          <Box paddingBlockStart="200">
+            <Text variant="headingLg" as="p">
+              Found a real loss of <Text variant="headingXl" as="span" tone="critical">${stats.totalLoss}</Text> in your last 20 orders. 
+              Products are being sold below cost!
+            </Text>
+          </Box>
         </Banner>
       );
     }
-    // Mode 2: No loss but stacking exists - Yellow Banner
     if (stats.hasAnyStacking) {
       return (
-        <Banner title="Discount Stacking Warning" tone="warning" icon={InfoIcon}>
-          <Text variant="bodyLg" as="p">
-            No direct losses found, but customers are using multiple discounts. This may erode your margins.
-          </Text>
+        <Banner title="DISCOUNT STACKING WARNING" tone="warning" icon={InfoIcon}>
+          <Box paddingBlockStart="200">
+            <Text variant="headingLg" as="p">
+              No direct losses found, but customers are using multiple discounts. This may erode your future margins.
+            </Text>
+          </Box>
         </Banner>
       );
     }
-    // Mode 3: Clean Audit - Green Banner
     return (
       <Banner title="System Audit Complete" tone="success">
-        <Text variant="bodyLg" as="p">No pricing anomalies or margin leaks found in your recent orders.</Text>
+        <Text variant="headingMd" as="p">No pricing anomalies found in your recent orders.</Text>
       </Banner>
     );
   };
 
   return (
     <AppProvider i18n={enTranslations}>
-      <Page title="Profit Guard: Live Audit">
+      <Page 
+        title="Profit Guard: Live Audit"
+        subtitle={`Data Accuracy: ${stats.coverage}% Cost Coverage`}
+        compactTitle
+      >
         <Layout>
           <Layout.Section>
             <Box paddingBlockEnd="600">
@@ -165,16 +171,16 @@ export default function Index() {
                           <Box padding="500" background="bg-surface-secondary" borderRadius="300">
                             <BlockStack gap="300">
                               <Text variant="headingMd" fontWeight="bold">Root Cause Analysis:</Text>
-                              <Text variant="bodyLg">• Applied Discounts: {order.appliedDiscounts.join(' + ') || 'None'}</Text>
+                              <Text variant="headingMd" tone="subdued">• Applied Discounts: {order.appliedDiscounts.join(' + ') || 'None'}</Text>
                               
                               {order.details.map((item, i) => (
                                 <Box key={i}>
                                   {item.isLoss ? (
-                                    <Text variant="bodyLg" tone="critical" fontWeight="bold">
+                                    <Text variant="headingMd" tone="critical" fontWeight="bold">
                                       • {item.title}: Sold at loss! (${item.price} vs cost ${item.cost})
                                     </Text>
                                   ) : (
-                                    <Text variant="bodyLg" tone="subdued">• {item.title}: {item.discountPct}% Discount Applied</Text>
+                                    <Text variant="headingMd" tone="subdued">• {item.title}: {item.discountPct}% Discount Applied</Text>
                                   )}
                                 </Box>
                               ))}
@@ -190,18 +196,9 @@ export default function Index() {
             </Card>
           </Layout.Section>
 
-          <Layout.Section>
-            <Box paddingBlockStart="600" paddingBlockEnd="600">
-              <InlineStack align="center" gap="400">
-                <Text variant="bodyLg" tone="subdued">Cost Data Coverage: {stats.coverage}%</Text>
-                {stats.mode !== "full" && (
-                  <Button variant="plain" url={`https://admin.shopify.com/store/${shopName}/products`} target="_blank" size="large">Add Unit Costs Now</Button>
-                )}
-              </InlineStack>
-            </Box>
-          </Layout.Section>
-        </Layout>
-      </Page>
-    </AppProvider>
-  );
-}
+          {stats.mode !== "full" && (
+            <Layout.Section>
+              <Box paddingBlockStart="600" paddingBlockEnd="600">
+                <InlineStack align="center" gap="400">
+                  <Text variant="bodyLg" tone="subdued">Missing cost data for some products.</Text>
+                  <Button variant="plain" url={`https://admin.shopify.com/store/${shopName}/products`} target="_blank
