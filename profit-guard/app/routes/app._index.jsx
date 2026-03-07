@@ -106,8 +106,8 @@ export default function Index() {
       return (
         <Banner title="CRITICAL MARGIN LOSS" tone="critical" icon={AlertCircleIcon}>
           <Box paddingBlockStart="300">
-            <Text variant="headingLg" as="p">
-              Real loss of <Text variant="headingXl" as="span" tone="critical">${stats.totalLoss}</Text> detected. 
+            <Text variant="headingMd" as="p">
+              Real loss of <Text variant="headingLg" as="span" tone="critical">${stats.totalLoss}</Text> detected. 
               Items sold below cost!
             </Text>
           </Box>
@@ -117,8 +117,8 @@ export default function Index() {
     if (stats.hasAnyStacking) {
       return (
         <Banner title="DISCOUNT STACKING WARNING" tone="warning" icon={InfoIcon}>
-          <Box paddingBlockStart="400" paddingBlockEnd="200">
-            <Text variant="headingLg" as="p">
+          <Box paddingBlockStart="300">
+            <Text variant="headingMd" as="p">
               No direct losses found, but multiple discounts are active. This may erode your future margins.
             </Text>
           </Box>
@@ -127,7 +127,7 @@ export default function Index() {
     }
     return (
       <Banner title="System Audit Healthy" tone="success">
-        <Text variant="headingLg" as="p">No pricing anomalies or margin leaks found in your recent orders.</Text>
+        <Text variant="headingMd" as="p">No pricing anomalies or margin leaks found in your recent orders.</Text>
       </Banner>
     );
   };
@@ -136,11 +136,11 @@ export default function Index() {
     <AppProvider i18n={enTranslations}>
       <Page title="Profit Guard: Live Audit" compactTitle>
         <Layout>
-          {/* Header Stats - Matched to Title Style */}
+          {/* Header Stats - Synced to Page Title size and color */}
           <Layout.Section>
             <Box paddingBlockEnd="500">
               <InlineStack align="space-between" blockAlign="center">
-                <Text variant="headingXl" as="h2">
+                <Text variant="headingXl" as="h2" fontWeight="bold">
                   Data Reliability: {stats.coverage}% Cost Coverage
                 </Text>
                 {stats.mode !== "full" && (
@@ -175,11 +175,11 @@ export default function Index() {
                             <Button icon={ExternalIcon} url={adminUrl} target="_blank" size="large">View</Button>
                           </InlineStack>
 
-                          {/* Analysis Box - All Black and Large Fonts */}
+                          {/* Analysis Box - All Black, Bold and Balanced */}
                           <Box padding="500" background="bg-surface-secondary" borderRadius="300">
                             <BlockStack gap="300">
                               <Text variant="headingMd" fontWeight="bold">Analysis:</Text>
-                              <Text variant="headingMd">• Applied Discounts: {order.appliedDiscounts.join(' + ') || 'None'}</Text>
+                              <Text variant="headingMd" fontWeight="medium">• Applied Discounts: {order.appliedDiscounts.join(' + ') || 'None'}</Text>
                               
                               {order.details.map((item, i) => (
                                 <Box key={i}>
