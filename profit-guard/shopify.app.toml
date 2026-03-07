@@ -1,6 +1,6 @@
 # shopify.app.toml המעודכן עבור Profit Guard
 
-client_id = "7b99db8bdff80b9a19e448dddacf78d3"
+client_id = "b275ac1a02242b72a48d9f1811c5f57a"
 name = "profit-guard"
 application_url = "https://discount-margin-guard.onrender.com"
 embedded = true
