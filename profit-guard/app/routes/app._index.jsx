@@ -10,8 +10,11 @@ import {
   Badge, 
   BlockStack, 
   Box,
-  Banner
+  Banner,
+  AppProvider
 } from "@shopify/polaris";
+import enTranslations from "@shopify/polaris/locales/en.json";
+import "@shopify/polaris/build/esm/styles.css";
 
 export const loader = async ({ request }) => {
   const { admin } = await authenticate.admin(request);
@@ -69,42 +72,44 @@ export default function Index() {
   const criticalOrders = report.filter(o => o.stacking || o.hasLoss);
 
   return (
-    <Page title="Profit Guard: Shock Report">
-      <Layout>
-        <Layout.Section>
-          {criticalOrders.length > 0 ? (
-            <Banner title={`Found ${criticalOrders.length} critical profit leaks`} status="critical">
-              <p>These orders are either selling below cost or using multiple discounts (stacking).</p>
-            </Banner>
-          ) : (
-            <Banner title="All systems clear" status="success">
-              <p>No immediate profit leaks detected in your last 20 orders.</p>
-            </Banner>
-          )}
-        </Layout.Section>
-        <Layout.Section>
-          <Card padding="0">
-            <ResourceList
-              resourceName={{ singular: 'order', plural: 'orders' }}
-              items={report}
-              renderItem={(order) => (
-                <ResourceList.Item id={order.id}>
-                  <Box padding="400">
-                    <BlockStack gap="200">
-                      <Text variant="bodyMd" fontWeight="bold">Order {order.name}</Text>
-                      <div style={{ display: 'flex', gap: '8px' }}>
-                        {order.hasLoss && <Badge tone="critical">🛑 Loss on Product</Badge>}
-                        {order.stacking && <Badge tone="warning">⚠️ Stacking Detected</Badge>}
-                        {!(order.hasLoss || order.stacking) && <Badge tone="success">Healthy</Badge>}
-                      </div>
-                    </BlockStack>
-                  </Box>
-                </ResourceList.Item>
-              )}
-            />
-          </Card>
-        </Layout.Section>
-      </Layout>
-    </Page>
+    <AppProvider i18n={enTranslations}>
+      <Page title="Profit Guard: Shock Report">
+        <Layout>
+          <Layout.Section>
+            {criticalOrders.length > 0 ? (
+              <Banner title={`Found ${criticalOrders.length} critical profit leaks`} status="critical">
+                <p>These orders are either selling below cost or using multiple discounts (stacking).</p>
+              </Banner>
+            ) : (
+              <Banner title="All systems clear" status="success">
+                <p>No immediate profit leaks detected in your last 20 orders.</p>
+              </Banner>
+            )}
+          </Layout.Section>
+          <Layout.Section>
+            <Card padding="0">
+              <ResourceList
+                resourceName={{ singular: 'order', plural: 'orders' }}
+                items={report}
+                renderItem={(order) => (
+                  <ResourceList.Item id={order.id}>
+                    <Box padding="400">
+                      <BlockStack gap="200">
+                        <Text variant="bodyMd" fontWeight="bold">Order {order.name}</Text>
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          {order.hasLoss && <Badge tone="critical">🛑 Loss on Product</Badge>}
+                          {order.stacking && <Badge tone="warning">⚠️ Stacking Detected</Badge>}
+                          {!(order.hasLoss || order.stacking) && <Badge tone="success">Healthy</Badge>}
+                        </div>
+                      </BlockStack>
+                    </Box>
+                  </ResourceList.Item>
+                )}
+              />
+            </Card>
+          </Layout.Section>
+        </Layout>
+      </Page>
+    </AppProvider>
   );
 }
