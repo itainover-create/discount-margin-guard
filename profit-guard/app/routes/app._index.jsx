@@ -95,24 +95,14 @@ export const loader = async ({ request }) => {
   const hasAnyLoss = totalLoss > 0;
   const hasAnyStacking = report.some(o => o.stacking);
 
-  return { 
-    report, 
-    shopName, 
-    stats: { 
-      coverage: (coverage * 100).toFixed(0), 
-      totalLoss: totalLoss.toFixed(2), 
-      mode, 
-      hasAnyLoss, 
-      hasAnyStacking 
-    } 
-  };
+  return { report, shopName, stats: { coverage: (coverage * 100).toFixed(0), totalLoss: totalLoss.toFixed(2), mode, hasAnyLoss, hasAnyStacking } };
 };
 
 export default function Index() {
   const { report, shopName, stats } = useLoaderData();
 
- const renderBanner = () => {
-    // מצב 1: הפסד קריטי (תמיד בעדיפות עליונה)
+  const renderBanner = () => {
+    // מצב 1: הפסד קריטי (Red)
     if (stats.hasAnyLoss) {
       return (
         <Banner title="CRITICAL MARGIN LOSS" tone="critical" icon={AlertCircleIcon}>
@@ -126,7 +116,7 @@ export default function Index() {
       );
     }
     
-    // מצב 2 + 3 משולב: כפל מבצעים + חוסר בנתוני עלות (השינוי המבוקש)
+    // מצב 2 + 3 משולב: כפל מבצעים + אזהרת חוסר נתונים (Yellow)
     if (stats.hasAnyStacking) {
       const missingDataNudge = stats.mode === "discount_only" 
         ? " Note: Product costs are missing—we cannot determine if these stacks cause actual losses."
@@ -136,7 +126,7 @@ export default function Index() {
         <Banner title="DISCOUNT STACKING WARNING" tone="warning" icon={InfoIcon}>
           <Box paddingBlockStart="300" paddingBlockEnd="100">
             <Text variant="headingLg" as="p">
-              Multiple discounts are active, which may erode your margins.{' '}
+              Multiple discounts are active, which may erode your margins. 
               <Text variant="headingLg" as="span" fontWeight="bold">{missingDataNudge}</Text>
             </Text>
           </Box>
@@ -144,7 +134,7 @@ export default function Index() {
       );
     }
 
-    // מצב 3 "נקי": אין בעיות אבל חסר מידע (Retention)
+    // מצב 3 "נקי": אין בעיות אבל חסר מידע (Blue - Retention Mode)
     if (stats.mode === "discount_only") {
       return (
         <Banner title="Audit Complete: No Stacking Detected" tone="info">
@@ -157,6 +147,7 @@ export default function Index() {
       );
     }
 
+    // מצב 4: הכל תקין ונתונים מלאים (Green)
     return (
       <Banner title="System Audit Healthy" tone="success">
         <Text variant="headingLg" as="p">No pricing anomalies or margin leaks found in your recent orders.</Text>
@@ -168,7 +159,7 @@ export default function Index() {
     <AppProvider i18n={enTranslations}>
       <Page narrowWidth>
         <Layout>
-          {/* SYMMETRIC HEADER - Custom Implementation */}
+          {/* SYMMETRIC HEADER SECTION */}
           <Layout.Section>
             <Box paddingBlockStart="600" paddingBlockEnd="800">
               <InlineStack align="space-between" blockAlign="center">
@@ -205,7 +196,7 @@ export default function Index() {
                             <Button icon={ExternalIcon} url={adminUrl} target="_blank" size="large">View</Button>
                           </InlineStack>
 
-                          {/* ANALYSIS BOX - High Contrast Bold Text */}
+                          {/* ANALYSIS BOX - High Contrast Bold Black Text */}
                           <Box padding="600" background="bg-surface-secondary" borderRadius="300">
                             <BlockStack gap="400">
                               <Text variant="headingLg" fontWeight="bold">Analysis:</Text>
