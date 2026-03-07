@@ -105,25 +105,29 @@ export default function Index() {
     if (stats.hasAnyLoss) {
       return (
         <Banner title="CRITICAL MARGIN LOSS" tone="critical" icon={AlertCircleIcon}>
-          <Text variant="headingMd" as="p">
-            Real loss of <Text variant="headingLg" as="span" tone="critical">${stats.totalLoss}</Text> detected. 
-            Items sold below cost!
-          </Text>
+          <Box paddingBlockStart="300">
+            <Text variant="headingLg" as="p">
+              Real loss of <Text variant="headingXl" as="span" tone="critical">${stats.totalLoss}</Text> detected. 
+              Items sold below cost!
+            </Text>
+          </Box>
         </Banner>
       );
     }
     if (stats.hasAnyStacking) {
       return (
         <Banner title="DISCOUNT STACKING WARNING" tone="warning" icon={InfoIcon}>
-          <Text variant="bodyLg" as="p">
-            No direct losses found, but multiple discounts are active. This may erode future margins.
-          </Text>
+          <Box paddingBlockStart="300">
+            <Text variant="headingMd" as="p">
+              No direct losses found, but multiple discounts are active. This may erode your future margins.
+            </Text>
+          </Box>
         </Banner>
       );
     }
     return (
       <Banner title="System Audit Healthy" tone="success">
-        <Text variant="bodyLg" as="p">No pricing anomalies or margin leaks found in your recent orders.</Text>
+        <Text variant="headingMd" as="p">No pricing anomalies or margin leaks found in your recent orders.</Text>
       </Banner>
     );
   };
@@ -132,16 +136,16 @@ export default function Index() {
     <AppProvider i18n={enTranslations}>
       <Page title="Profit Guard: Live Audit" compactTitle>
         <Layout>
-          {/* Enhanced Coverage Header */}
+          {/* Enhanced Visibility: Data Reliability Header */}
           <Layout.Section>
-            <Box paddingBlockEnd="400">
+            <Box paddingBlockEnd="500">
               <InlineStack align="space-between" blockAlign="center">
-                <Text variant="headingMd" tone="subdued">
-                  Audit Confidence: <Text variant="headingMd" as="span" tone="success">{stats.coverage}% Cost Coverage</Text>
+                <Text variant="headingLg" tone="subdued">
+                  Data Reliability: <Text variant="headingLg" as="span" tone="success">{stats.coverage}% Cost Coverage</Text>
                 </Text>
                 {stats.mode !== "full" && (
                   <Button variant="plain" url={`https://admin.shopify.com/store/${shopName}/products`} target="_blank">
-                    Improve Accuracy
+                    Add missing costs
                   </Button>
                 )}
               </InlineStack>
@@ -174,16 +178,16 @@ export default function Index() {
                           <Box padding="500" background="bg-surface-secondary" borderRadius="300">
                             <BlockStack gap="300">
                               <Text variant="headingMd" fontWeight="bold">Analysis:</Text>
-                              <Text variant="bodyLg" tone="subdued">• Discounts: {order.appliedDiscounts.join(' + ') || 'None'}</Text>
+                              <Text variant="headingMd" tone="subdued">• Discounts: {order.appliedDiscounts.join(' + ') || 'None'}</Text>
                               
                               {order.details.map((item, i) => (
                                 <Box key={i}>
                                   {item.isLoss ? (
-                                    <Text variant="bodyLg" tone="critical" fontWeight="bold">
+                                    <Text variant="headingMd" tone="critical" fontWeight="bold">
                                       • {item.title}: Loss (${item.price} vs cost ${item.cost})
                                     </Text>
                                   ) : (
-                                    <Text variant="bodyLg" tone="subdued">• {item.title}: {item.discountPct}% off</Text>
+                                    <Text variant="headingMd" tone="subdued">• {item.title}: {item.discountPct}% off</Text>
                                   )}
                                 </Box>
                               ))}
