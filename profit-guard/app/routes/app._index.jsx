@@ -1,13 +1,11 @@
 // app/routes/app._index.jsx
-import { useState } from "react";
 import { useLoaderData } from "react-router"; 
 import { authenticate } from "../shopify.server";
 import { 
   Page, Layout, Card, ResourceList, Text, Badge, BlockStack, Box,
-  Banner, AppProvider, Icon, InlineStack, Divider, ProgressBar, 
-  Button, ButtonGroup, EmptyState
+  Banner, AppProvider, InlineStack, Divider, ProgressBar, Button, Icon
 } from "@shopify/polaris";
-import { AlertCircleIcon, CheckCircleIcon, ExternalIcon, HideIcon } from '@shopify/polaris-icons';
+import { AlertCircleIcon, InfoIcon, ExternalIcon } from '@shopify/polaris-icons';
 import enTranslations from "@shopify/polaris/locales/en.json";
 import "@shopify/polaris/build/esm/styles.css";
 
@@ -36,7 +34,6 @@ export const loader = async ({ request }) => {
               edges {
                 node {
                   title
-                  quantity
                   discountedUnitPriceSet { shopMoney { amount } }
                   variant { 
                     price
@@ -54,35 +51,31 @@ export const loader = async ({ request }) => {
   const data = await response.json();
   const orders = data.data.orders.edges.map(e => e.node);
 
+  let totalItems = 0;
+  let itemsWithCost = 0;
   let totalLoss = 0;
-  let totalPotentialProfit = 0;
-  let totalActualProfit = 0;
 
   const report = orders.map(order => {
     const discounts = order.discountApplications.edges.map(e => e.node.code || e.node.title);
     const stacking = discounts.length > 1;
     
-    let orderPotentialProfit = 0;
-    let orderActualProfit = 0;
-
     const items = order.lineItems.edges.map(({ node }) => {
-      const actualPrice = parseFloat(node.discountedUnitPriceSet.shopMoney.amount);
-      const originalPrice = parseFloat(node.variant?.price || actualPrice);
-      const cost = node.variant?.inventoryItem?.unitCost ? parseFloat(node.variant.inventoryItem.unitCost.amount) : 0;
+      totalItems++;
+      const price = parseFloat(node.discountedUnitPriceSet.shopMoney.amount);
+      const originalPrice = parseFloat(node.variant?.price || price);
+      const costField = node.variant?.inventoryItem?.unitCost;
       
-      const profit = actualPrice - cost;
-      const potential = originalPrice - cost;
+      const discountPct = originalPrice > 0 ? ((1 - price / originalPrice) * 100).toFixed(0) : 0;
 
-      orderActualProfit += profit;
-      orderPotentialProfit += potential;
-
-      return { title: node.title, price: actualPrice, cost, isLoss: profit < 0 };
+      if (costField) {
+        itemsWithCost++;
+        const cost = parseFloat(costField.amount);
+        const profit = price - cost;
+        if (profit < 0) totalLoss += Math.abs(profit);
+        return { title: node.title, price, cost, hasCost: true, isLoss: profit < 0, discountPct };
+      }
+      return { title: node.title, price, cost: null, hasCost: false, isLoss: false, discountPct };
     });
-
-    const orderLossToDiscounts = orderPotentialProfit - orderActualProfit;
-    totalLoss += orderLossToDiscounts;
-    totalPotentialProfit += orderPotentialProfit;
-    totalActualProfit += orderActualProfit;
 
     return { 
       id: order.id, 
@@ -91,95 +84,88 @@ export const loader = async ({ request }) => {
       stacking, 
       appliedDiscounts: discounts,
       hasLoss: items.some(i => i.isLoss),
-      lossDetails: items.filter(i => i.isLoss),
-      orderLossToDiscounts
+      details: items
     };
   });
 
-  const profitRetention = totalPotentialProfit > 0 ? (totalActualProfit / totalPotentialProfit) * 100 : 100;
+  const coverage = totalItems > 0 ? (itemsWithCost / totalItems) : 0;
+  let mode = "discount_only"; // Default < 30%
+  if (coverage >= 0.9) mode = "full";
+  else if (coverage >= 0.3) mode = "hybrid";
 
-  return { 
-    report, 
-    shopName, 
-    stats: { 
-      totalLoss: totalLoss.toFixed(2), 
-      profitRetention: Math.max(0, profitRetention.toFixed(0)),
-      criticalCount: report.filter(o => o.stacking || o.hasLoss).length
-    } 
-  };
+  return { report, shopName, stats: { coverage: (coverage * 100).toFixed(0), totalLoss: totalLoss.toFixed(2), mode } };
 };
 
 export default function Index() {
   const { report, shopName, stats } = useLoaderData();
-  const [ignoredOrders, setIgnoredOrders] = useState([]);
 
-  const visibleReport = report.filter(o => !ignoredOrders.includes(o.id));
-  const criticalOrders = visibleReport.filter(o => o.stacking || o.hasLoss);
+  const renderBanner = () => {
+    switch (stats.mode) {
+      case "full":
+        return (
+          <Banner title="CRITICAL MARGIN AUDIT" tone="critical" icon={AlertCircleIcon}>
+            <Text as="p">Full data coverage ({stats.coverage}%). You lost <b>${stats.totalLoss}</b> on these orders due to pricing/stacking errors.</Text>
+          </Banner>
+        );
+      case "hybrid":
+        return (
+          <Banner title="PARTIAL PROFIT AUDIT" tone="warning" icon={InfoIcon}>
+            <Text as="p">Analyzing {stats.coverage}% of items. We identified <b>${stats.totalLoss}</b> in known losses. Add more unit costs for a 100% accurate report.</Text>
+          </Banner>
+        );
+      default:
+        return (
+          <Banner title="DISCOUNT STACKING REPORT" tone="info" icon={InfoIcon}>
+            <Text as="p">Cost data missing for {100 - stats.coverage}% of items. We are auditing <b>Stacking Signatures</b> and combined discount impact.</Text>
+          </Banner>
+        );
+    }
+  };
 
   return (
     <AppProvider i18n={enTranslations}>
-      <Page title="Profit Guard: Financial Audit">
+      <Page title="Profit Guard: Live Audit">
         <Layout>
-          {/* TOP SHOCK SUMMARY */}
-          <Layout.Section>
-            <Card>
-              <BlockStack gap="400">
-                <InlineStack align="space-between">
-                  <Text variant="headingLg" as="h2">Profit Erosion Overview</Text>
-                  <Badge tone={stats.totalLoss > 0 ? "critical" : "success"} size="large">
-                    Total Revenue Leaked: ${stats.totalLoss}
-                  </Badge>
-                </InlineStack>
-                <BlockStack gap="200">
-                  <InlineStack align="space-between">
-                    <Text variant="bodyMd" tone="subdued">Profit Retention Rate</Text>
-                    <Text variant="bodyMd" fontWeight="bold">{stats.profitRetention}%</Text>
-                  </InlineStack>
-                  <ProgressBar progress={parseFloat(stats.profitRetention)} tone={stats.profitRetention < 70 ? "critical" : "highlight"} />
-                </BlockStack>
-              </BlockStack>
-            </Card>
-          </Layout.Section>
-
-          {/* MAIN LIST */}
+          <Layout.Section>{renderBanner()}</Layout.Section>
+          
           <Layout.Section>
             <Card padding="0">
               <ResourceList
                 resourceName={{ singular: 'order', plural: 'orders' }}
-                items={visibleReport}
+                items={report}
                 renderItem={(order) => {
-                  const isCritical = order.hasLoss || order.stacking;
                   const adminUrl = `https://admin.shopify.com/store/${shopName}/orders/${order.legacyId}`;
-
                   return (
-                    <ResourceList.Item id={order.id} verticalAlignment="center">
-                      <Box padding="500" background={isCritical ? "bg-surface-critical-secondary" : undefined}>
+                    <ResourceList.Item id={order.id}>
+                      <Box padding="500">
                         <BlockStack gap="400">
                           <InlineStack align="space-between">
                             <BlockStack gap="100">
                               <Text variant="headingMd" as="h3">Order {order.name}</Text>
                               <InlineStack gap="200">
-                                {order.hasLoss && <Badge tone="critical">🛑 MARGIN LOSS</Badge>}
-                                {order.stacking && <Badge tone="warning">⚠️ STACKING</Badge>}
+                                {order.stacking && <Badge tone="warning">⚠️ STACKING ATTACK</Badge>}
+                                {stats.mode !== "discount_only" && order.hasLoss && <Badge tone="critical">🛑 MARGIN KILLER</Badge>}
                               </InlineStack>
                             </BlockStack>
-                            <ButtonGroup>
-                              <Button icon={ExternalIcon} url={adminUrl} target="_blank">View in Admin</Button>
-                              <Button icon={HideIcon} onClick={() => setIgnoredOrders([...ignoredOrders, order.id])}>Ignore</Button>
-                            </ButtonGroup>
+                            <Button icon={ExternalIcon} url={adminUrl} target="_blank">View Order</Button>
                           </InlineStack>
 
-                          {isCritical && (
-                            <Box padding="300" background="bg-surface-secondary" borderRadius="200">
-                              <BlockStack gap="100">
-                                {order.stacking && <Text variant="bodySm">Combined: {order.appliedDiscounts.join(' + ')}</Text>}
-                                {order.hasLoss && order.lossDetails.map((item, i) => (
-                                  <Text key={i} variant="bodySm" tone="critical">• {item.title}: Sold below cost (${item.price} vs ${item.cost})</Text>
-                                ))}
-                                <Text variant="bodySm" fontWeight="bold" tone="critical">Profit Lost: ${order.orderLossToDiscounts.toFixed(2)}</Text>
-                              </BlockStack>
-                            </Box>
-                          )}
+                          <Box padding="300" background="bg-surface-secondary" borderRadius="200">
+                            <BlockStack gap="100">
+                              <Text variant="bodySm" fontWeight="bold">Root Cause Analysis:</Text>
+                              <Text variant="bodySm">• Discounts: {order.appliedDiscounts.join(' + ') || 'None'}</Text>
+                              
+                              {order.details.map((item, i) => (
+                                <Box key={i}>
+                                  {item.isLoss ? (
+                                    <Text variant="bodySm" tone="critical">• {item.title}: Sold at loss (${item.price} vs cost ${item.cost})</Text>
+                                  ) : (
+                                    <Text variant="bodySm" tone="subdued">• {item.title}: {item.discountPct}% Discount Applied</Text>
+                                  )}
+                                </Box>
+                              ))}
+                            </BlockStack>
+                          </Box>
                         </BlockStack>
                       </Box>
                       <Divider />
@@ -190,12 +176,16 @@ export default function Index() {
             </Card>
           </Layout.Section>
 
-          {/* BOTTOM SUMMARY BANNER */}
-          <Layout.Section>
-            <Banner tone="info" title="Audit Summary (Last 20 Orders)">
-              <p>We identified <b>{stats.criticalCount}</b> orders with profit leaks. By fixing your discount stacking rules, you could have saved <b>${stats.totalLoss}</b> in margin.</p>
-            </Banner>
-          </Layout.Section>
+          {stats.mode !== "full" && (
+            <Layout.Section>
+              <Box paddingBlockStart="400" paddingBlockEnd="400">
+                <InlineStack align="center">
+                  <Text variant="bodyMd" tone="subdued">Missing cost data for some products.</Text>
+                  <Button variant="plain" url={`https://admin.shopify.com/store/${shopName}/products`} target="_blank">Add Unit Costs now</Button>
+                </InlineStack>
+              </Box>
+            </Layout.Section>
+          )}
         </Layout>
       </Page>
     </AppProvider>
