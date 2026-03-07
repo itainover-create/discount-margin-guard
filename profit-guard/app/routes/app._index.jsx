@@ -13,10 +13,11 @@ export const loader = async ({ request }) => {
   const { admin, session } = await authenticate.admin(request);
   const shopName = session.shop.replace(".myshopify.com", "");
 
+  // הוספת reverse: true כדי לקבל את ה-20 הכי חדשות
   const response = await admin.graphql(
     `#graphql
     query getAuditData {
-      orders(first: 20, query: "financial_status:paid") {
+      orders(first: 20, query: "financial_status:paid", reverse: true) {
         edges {
           node {
             id
@@ -102,7 +103,6 @@ export default function Index() {
   const { report, shopName, stats } = useLoaderData();
 
   const renderBanner = () => {
-    // מצב 1: הפסד קריטי (Red)
     if (stats.hasAnyLoss) {
       return (
         <Banner title="CRITICAL MARGIN LOSS" tone="critical" icon={AlertCircleIcon}>
@@ -116,7 +116,6 @@ export default function Index() {
       );
     }
     
-    // מצב 2 + 3 משולב: כפל מבצעים + אזהרת חוסר נתונים (Yellow)
     if (stats.hasAnyStacking) {
       const missingDataNudge = stats.mode === "discount_only" 
         ? " Note: Product costs are missing—we cannot determine if these stacks cause actual losses."
@@ -134,7 +133,6 @@ export default function Index() {
       );
     }
 
-    // מצב 3 "נקי": אין בעיות אבל חסר מידע (Blue - Retention Mode)
     if (stats.mode === "discount_only") {
       return (
         <Banner title="Audit Complete: No Stacking Detected" tone="info">
@@ -147,7 +145,6 @@ export default function Index() {
       );
     }
 
-    // מצב 4: הכל תקין ונתונים מלאים (Green)
     return (
       <Banner title="System Audit Healthy" tone="success">
         <Text variant="headingLg" as="p">No pricing anomalies or margin leaks found in your recent orders.</Text>
@@ -159,7 +156,6 @@ export default function Index() {
     <AppProvider i18n={enTranslations}>
       <Page narrowWidth>
         <Layout>
-          {/* SYMMETRIC HEADER SECTION */}
           <Layout.Section>
             <Box paddingBlockStart="600" paddingBlockEnd="800">
               <InlineStack align="space-between" blockAlign="center">
@@ -196,7 +192,6 @@ export default function Index() {
                             <Button icon={ExternalIcon} url={adminUrl} target="_blank" size="large">View</Button>
                           </InlineStack>
 
-                          {/* ANALYSIS BOX - High Contrast Bold Black Text */}
                           <Box padding="600" background="bg-surface-secondary" borderRadius="300">
                             <BlockStack gap="400">
                               <Text variant="headingLg" fontWeight="bold">Analysis:</Text>
