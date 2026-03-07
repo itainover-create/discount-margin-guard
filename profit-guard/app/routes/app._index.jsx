@@ -13,7 +13,6 @@ export const loader = async ({ request }) => {
   const { admin, session } = await authenticate.admin(request);
   const shopName = session.shop.replace(".myshopify.com", "");
 
-  // הוספת reverse: true כדי לקבל את ה-20 הכי חדשות
   const response = await admin.graphql(
     `#graphql
     query getAuditData {
@@ -55,11 +54,13 @@ export const loader = async ({ request }) => {
   let totalItems = 0;
   let itemsWithCost = 0;
   let totalLoss = 0;
+  let bleedingCount = 0;
 
   const report = orders.map(order => {
     const discounts = order.discountApplications.edges.map(e => e.node.code || e.node.title);
     const stacking = discounts.length > 1;
     
+    let orderHasLoss = false;
     const items = order.lineItems.edges.map(({ node }) => {
       totalItems++;
       const price = parseFloat(node.discountedUnitPriceSet.shopMoney.amount);
@@ -71,11 +72,16 @@ export const loader = async ({ request }) => {
         itemsWithCost++;
         const cost = parseFloat(costField.amount);
         const profit = price - cost;
-        if (profit < 0) totalLoss += Math.abs(profit);
+        if (profit < 0) {
+          totalLoss += Math.abs(profit);
+          orderHasLoss = true;
+        }
         return { title: node.title, price, cost, hasCost: true, isLoss: profit < 0, discountPct };
       }
       return { title: node.title, price, cost: null, hasCost: false, isLoss: false, discountPct };
     });
+
+    if (orderHasLoss) bleedingCount++;
 
     return { 
       id: order.id, 
@@ -83,7 +89,7 @@ export const loader = async ({ request }) => {
       name: order.name, 
       stacking, 
       appliedDiscounts: discounts,
-      hasLoss: items.some(i => i.isLoss),
+      hasLoss: orderHasLoss,
       details: items
     };
   });
@@ -93,10 +99,18 @@ export const loader = async ({ request }) => {
   if (coverage < 0.3) mode = "discount_only";
   else if (coverage < 0.9) mode = "hybrid";
 
-  const hasAnyLoss = totalLoss > 0;
-  const hasAnyStacking = report.some(o => o.stacking);
-
-  return { report, shopName, stats: { coverage: (coverage * 100).toFixed(0), totalLoss: totalLoss.toFixed(2), mode, hasAnyLoss, hasAnyStacking } };
+  return { 
+    report, 
+    shopName, 
+    stats: { 
+      coverage: (coverage * 100).toFixed(0), 
+      totalLoss: totalLoss.toFixed(2), 
+      bleedingCount,
+      mode, 
+      hasAnyLoss: totalLoss > 0, 
+      hasAnyStacking: report.some(o => o.stacking) 
+    } 
+  };
 };
 
 export default function Index() {
@@ -105,49 +119,50 @@ export default function Index() {
   const renderBanner = () => {
     if (stats.hasAnyLoss) {
       return (
-        <Banner title="CRITICAL MARGIN LOSS" tone="critical" icon={AlertCircleIcon}>
-          <Box paddingBlockStart="300">
+        <Banner tone="critical" icon={AlertCircleIcon}>
+          <BlockStack gap="300">
+            <Text variant="heading2xl" as="h2">CRITICAL MARGIN LOSS</Text>
             <Text variant="headingLg" as="p">
-              Real loss of <Text variant="headingLg" as="span" tone="critical" fontWeight="bold">${stats.totalLoss}</Text> detected. 
-              Items sold below cost!
+              Detected <Text variant="headingLg" as="span" tone="critical" fontWeight="bold">{stats.bleedingCount} Bleeding Orders</Text> totaling <Text variant="headingLg" as="span" tone="critical" fontWeight="bold">${stats.totalLoss}</Text> in losses.
             </Text>
-          </Box>
+          </BlockStack>
         </Banner>
       );
     }
     
     if (stats.hasAnyStacking) {
-      const missingDataNudge = stats.mode === "discount_only" 
-        ? " Note: Product costs are missing—we cannot determine if these stacks cause actual losses."
-        : "";
-
+      const nudge = stats.mode === "discount_only" ? " flying blind without cost data." : "";
       return (
-        <Banner title="DISCOUNT STACKING WARNING" tone="warning" icon={InfoIcon}>
-          <Box paddingBlockStart="300" paddingBlockEnd="100">
+        <Banner tone="warning" icon={InfoIcon}>
+          <BlockStack gap="300">
+            <Text variant="heading2xl" as="h2">DISCOUNT STACKING WARNING</Text>
             <Text variant="headingLg" as="p">
-              Multiple discounts are active, which may erode your margins. 
-              <Text variant="headingLg" as="span" fontWeight="bold">{missingDataNudge}</Text>
+              Multiple discounts are active. You are currently <Text variant="headingLg" as="span" fontWeight="bold">{nudge}</Text>
             </Text>
-          </Box>
+          </BlockStack>
         </Banner>
       );
     }
 
     if (stats.mode === "discount_only") {
       return (
-        <Banner title="Audit Complete: No Stacking Detected" tone="info">
-          <Box paddingBlockStart="300">
+        <Banner tone="info">
+          <BlockStack gap="400">
+            <Text variant="heading2xl" as="h2">Audit Complete: No Stacking Detected</Text>
             <Text variant="headingLg" as="p">
-              No discount stacks found. <Text fontWeight="bold" as="span">Product costs are missing</Text>—add costs now to monitor if future discounts erode your margins.
+              No discount stacks found. <Text fontWeight="bold" as="span">Margin Visibility is 0%</Text>—add costs now to see if your store is bleeding money.
             </Text>
-          </Box>
+          </BlockStack>
         </Banner>
       );
     }
 
     return (
-      <Banner title="System Audit Healthy" tone="success">
-        <Text variant="headingLg" as="p">No pricing anomalies or margin leaks found in your recent orders.</Text>
+      <Banner tone="success">
+        <BlockStack gap="300">
+          <Text variant="heading2xl" as="h2">System Audit Healthy</Text>
+          <Text variant="headingLg" as="p">No pricing anomalies or margin leaks found in your recent orders.</Text>
+        </BlockStack>
       </Banner>
     );
   };
@@ -156,6 +171,7 @@ export default function Index() {
     <AppProvider i18n={enTranslations}>
       <Page narrowWidth>
         <Layout>
+          {/* SYMMETRIC HEADER - The SOBER version */}
           <Layout.Section>
             <Box paddingBlockStart="600" paddingBlockEnd="800">
               <InlineStack align="space-between" blockAlign="center">
@@ -163,7 +179,7 @@ export default function Index() {
                   Profit Guard: Live Audit
                 </Text>
                 <Text variant="heading2xl" as="h1" fontWeight="bold">
-                  Data Reliability: {stats.coverage}% Cost Coverage
+                  Margin Visibility: {stats.coverage}%
                 </Text>
               </InlineStack>
             </Box>
@@ -186,7 +202,7 @@ export default function Index() {
                               <Text variant="headingLg" as="h3">Order {order.name}</Text>
                               <InlineStack gap="300">
                                 {order.stacking && <Badge tone="warning" size="large">⚠️ STACKING</Badge>}
-                                {order.hasLoss && <Badge tone="critical" size="large">🛑 LOSS</Badge>}
+                                {order.hasLoss && <Badge tone="critical" size="large">🛑 BLEEDING</Badge>}
                               </InlineStack>
                             </BlockStack>
                             <Button icon={ExternalIcon} url={adminUrl} target="_blank" size="large">View</Button>
@@ -194,12 +210,12 @@ export default function Index() {
 
                           <Box padding="600" background="bg-surface-secondary" borderRadius="300">
                             <BlockStack gap="400">
-                              <Text variant="headingLg" fontWeight="bold">Analysis:</Text>
-                              <Text variant="headingLg" fontWeight="bold">• Applied Discounts: {order.appliedDiscounts.join(' + ') || 'None'}</Text>
+                              <Text variant="headingLg" fontWeight="bold">Audit Analysis:</Text>
+                              <Text variant="headingLg" fontWeight="bold">• Applied: {order.appliedDiscounts.join(' + ') || 'No Discounts'}</Text>
                               {order.details.map((item, i) => (
                                 <Box key={i}>
                                   <Text variant="headingLg" fontWeight="bold" tone={item.isLoss ? "critical" : "default"}>
-                                    • {item.title}: {item.isLoss ? `Loss ($${item.price} vs cost $${item.cost})` : `${item.discountPct}% off`}
+                                    • {item.title}: {item.isLoss ? `Bleeding ($${item.price} vs cost $${item.cost})` : `${item.discountPct}% off`}
                                   </Text>
                                 </Box>
                               ))}
