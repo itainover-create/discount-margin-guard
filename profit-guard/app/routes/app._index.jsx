@@ -3,10 +3,10 @@ import { useLoaderData } from "react-router";
 import { authenticate } from "../shopify.server";
 import { 
   Page, Layout, Card, ResourceList, Text, Badge, BlockStack, Box,
-  Banner, AppProvider, InlineStack, Divider, Button, Icon
+  Banner, AppProvider, InlineStack, Divider, Button
 } from "@shopify/polaris";
-import { AlertCircleIcon, InfoIcon, ExternalIcon, alertIcon } from '@shopify/polaris-icons';
-import heTranslations from "@shopify/polaris/locales/he.json";
+import { AlertCircleIcon, InfoIcon, ExternalIcon } from '@shopify/polaris-icons';
+import enTranslations from "@shopify/polaris/locales/en.json";
 import "@shopify/polaris/build/esm/styles.css";
 
 export const loader = async ({ request }) => {
@@ -102,108 +102,106 @@ export default function Index() {
   const { report, shopName, stats } = useLoaderData();
 
   const renderBanner = () => {
-    // מצב 1: יש הפסד כספי ממשי - באנר אדום קריטי
+    // Mode 1: Real loss detected - Red Banner
     if (stats.hasAnyLoss) {
       return (
-        <Banner title="התראת הפסד כספי קריטית" tone="critical" icon={AlertCircleIcon}>
+        <Banner title="Critical Margin Loss Detected" tone="critical" icon={AlertCircleIcon}>
           <Text variant="bodyLg" as="p">
-            זוהה הפסד ממשי של <b>${stats.totalLoss}</b> ב-20 ההזמנות האחרונות. המוצרים נמכרים מתחת לעלות הייצור!
+            We found a real loss of <b>${stats.totalLoss}</b> in your last 20 orders. Products are being sold below cost!
           </Text>
         </Banner>
       );
     }
-    // מצב 2: אין הפסד דולרי אבל יש כפל מבצעים - באנר כתום אזהרה
+    // Mode 2: No loss but stacking exists - Yellow Banner
     if (stats.hasAnyStacking) {
       return (
-        <Banner title="אזהרת כפל מבצעים (Stacking)" tone="warning" icon={InfoIcon}>
+        <Banner title="Discount Stacking Warning" tone="warning" icon={InfoIcon}>
           <Text variant="bodyLg" as="p">
-            לא זוהה הפסד ישיר, אך לקוחות משתמשים במספר הנחות בו-זמנית. זהו פתח לשחיקת רווחים עתידית.
+            No direct losses found, but customers are using multiple discounts. This may erode your margins.
           </Text>
         </Banner>
       );
     }
-    // מצב 3: הכל תקין - באנר ירוק
+    // Mode 3: Clean Audit - Green Banner
     return (
-      <Banner title="המערכת סרקה והכל נראה תקין" tone="success">
-        <Text variant="bodyLg" as="p">לא נמצאו חריגות ב-20 ההזמנות האחרונות.</Text>
+      <Banner title="System Audit Complete" tone="success">
+        <Text variant="bodyLg" as="p">No pricing anomalies or margin leaks found in your recent orders.</Text>
       </Banner>
     );
   };
 
   return (
-    <AppProvider i18n={heTranslations}>
-      <div dir="rtl">
-        <Page title="Profit Guard: דו''ח ביקורת רווחיות">
-          <Layout>
-            <Layout.Section>
-              <Box paddingBlockEnd="600">
-                {renderBanner()}
-              </Box>
-            </Layout.Section>
-            
-            <Layout.Section>
-              <Card padding="0">
-                <ResourceList
-                  resourceName={{ singular: 'הזמנה', plural: 'הזמנות' }}
-                  items={report}
-                  renderItem={(order) => {
-                    const adminUrl = `https://admin.shopify.com/store/${shopName}/orders/${order.legacyId}`;
-                    return (
-                      <ResourceList.Item id={order.id}>
-                        <Box padding="600">
-                          <BlockStack gap="500">
-                            <InlineStack align="space-between">
-                              <BlockStack gap="200">
-                                <Text variant="headingLg" as="h3">הזמנה {order.name}</Text>
-                                <InlineStack gap="300">
-                                  {order.stacking && <Badge tone="warning" size="large">⚠️ כפל מבצעים</Badge>}
-                                  {stats.mode !== "discount_only" && order.hasLoss && <Badge tone="critical" size="large">🛑 מכירה בהפסד</Badge>}
-                                </InlineStack>
-                              </BlockStack>
-                              <Button icon={ExternalIcon} url={adminUrl} target="_blank" size="large">צפה בהזמנה</Button>
-                            </InlineStack>
+    <AppProvider i18n={enTranslations}>
+      <Page title="Profit Guard: Live Audit">
+        <Layout>
+          <Layout.Section>
+            <Box paddingBlockEnd="600">
+              {renderBanner()}
+            </Box>
+          </Layout.Section>
+          
+          <Layout.Section>
+            <Card padding="0">
+              <ResourceList
+                resourceName={{ singular: 'order', plural: 'orders' }}
+                items={report}
+                renderItem={(order) => {
+                  const adminUrl = `https://admin.shopify.com/store/${shopName}/orders/${order.legacyId}`;
+                  return (
+                    <ResourceList.Item id={order.id}>
+                      <Box padding="600">
+                        <BlockStack gap="500">
+                          <InlineStack align="space-between">
+                            <BlockStack gap="200">
+                              <Text variant="headingLg" as="h3">Order {order.name}</Text>
+                              <InlineStack gap="300">
+                                {order.stacking && <Badge tone="warning" size="large">⚠️ STACKING DETECTED</Badge>}
+                                {stats.mode !== "discount_only" && order.hasLoss && <Badge tone="critical" size="large">🛑 MARGIN KILLER</Badge>}
+                              </InlineStack>
+                            </BlockStack>
+                            <Button icon={ExternalIcon} url={adminUrl} target="_blank" size="large">View Order</Button>
+                          </InlineStack>
 
-                            <Box padding="500" background="bg-surface-secondary" borderRadius="300">
-                              <BlockStack gap="300">
-                                <Text variant="headingMd" fontWeight="bold">ניתוח סיבות (Root Cause):</Text>
-                                <Text variant="bodyLg">• הנחות שהופעלו: {order.appliedDiscounts.join(' + ') || 'ללא'}</Text>
-                                
-                                {order.details.map((item, i) => (
-                                  <Box key={i}>
-                                    {item.isLoss ? (
-                                      <Text variant="bodyLg" tone="critical" fontWeight="bold">
-                                        • {item.title}: נמכר בהפסד! (${item.price} מול עלות ${item.cost})
-                                      </Text>
-                                    ) : (
-                                      <Text variant="bodyLg" tone="subdued">• {item.title}: הופעלה הנחה של {item.discountPct}%</Text>
-                                    )}
-                                  </Box>
-                                ))}
-                              </BlockStack>
-                            </Box>
-                          </BlockStack>
-                        </Box>
-                        <Divider />
-                      </ResourceList.Item>
-                    );
-                  }}
-                />
-              </Card>
-            </Layout.Section>
+                          <Box padding="500" background="bg-surface-secondary" borderRadius="300">
+                            <BlockStack gap="300">
+                              <Text variant="headingMd" fontWeight="bold">Root Cause Analysis:</Text>
+                              <Text variant="bodyLg">• Applied Discounts: {order.appliedDiscounts.join(' + ') || 'None'}</Text>
+                              
+                              {order.details.map((item, i) => (
+                                <Box key={i}>
+                                  {item.isLoss ? (
+                                    <Text variant="bodyLg" tone="critical" fontWeight="bold">
+                                      • {item.title}: Sold at loss! (${item.price} vs cost ${item.cost})
+                                    </Text>
+                                  ) : (
+                                    <Text variant="bodyLg" tone="subdued">• {item.title}: {item.discountPct}% Discount Applied</Text>
+                                  )}
+                                </Box>
+                              ))}
+                            </BlockStack>
+                          </Box>
+                        </BlockStack>
+                      </Box>
+                      <Divider />
+                    </ResourceList.Item>
+                  );
+                }}
+              />
+            </Card>
+          </Layout.Section>
 
-            <Layout.Section>
-              <Box paddingBlockStart="600" paddingBlockEnd="600">
-                <InlineStack align="center" gap="400">
-                  <Text variant="bodyLg" tone="subdued">כיסוי נתוני עלות: {stats.coverage}%</Text>
-                  {stats.mode !== "full" && (
-                    <Button variant="plain" url={`https://admin.shopify.com/store/${shopName}/products`} target="_blank" size="large">עדכן עלויות מוצר עכשיו</Button>
-                  )}
-                </InlineStack>
-              </Box>
-            </Layout.Section>
-          </Layout>
-        </Page>
-      </div>
+          <Layout.Section>
+            <Box paddingBlockStart="600" paddingBlockEnd="600">
+              <InlineStack align="center" gap="400">
+                <Text variant="bodyLg" tone="subdued">Cost Data Coverage: {stats.coverage}%</Text>
+                {stats.mode !== "full" && (
+                  <Button variant="plain" url={`https://admin.shopify.com/store/${shopName}/products`} target="_blank" size="large">Add Unit Costs Now</Button>
+                )}
+              </InlineStack>
+            </Box>
+          </Layout.Section>
+        </Layout>
+      </Page>
     </AppProvider>
   );
 }
