@@ -104,46 +104,49 @@ export default function Index() {
   const renderBanner = () => {
     if (stats.hasAnyLoss) {
       return (
-        <Banner title="CRITICAL MARGIN LOSS DETECTED" tone="critical" icon={AlertCircleIcon}>
-          <Box paddingBlockStart="300">
-            <Text variant="headingLg" as="p">
-              Found a real loss of <Text variant="headingXl" as="span" tone="critical">${stats.totalLoss}</Text> in your last 20 orders. 
-              Products are being sold below cost!
-            </Text>
-          </Box>
+        <Banner title="CRITICAL MARGIN LOSS" tone="critical" icon={AlertCircleIcon}>
+          <Text variant="headingMd" as="p">
+            Real loss of <Text variant="headingLg" as="span" tone="critical">${stats.totalLoss}</Text> detected. 
+            Items sold below cost!
+          </Text>
         </Banner>
       );
     }
     if (stats.hasAnyStacking) {
       return (
         <Banner title="DISCOUNT STACKING WARNING" tone="warning" icon={InfoIcon}>
-          <Box paddingBlockStart="300">
-            <Text variant="headingLg" as="p">
-              No direct losses found, but customers are using multiple discounts. This may erode your future margins.
-            </Text>
-          </Box>
+          <Text variant="bodyLg" as="p">
+            No direct losses found, but multiple discounts are active. This may erode future margins.
+          </Text>
         </Banner>
       );
     }
     return (
-      <Banner title="System Audit Complete" tone="success">
-        <Text variant="headingLg" as="p">No pricing anomalies or margin leaks found in your recent orders.</Text>
+      <Banner title="System Audit Healthy" tone="success">
+        <Text variant="bodyLg" as="p">No pricing anomalies or margin leaks found in your recent orders.</Text>
       </Banner>
     );
   };
 
   return (
     <AppProvider i18n={enTranslations}>
-      <Page 
-        title="Profit Guard: Live Audit"
-        subtitle={`Data Accuracy: ${stats.coverage}% Cost Coverage`}
-        compactTitle
-      >
+      <Page title="Profit Guard: Live Audit" compactTitle>
         <Layout>
+          {/* Enhanced Coverage Header */}
           <Layout.Section>
-            <Box paddingBlockEnd="600">
-              {renderBanner()}
+            <Box paddingBlockEnd="400">
+              <InlineStack align="space-between" blockAlign="center">
+                <Text variant="headingMd" tone="subdued">
+                  Audit Confidence: <Text variant="headingMd" as="span" tone="success">{stats.coverage}% Cost Coverage</Text>
+                </Text>
+                {stats.mode !== "full" && (
+                  <Button variant="plain" url={`https://admin.shopify.com/store/${shopName}/products`} target="_blank">
+                    Improve Accuracy
+                  </Button>
+                )}
+              </InlineStack>
             </Box>
+            {renderBanner()}
           </Layout.Section>
           
           <Layout.Section>
@@ -161,26 +164,26 @@ export default function Index() {
                             <BlockStack gap="200">
                               <Text variant="headingLg" as="h3">Order {order.name}</Text>
                               <InlineStack gap="300">
-                                {order.stacking && <Badge tone="warning" size="large">⚠️ STACKING DETECTED</Badge>}
-                                {stats.mode !== "discount_only" && order.hasLoss && <Badge tone="critical" size="large">🛑 MARGIN KILLER</Badge>}
+                                {order.stacking && <Badge tone="warning" size="large">⚠️ STACKING</Badge>}
+                                {stats.mode !== "discount_only" && order.hasLoss && <Badge tone="critical" size="large">🛑 LOSS</Badge>}
                               </InlineStack>
                             </BlockStack>
-                            <Button icon={ExternalIcon} url={adminUrl} target="_blank" size="large">View Order</Button>
+                            <Button icon={ExternalIcon} url={adminUrl} target="_blank" size="large">View</Button>
                           </InlineStack>
 
                           <Box padding="500" background="bg-surface-secondary" borderRadius="300">
                             <BlockStack gap="300">
-                              <Text variant="headingMd" fontWeight="bold">Root Cause Analysis:</Text>
-                              <Text variant="headingMd" tone="subdued">• Applied Discounts: {order.appliedDiscounts.join(' + ') || 'None'}</Text>
+                              <Text variant="headingMd" fontWeight="bold">Analysis:</Text>
+                              <Text variant="bodyLg" tone="subdued">• Discounts: {order.appliedDiscounts.join(' + ') || 'None'}</Text>
                               
                               {order.details.map((item, i) => (
                                 <Box key={i}>
                                   {item.isLoss ? (
-                                    <Text variant="headingMd" tone="critical" fontWeight="bold">
-                                      • {item.title}: Sold at loss! (${item.price} vs cost ${item.cost})
+                                    <Text variant="bodyLg" tone="critical" fontWeight="bold">
+                                      • {item.title}: Loss (${item.price} vs cost ${item.cost})
                                     </Text>
                                   ) : (
-                                    <Text variant="headingMd" tone="subdued">• {item.title}: {item.discountPct}% Discount Applied</Text>
+                                    <Text variant="bodyLg" tone="subdued">• {item.title}: {item.discountPct}% off</Text>
                                   )}
                                 </Box>
                               ))}
@@ -195,17 +198,6 @@ export default function Index() {
               />
             </Card>
           </Layout.Section>
-
-          {stats.mode !== "full" && (
-            <Layout.Section>
-              <Box paddingBlockStart="600" paddingBlockEnd="600">
-                <InlineStack align="center" gap="400">
-                  <Text variant="bodyLg" tone="subdued">Missing cost data for some products.</Text>
-                  <Button variant="plain" url={`https://admin.shopify.com/store/${shopName}/products`} target="_blank" size="large">Add Unit Costs Now</Button>
-                </InlineStack>
-              </Box>
-            </Layout.Section>
-          )}
         </Layout>
       </Page>
     </AppProvider>
