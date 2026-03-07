@@ -3,10 +3,10 @@ import { useLoaderData } from "react-router";
 import { authenticate } from "../shopify.server";
 import { 
   Page, Layout, Card, ResourceList, Text, Badge, BlockStack, Box,
-  Banner, AppProvider, InlineStack, Divider, ProgressBar, Button, Icon
+  Banner, AppProvider, InlineStack, Divider, Button, Icon
 } from "@shopify/polaris";
-import { AlertCircleIcon, InfoIcon, ExternalIcon } from '@shopify/polaris-icons';
-import enTranslations from "@shopify/polaris/locales/en.json";
+import { AlertCircleIcon, InfoIcon, ExternalIcon, alertIcon } from '@shopify/polaris-icons';
+import heTranslations from "@shopify/polaris/locales/he.json";
 import "@shopify/polaris/build/esm/styles.css";
 
 export const loader = async ({ request }) => {
@@ -64,7 +64,6 @@ export const loader = async ({ request }) => {
       const price = parseFloat(node.discountedUnitPriceSet.shopMoney.amount);
       const originalPrice = parseFloat(node.variant?.price || price);
       const costField = node.variant?.inventoryItem?.unitCost;
-      
       const discountPct = originalPrice > 0 ? ((1 - price / originalPrice) * 100).toFixed(0) : 0;
 
       if (costField) {
@@ -89,105 +88,122 @@ export const loader = async ({ request }) => {
   });
 
   const coverage = totalItems > 0 ? (itemsWithCost / totalItems) : 0;
-  let mode = "discount_only"; // Default < 30%
+  let mode = "discount_only";
   if (coverage >= 0.9) mode = "full";
   else if (coverage >= 0.3) mode = "hybrid";
 
-  return { report, shopName, stats: { coverage: (coverage * 100).toFixed(0), totalLoss: totalLoss.toFixed(2), mode } };
+  const hasAnyLoss = totalLoss > 0;
+  const hasAnyStacking = report.some(o => o.stacking);
+
+  return { report, shopName, stats: { coverage: (coverage * 100).toFixed(0), totalLoss: totalLoss.toFixed(2), mode, hasAnyLoss, hasAnyStacking } };
 };
 
 export default function Index() {
   const { report, shopName, stats } = useLoaderData();
 
   const renderBanner = () => {
-    switch (stats.mode) {
-      case "full":
-        return (
-          <Banner title="CRITICAL MARGIN AUDIT" tone="critical" icon={AlertCircleIcon}>
-            <Text as="p">Full data coverage ({stats.coverage}%). You lost <b>${stats.totalLoss}</b> on these orders due to pricing/stacking errors.</Text>
-          </Banner>
-        );
-      case "hybrid":
-        return (
-          <Banner title="PARTIAL PROFIT AUDIT" tone="warning" icon={InfoIcon}>
-            <Text as="p">Analyzing {stats.coverage}% of items. We identified <b>${stats.totalLoss}</b> in known losses. Add more unit costs for a 100% accurate report.</Text>
-          </Banner>
-        );
-      default:
-        return (
-          <Banner title="DISCOUNT STACKING REPORT" tone="info" icon={InfoIcon}>
-            <Text as="p">Cost data missing for {100 - stats.coverage}% of items. We are auditing <b>Stacking Signatures</b> and combined discount impact.</Text>
-          </Banner>
-        );
+    // מצב 1: יש הפסד כספי ממשי - באנר אדום קריטי
+    if (stats.hasAnyLoss) {
+      return (
+        <Banner title="התראת הפסד כספי קריטית" tone="critical" icon={AlertCircleIcon}>
+          <Text variant="bodyLg" as="p">
+            זוהה הפסד ממשי של <b>${stats.totalLoss}</b> ב-20 ההזמנות האחרונות. המוצרים נמכרים מתחת לעלות הייצור!
+          </Text>
+        </Banner>
+      );
     }
+    // מצב 2: אין הפסד דולרי אבל יש כפל מבצעים - באנר כתום אזהרה
+    if (stats.hasAnyStacking) {
+      return (
+        <Banner title="אזהרת כפל מבצעים (Stacking)" tone="warning" icon={InfoIcon}>
+          <Text variant="bodyLg" as="p">
+            לא זוהה הפסד ישיר, אך לקוחות משתמשים במספר הנחות בו-זמנית. זהו פתח לשחיקת רווחים עתידית.
+          </Text>
+        </Banner>
+      );
+    }
+    // מצב 3: הכל תקין - באנר ירוק
+    return (
+      <Banner title="המערכת סרקה והכל נראה תקין" tone="success">
+        <Text variant="bodyLg" as="p">לא נמצאו חריגות ב-20 ההזמנות האחרונות.</Text>
+      </Banner>
+    );
   };
 
   return (
-    <AppProvider i18n={enTranslations}>
-      <Page title="Profit Guard: Live Audit">
-        <Layout>
-          <Layout.Section>{renderBanner()}</Layout.Section>
-          
-          <Layout.Section>
-            <Card padding="0">
-              <ResourceList
-                resourceName={{ singular: 'order', plural: 'orders' }}
-                items={report}
-                renderItem={(order) => {
-                  const adminUrl = `https://admin.shopify.com/store/${shopName}/orders/${order.legacyId}`;
-                  return (
-                    <ResourceList.Item id={order.id}>
-                      <Box padding="500">
-                        <BlockStack gap="400">
-                          <InlineStack align="space-between">
-                            <BlockStack gap="100">
-                              <Text variant="headingMd" as="h3">Order {order.name}</Text>
-                              <InlineStack gap="200">
-                                {order.stacking && <Badge tone="warning">⚠️ STACKING ATTACK</Badge>}
-                                {stats.mode !== "discount_only" && order.hasLoss && <Badge tone="critical">🛑 MARGIN KILLER</Badge>}
-                              </InlineStack>
-                            </BlockStack>
-                            <Button icon={ExternalIcon} url={adminUrl} target="_blank">View Order</Button>
-                          </InlineStack>
-
-                          <Box padding="300" background="bg-surface-secondary" borderRadius="200">
-                            <BlockStack gap="100">
-                              <Text variant="bodySm" fontWeight="bold">Root Cause Analysis:</Text>
-                              <Text variant="bodySm">• Discounts: {order.appliedDiscounts.join(' + ') || 'None'}</Text>
-                              
-                              {order.details.map((item, i) => (
-                                <Box key={i}>
-                                  {item.isLoss ? (
-                                    <Text variant="bodySm" tone="critical">• {item.title}: Sold at loss (${item.price} vs cost ${item.cost})</Text>
-                                  ) : (
-                                    <Text variant="bodySm" tone="subdued">• {item.title}: {item.discountPct}% Discount Applied</Text>
-                                  )}
-                                </Box>
-                              ))}
-                            </BlockStack>
-                          </Box>
-                        </BlockStack>
-                      </Box>
-                      <Divider />
-                    </ResourceList.Item>
-                  );
-                }}
-              />
-            </Card>
-          </Layout.Section>
-
-          {stats.mode !== "full" && (
+    <AppProvider i18n={heTranslations}>
+      <div dir="rtl">
+        <Page title="Profit Guard: דו''ח ביקורת רווחיות">
+          <Layout>
             <Layout.Section>
-              <Box paddingBlockStart="400" paddingBlockEnd="400">
-                <InlineStack align="center">
-                  <Text variant="bodyMd" tone="subdued">Missing cost data for some products.</Text>
-                  <Button variant="plain" url={`https://admin.shopify.com/store/${shopName}/products`} target="_blank">Add Unit Costs now</Button>
+              <Box paddingBlockEnd="600">
+                {renderBanner()}
+              </Box>
+            </Layout.Section>
+            
+            <Layout.Section>
+              <Card padding="0">
+                <ResourceList
+                  resourceName={{ singular: 'הזמנה', plural: 'הזמנות' }}
+                  items={report}
+                  renderItem={(order) => {
+                    const adminUrl = `https://admin.shopify.com/store/${shopName}/orders/${order.legacyId}`;
+                    return (
+                      <ResourceList.Item id={order.id}>
+                        <Box padding="600">
+                          <BlockStack gap="500">
+                            <InlineStack align="space-between">
+                              <BlockStack gap="200">
+                                <Text variant="headingLg" as="h3">הזמנה {order.name}</Text>
+                                <InlineStack gap="300">
+                                  {order.stacking && <Badge tone="warning" size="large">⚠️ כפל מבצעים</Badge>}
+                                  {stats.mode !== "discount_only" && order.hasLoss && <Badge tone="critical" size="large">🛑 מכירה בהפסד</Badge>}
+                                </InlineStack>
+                              </BlockStack>
+                              <Button icon={ExternalIcon} url={adminUrl} target="_blank" size="large">צפה בהזמנה</Button>
+                            </InlineStack>
+
+                            <Box padding="500" background="bg-surface-secondary" borderRadius="300">
+                              <BlockStack gap="300">
+                                <Text variant="headingMd" fontWeight="bold">ניתוח סיבות (Root Cause):</Text>
+                                <Text variant="bodyLg">• הנחות שהופעלו: {order.appliedDiscounts.join(' + ') || 'ללא'}</Text>
+                                
+                                {order.details.map((item, i) => (
+                                  <Box key={i}>
+                                    {item.isLoss ? (
+                                      <Text variant="bodyLg" tone="critical" fontWeight="bold">
+                                        • {item.title}: נמכר בהפסד! (${item.price} מול עלות ${item.cost})
+                                      </Text>
+                                    ) : (
+                                      <Text variant="bodyLg" tone="subdued">• {item.title}: הופעלה הנחה של {item.discountPct}%</Text>
+                                    )}
+                                  </Box>
+                                ))}
+                              </BlockStack>
+                            </Box>
+                          </BlockStack>
+                        </Box>
+                        <Divider />
+                      </ResourceList.Item>
+                    );
+                  }}
+                />
+              </Card>
+            </Layout.Section>
+
+            <Layout.Section>
+              <Box paddingBlockStart="600" paddingBlockEnd="600">
+                <InlineStack align="center" gap="400">
+                  <Text variant="bodyLg" tone="subdued">כיסוי נתוני עלות: {stats.coverage}%</Text>
+                  {stats.mode !== "full" && (
+                    <Button variant="plain" url={`https://admin.shopify.com/store/${shopName}/products`} target="_blank" size="large">עדכן עלויות מוצר עכשיו</Button>
+                  )}
                 </InlineStack>
               </Box>
             </Layout.Section>
-          )}
-        </Layout>
-      </Page>
+          </Layout>
+        </Page>
+      </div>
     </AppProvider>
   );
 }
