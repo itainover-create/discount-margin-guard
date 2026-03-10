@@ -117,7 +117,6 @@ export default function Index() {
   const { report, shopName, stats } = useLoaderData();
 
   const renderBanner = () => {
-    // 1. CRITICAL: Real Financial Damage
     if (stats.hasAnyLoss) {
       return (
         <Banner tone="critical" icon={AlertCircleIcon}>
@@ -131,7 +130,6 @@ export default function Index() {
       );
     }
     
-    // 2. WARNING: Operational Risk (Stacking + Blind Spot nudge)
     if (stats.hasAnyStacking) {
       const nudge = stats.mode === "discount_only" ? " You are currently flying blind without cost data." : "";
       return (
@@ -147,7 +145,6 @@ export default function Index() {
       );
     }
 
-    // 3. PROACTIVE (Mode 3): No issues but 0% Visibility
     if (stats.mode === "discount_only") {
       return (
         <Banner tone="info">
@@ -161,7 +158,6 @@ export default function Index() {
       );
     }
 
-    // 4. HEALTHY: Everything verified
     return (
       <Banner tone="success">
         <BlockStack gap="300">
@@ -176,9 +172,8 @@ export default function Index() {
     <AppProvider i18n={enTranslations}>
       <Page narrowWidth>
         <Layout>
-          {/* SYMMETRIC HEADER - HIGH IMPACT */}
           <Layout.Section>
-            <Box paddingBlockStart="600" paddingBlockEnd="800">
+            <Box paddingBlockStart="600" paddingBlockEnd="400">
               <InlineStack align="space-between" blockAlign="center">
                 <Text variant="heading2xl" as="h1" fontWeight="bold">
                   Profit Guard: Live Audit
@@ -188,6 +183,14 @@ export default function Index() {
                 </Text>
               </InlineStack>
             </Box>
+            
+            {/* MARGIN DISCLAIMER - CLEAN & DIRECT */}
+            <Box paddingBlockEnd="600">
+              <Text variant="bodySm" tone="subdued">
+                Based on product cost data only. Does not include shipping, fees, or taxes.
+              </Text>
+            </Box>
+
             {renderBanner()}
           </Layout.Section>
           
@@ -213,7 +216,6 @@ export default function Index() {
                             <Button icon={ExternalIcon} url={adminUrl} target="_blank" size="large">View</Button>
                           </InlineStack>
 
-                          {/* ANALYSIS BOX - MAXIMUM READABILITY */}
                           <Box padding="600" background="bg-surface-secondary" borderRadius="300">
                             <BlockStack gap="400">
                               <Text variant="headingLg" fontWeight="bold">Audit Analysis:</Text>
