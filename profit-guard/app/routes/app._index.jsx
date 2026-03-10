@@ -172,29 +172,46 @@ export default function Index() {
         <Layout>
           {!data && !isLoading && (
             <Layout.Section>
-              {/* Hero Section מוגדל עם צבעים חזקים */}
-              <Box paddingBlockStart="3200" paddingBlockEnd="3200">
-                <BlockStack gap="1000" inlineAlign="center">
-                  <Box maxWidth="700px">
-                    <BlockStack gap="600" inlineAlign="center">
-                      <Text variant="heading4xl" as="h1" textAlign="center" fontWeight="bold">
+              {/* הגדלה אגרסיבית של הפונטים בעזרת סטייל מותאם */}
+              <Box paddingBlockStart="4000" paddingBlockEnd="4000">
+                <BlockStack gap="1200" inlineAlign="center">
+                  <Box maxWidth="800px">
+                    <BlockStack gap="800" inlineAlign="center">
+                      {/* כותרת ענקית - 56px */}
+                      <div style={{ 
+                        fontSize: '56px', 
+                        fontWeight: '800', 
+                        textAlign: 'center', 
+                        lineHeight: '1.1',
+                        letterSpacing: '-1px',
+                        color: '#1a1a1a'
+                      }}>
                         Is your store bleeding money?
-                      </Text>
-                      {/* הוסר tone="subdued" כדי שהטקסט יהיה שחור מלא */}
-                      <Text variant="headingXl" as="p" textAlign="center" fontWeight="medium">
+                      </div>
+                      
+                      {/* תיאור שחור בולט - 24px */}
+                      <div style={{ 
+                        fontSize: '24px', 
+                        fontWeight: '500', 
+                        textAlign: 'center', 
+                        color: 'black',
+                        maxWidth: '650px',
+                        lineHeight: '1.4'
+                      }}>
                         Run a real-time audit on your last 20 orders to detect hidden discount stacking and margin leaks.
-                      </Text>
+                      </div>
                     </BlockStack>
                   </Box>
+                  
                   <Button 
                     variant="primary" 
                     size="large" 
                     icon={PlayIcon} 
                     onClick={() => fetcher.submit({}, { method: "POST" })}
                   >
-                    <Box paddingInlineStart="400" paddingInlineEnd="400">
-                        <Text variant="headingLg" as="span" fontWeight="bold">Run Profit Audit Now</Text>
-                    </Box>
+                    <div style={{ padding: '8px 24px' }}>
+                        <Text variant="headingXl" as="span" fontWeight="bold">Run Profit Audit Now</Text>
+                    </div>
                   </Button>
                 </BlockStack>
               </Box>
@@ -203,7 +220,7 @@ export default function Index() {
 
           {isLoading && (
             <Layout.Section>
-              <Box padding="3200">
+              <Box padding="4000">
                 <BlockStack inlineAlign="center" gap="600">
                   <Spinner size="large" />
                   <Text variant="heading2xl" as="p" fontWeight="bold">Analyzing recent orders and calculating margins...</Text>
