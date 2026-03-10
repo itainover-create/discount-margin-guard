@@ -1,15 +1,21 @@
-// app/routes/app._index.jsx
-import { useLoaderData } from "react-router"; 
+import { useFetcher } from "@remix-run/react";
 import { authenticate } from "../shopify.server";
 import { 
   Page, Layout, Card, ResourceList, Text, Badge, BlockStack, Box,
-  Banner, AppProvider, InlineStack, Divider, Button
+  Banner, AppProvider, InlineStack, Divider, Button, EmptyState, Spinner
 } from "@shopify/polaris";
-import { AlertCircleIcon, InfoIcon, ExternalIcon } from '@shopify/polaris-icons';
+import { AlertCircleIcon, InfoIcon, ExternalIcon, PlayIcon } from '@shopify/polaris-icons';
 import enTranslations from "@shopify/polaris/locales/en.json";
 import "@shopify/polaris/build/esm/styles.css";
 
+// ה-Loader כעת רק מחזיר את שם החנות בבסיסו
 export const loader = async ({ request }) => {
+  const { session } = await authenticate.admin(request);
+  return { shopName: session.shop.replace(".myshopify.com", "") };
+};
+
+// הלוגיקה עברה ל-Action שמופעל בלחיצה על כפתור
+export const action = async ({ request }) => {
   const { admin, session } = await authenticate.admin(request);
   const shopName = session.shop.replace(".myshopify.com", "");
 
@@ -67,16 +73,11 @@ export const loader = async ({ request }) => {
     let orderHasLoss = false;
     const items = order.lineItems.edges.map(({ node }) => {
       totalItems++;
-      
-      // 1. מחיר יחידה אחרי הנחות שורה (לפני הנחות עגלה)
       const discountedPrice = parseFloat(node.discountedUnitPriceSet.shopMoney.amount);
       const originalPrice = parseFloat(node.variant?.price || discountedPrice);
-      
-      // 2. חישוב הנחות עגלה שהוקצו לשורה הזו (Allocations)
       const totalAllocated = node.discountAllocations.reduce((acc, alloc) => 
         acc + parseFloat(alloc.allocatedAmountSet.shopMoney.amount), 0);
       
-      // 3. המחיר הסופי האמיתי (Net)
       const netPrice = discountedPrice - (totalAllocated / node.quantity);
       const discountPct = originalPrice > 0 ? (((originalPrice - netPrice) / originalPrice) * 100).toFixed(0) : 0;
 
@@ -127,9 +128,11 @@ export const loader = async ({ request }) => {
 };
 
 export default function Index() {
-  const { report, shopName, stats } = useLoaderData();
+  const fetcher = useFetcher();
+  const isLoading = fetcher.state === "submitting";
+  const data = fetcher.data;
 
-  const renderBanner = () => {
+  const renderBanner = (stats) => {
     if (stats.hasAnyLoss) {
       return (
         <Banner tone="critical" icon={AlertCircleIcon}>
@@ -158,24 +161,13 @@ export default function Index() {
       );
     }
 
-    if (stats.mode === "discount_only") {
-      return (
-        <Banner tone="info">
-          <BlockStack gap="400">
-            <Text variant="heading2xl" as="h2">Audit Complete: No Stacking Detected</Text>
-            <Text variant="headingLg" as="p">
-              Your discount rules are secure. <Text fontWeight="bold" as="span">Margin Visibility is 0%</Text>—add costs now to ensure these promotions aren't eroding your profits.
-            </Text>
-          </BlockStack>
-        </Banner>
-      );
-    }
-
     return (
-      <Banner tone="success">
-        <BlockStack gap="300">
-          <Text variant="heading2xl" as="h2">System Audit Healthy</Text>
-          <Text variant="headingLg" as="p">No pricing anomalies or margin leaks found in your recent orders.</Text>
+      <Banner tone="info">
+        <BlockStack gap="400">
+          <Text variant="heading2xl" as="h2">Audit Complete: No Stacking Detected</Text>
+          <Text variant="headingLg" as="p">
+            Your discount rules are secure. <Text fontWeight="bold" as="span">Margin Visibility is {stats.coverage}%</Text>.
+          </Text>
         </BlockStack>
       </Banner>
     );
@@ -185,71 +177,90 @@ export default function Index() {
     <AppProvider i18n={enTranslations}>
       <Page narrowWidth>
         <Layout>
-          <Layout.Section>
-            <Box paddingBlockStart="600" paddingBlockEnd="400">
-              <InlineStack align="space-between" blockAlign="center">
-                <Text variant="heading2xl" as="h1" fontWeight="bold">
-                  Profit Guard: Live Audit
-                </Text>
-                <Text variant="heading2xl" as="h1" fontWeight="bold">
-                  Margin Visibility: {stats.coverage}%
-                </Text>
-              </InlineStack>
-            </Box>
-            
-            <Box paddingBlockEnd="600">
-              <Text variant="bodySm" tone="subdued">
-                Based on product cost data only. Does not include shipping, fees, or taxes.
-              </Text>
-            </Box>
+          {!data && !isLoading && (
+            <Layout.Section>
+              <EmptyState
+                heading="Is your store bleeding money?"
+                action={{
+                  content: 'Run Profit Audit',
+                  onAction: () => fetcher.submit({}, { method: "POST" }),
+                  icon: PlayIcon
+                }}
+                image="https://cdn.shopify.com/s/files/1/0262/4071/2726/files/emptystate-files.png"
+              >
+                <p>Run a real-time audit on your last 20 orders to detect discount stacking and margin leaks.</p>
+              </EmptyState>
+            </Layout.Section>
+          )}
 
-            {renderBanner()}
-          </Layout.Section>
-          
-          <Layout.Section>
-            <Card padding="0">
-              <ResourceList
-                resourceName={{ singular: 'order', plural: 'orders' }}
-                items={report}
-                renderItem={(order) => {
-                  const adminUrl = `https://admin.shopify.com/store/${shopName}/orders/${order.legacyId}`;
-                  return (
-                    <ResourceList.Item id={order.id}>
-                      <Box padding="600">
-                        <BlockStack gap="500">
-                          <InlineStack align="space-between">
-                            <BlockStack gap="200">
-                              <Text variant="headingLg" as="h3">Order {order.name}</Text>
-                              <InlineStack gap="300">
-                                {order.stacking && <Badge tone="warning" size="large">⚠️ STACKING</Badge>}
-                                {order.hasLoss && <Badge tone="critical" size="large">🛑 BLEEDING</Badge>}
-                              </InlineStack>
-                            </BlockStack>
-                            <Button icon={ExternalIcon} url={adminUrl} target="_blank" size="large">View</Button>
-                          </InlineStack>
+          {isLoading && (
+            <Layout.Section>
+              <Box padding="1000">
+                <BlockStack inlineAlign="center" gap="500">
+                  <Spinner size="large" />
+                  <Text variant="headingLg" as="p">Analyzing recent orders and calculating margins...</Text>
+                </BlockStack>
+              </Box>
+            </Layout.Section>
+          )}
 
-                          <Box padding="600" background="bg-surface-secondary" borderRadius="300">
-                            <BlockStack gap="400">
-                              <Text variant="headingLg" fontWeight="bold">Audit Analysis:</Text>
-                              <Text variant="headingLg" fontWeight="bold">• Applied: {order.appliedDiscounts.join(' + ') || 'No Discounts'}</Text>
-                              {order.details.map((item, i) => (
-                                <Box key={i}>
-                                  <Text variant="headingLg" fontWeight="bold" tone={item.isLoss ? "critical" : "default"}>
+          {data && !isLoading && (
+            <>
+              <Layout.Section>
+                <Box paddingBlockStart="600" paddingBlockEnd="400">
+                  <InlineStack align="space-between" blockAlign="center">
+                    <Text variant="heading2xl" as="h1" fontWeight="bold">Profit Guard: Live Audit</Text>
+                    <Button variant="primary" onClick={() => fetcher.submit({}, { method: "POST" })} loading={isLoading}>Run Again</Button>
+                  </InlineStack>
+                </Box>
+                <Box paddingBlockEnd="600">
+                  <Text variant="bodySm" tone="subdued">
+                    Based on product cost data only. Does not include shipping, fees, or taxes.
+                  </Text>
+                </Box>
+                {renderBanner(data.stats)}
+              </Layout.Section>
+              
+              <Layout.Section>
+                <Card padding="0">
+                  <ResourceList
+                    resourceName={{ singular: 'order', plural: 'orders' }}
+                    items={data.report}
+                    renderItem={(order) => (
+                      <ResourceList.Item id={order.id}>
+                        <Box padding="600">
+                          <BlockStack gap="500">
+                            <InlineStack align="space-between">
+                              <BlockStack gap="200">
+                                <Text variant="headingLg" as="h3">Order {order.name}</Text>
+                                <InlineStack gap="300">
+                                  {order.stacking && <Badge tone="warning">⚠️ STACKING</Badge>}
+                                  {order.hasLoss && <Badge tone="critical">🛑 BLEEDING</Badge>}
+                                </InlineStack>
+                              </BlockStack>
+                              <Button icon={ExternalIcon} url={`https://admin.shopify.com/store/${data.shopName}/orders/${order.legacyId}`} target="_blank">View</Button>
+                            </InlineStack>
+                            <Box padding="400" background="bg-surface-secondary" borderRadius="200">
+                              <BlockStack gap="200">
+                                <Text fontWeight="bold">Audit Analysis:</Text>
+                                <Text>• Applied: {order.appliedDiscounts.join(' + ') || 'No Discounts'}</Text>
+                                {order.details.map((item, i) => (
+                                  <Text key={i} tone={item.isLoss ? "critical" : "default"}>
                                     • {item.title}: {item.isLoss ? `Bleeding ($${item.price} vs cost $${item.cost})` : `${item.discountPct}% off`}
                                   </Text>
-                                </Box>
-                              ))}
-                            </BlockStack>
-                          </Box>
-                        </BlockStack>
-                      </Box>
-                      <Divider />
-                    </ResourceList.Item>
-                  );
-                }}
-              />
-            </Card>
-          </Layout.Section>
+                                ))}
+                              </BlockStack>
+                            </Box>
+                          </BlockStack>
+                        </Box>
+                        <Divider />
+                      </ResourceList.Item>
+                    )}
+                  />
+                </Card>
+              </Layout.Section>
+            </>
+          )}
         </Layout>
       </Page>
     </AppProvider>
