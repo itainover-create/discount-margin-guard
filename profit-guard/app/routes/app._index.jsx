@@ -34,7 +34,11 @@ export const loader = async ({ request }) => {
               edges {
                 node {
                   title
+                  quantity
                   discountedUnitPriceSet { shopMoney { amount } }
+                  discountAllocations {
+                    allocatedAmountSet { shopMoney { amount } }
+                  }
                   variant { 
                     price
                     inventoryItem { unitCost { amount } } 
@@ -63,22 +67,31 @@ export const loader = async ({ request }) => {
     let orderHasLoss = false;
     const items = order.lineItems.edges.map(({ node }) => {
       totalItems++;
-      const price = parseFloat(node.discountedUnitPriceSet.shopMoney.amount);
-      const originalPrice = parseFloat(node.variant?.price || price);
-      const costField = node.variant?.inventoryItem?.unitCost;
-      const discountPct = originalPrice > 0 ? ((1 - price / originalPrice) * 100).toFixed(0) : 0;
+      
+      // 1. מחיר יחידה אחרי הנחות שורה (לפני הנחות עגלה)
+      const discountedPrice = parseFloat(node.discountedUnitPriceSet.shopMoney.amount);
+      const originalPrice = parseFloat(node.variant?.price || discountedPrice);
+      
+      // 2. חישוב הנחות עגלה שהוקצו לשורה הזו (Allocations)
+      const totalAllocated = node.discountAllocations.reduce((acc, alloc) => 
+        acc + parseFloat(alloc.allocatedAmountSet.shopMoney.amount), 0);
+      
+      // 3. המחיר הסופי האמיתי (Net)
+      const netPrice = discountedPrice - (totalAllocated / node.quantity);
+      const discountPct = originalPrice > 0 ? (((originalPrice - netPrice) / originalPrice) * 100).toFixed(0) : 0;
 
+      const costField = node.variant?.inventoryItem?.unitCost;
       if (costField) {
         itemsWithCost++;
         const cost = parseFloat(costField.amount);
-        const profit = price - cost;
+        const profit = netPrice - cost;
         if (profit < 0) {
-          totalLoss += Math.abs(profit);
+          totalLoss += Math.abs(profit) * node.quantity;
           orderHasLoss = true;
         }
-        return { title: node.title, price, cost, hasCost: true, isLoss: profit < 0, discountPct };
+        return { title: node.title, price: netPrice.toFixed(2), cost, hasCost: true, isLoss: profit < 0, discountPct };
       }
-      return { title: node.title, price, cost: null, hasCost: false, isLoss: false, discountPct };
+      return { title: node.title, price: netPrice.toFixed(2), cost: null, hasCost: false, isLoss: false, discountPct };
     });
 
     if (orderHasLoss) bleedingCount++;
@@ -184,7 +197,6 @@ export default function Index() {
               </InlineStack>
             </Box>
             
-            {/* MARGIN DISCLAIMER - CLEAN & DIRECT */}
             <Box paddingBlockEnd="600">
               <Text variant="bodySm" tone="subdued">
                 Based on product cost data only. Does not include shipping, fees, or taxes.
