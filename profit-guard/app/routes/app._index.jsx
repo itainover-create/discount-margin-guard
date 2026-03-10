@@ -170,17 +170,18 @@ export default function Index() {
     <AppProvider i18n={enTranslations}>
       <Page narrowWidth>
         <Layout>
-          {/* ה-Empty State החדש והבולט */}
           {!data && !isLoading && (
             <Layout.Section>
-              <Box paddingBlockStart="2000" paddingBlockEnd="2000">
-                <BlockStack gap="800" inlineAlign="center">
-                  <Box maxWidth="600px">
-                    <BlockStack gap="500" inlineAlign="center">
+              {/* Hero Section מוגדל עם צבעים חזקים */}
+              <Box paddingBlockStart="3200" paddingBlockEnd="3200">
+                <BlockStack gap="1000" inlineAlign="center">
+                  <Box maxWidth="700px">
+                    <BlockStack gap="600" inlineAlign="center">
                       <Text variant="heading4xl" as="h1" textAlign="center" fontWeight="bold">
                         Is your store bleeding money?
                       </Text>
-                      <Text variant="headingLg" as="p" textAlign="center" tone="subdued">
+                      {/* הוסר tone="subdued" כדי שהטקסט יהיה שחור מלא */}
+                      <Text variant="headingXl" as="p" textAlign="center" fontWeight="medium">
                         Run a real-time audit on your last 20 orders to detect hidden discount stacking and margin leaks.
                       </Text>
                     </BlockStack>
@@ -191,7 +192,9 @@ export default function Index() {
                     icon={PlayIcon} 
                     onClick={() => fetcher.submit({}, { method: "POST" })}
                   >
-                    <Text variant="headingLg" as="span" fontWeight="bold">Run Profit Audit Now</Text>
+                    <Box paddingInlineStart="400" paddingInlineEnd="400">
+                        <Text variant="headingLg" as="span" fontWeight="bold">Run Profit Audit Now</Text>
+                    </Box>
                   </Button>
                 </BlockStack>
               </Box>
@@ -200,10 +203,10 @@ export default function Index() {
 
           {isLoading && (
             <Layout.Section>
-              <Box padding="2000">
+              <Box padding="3200">
                 <BlockStack inlineAlign="center" gap="600">
                   <Spinner size="large" />
-                  <Text variant="heading2xl" as="p">Analyzing recent orders and calculating margins...</Text>
+                  <Text variant="heading2xl" as="p" fontWeight="bold">Analyzing recent orders and calculating margins...</Text>
                 </BlockStack>
               </Box>
             </Layout.Section>
