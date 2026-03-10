@@ -1,4 +1,4 @@
-import { useFetcher } from "@remix-run/react";
+import { useFetcher } from "react-router"; // התיקון כאן: שינוי מ-remix ל-react-router
 import { authenticate } from "../shopify.server";
 import { 
   Page, Layout, Card, ResourceList, Text, Badge, BlockStack, Box,
@@ -8,13 +8,11 @@ import { AlertCircleIcon, InfoIcon, ExternalIcon, PlayIcon } from '@shopify/pola
 import enTranslations from "@shopify/polaris/locales/en.json";
 import "@shopify/polaris/build/esm/styles.css";
 
-// ה-Loader כעת רק מחזיר את שם החנות בבסיסו
 export const loader = async ({ request }) => {
   const { session } = await authenticate.admin(request);
   return { shopName: session.shop.replace(".myshopify.com", "") };
 };
 
-// הלוגיקה עברה ל-Action שמופעל בלחיצה על כפתור
 export const action = async ({ request }) => {
   const { admin, session } = await authenticate.admin(request);
   const shopName = session.shop.replace(".myshopify.com", "");
@@ -109,9 +107,6 @@ export const action = async ({ request }) => {
   });
 
   const coverage = totalItems > 0 ? (itemsWithCost / totalItems) : 0;
-  let mode = "full";
-  if (coverage < 0.3) mode = "discount_only";
-  else if (coverage < 0.9) mode = "hybrid";
 
   return { 
     report, 
@@ -120,7 +115,6 @@ export const action = async ({ request }) => {
       coverage: (coverage * 100).toFixed(0), 
       totalLoss: totalLoss.toFixed(2), 
       bleedingCount,
-      mode, 
       hasAnyLoss: totalLoss > 0, 
       hasAnyStacking: report.some(o => o.stacking) 
     } 
@@ -147,14 +141,13 @@ export default function Index() {
     }
     
     if (stats.hasAnyStacking) {
-      const nudge = stats.mode === "discount_only" ? " You are currently flying blind without cost data." : "";
       return (
         <Banner tone="warning" icon={InfoIcon}>
           <BlockStack gap="300">
             <Text variant="heading2xl" as="h2">DISCOUNT STACKING WARNING</Text>
             <Text variant="headingLg" as="p">
-              Multiple discounts are active. This may erode your margins.{' '}
-              <Text variant="headingLg" as="span" fontWeight="bold">{nudge}</Text>
+              Multiple discounts are active. This may erode your margins. 
+              <Text variant="headingLg" as="span" fontWeight="bold"> You are currently flying blind without cost data.</Text>
             </Text>
           </BlockStack>
         </Banner>
