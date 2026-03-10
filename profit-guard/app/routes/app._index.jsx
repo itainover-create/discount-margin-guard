@@ -1,8 +1,8 @@
-import { useFetcher } from "react-router"; // התיקון כאן: שינוי מ-remix ל-react-router
+import { useFetcher } from "react-router";
 import { authenticate } from "../shopify.server";
 import { 
   Page, Layout, Card, ResourceList, Text, Badge, BlockStack, Box,
-  Banner, AppProvider, InlineStack, Divider, Button, EmptyState, Spinner
+  Banner, AppProvider, InlineStack, Divider, Button, Spinner
 } from "@shopify/polaris";
 import { AlertCircleIcon, InfoIcon, ExternalIcon, PlayIcon } from '@shopify/polaris-icons';
 import enTranslations from "@shopify/polaris/locales/en.json";
@@ -170,28 +170,40 @@ export default function Index() {
     <AppProvider i18n={enTranslations}>
       <Page narrowWidth>
         <Layout>
+          {/* ה-Empty State החדש והבולט */}
           {!data && !isLoading && (
             <Layout.Section>
-              <EmptyState
-                heading="Is your store bleeding money?"
-                action={{
-                  content: 'Run Profit Audit',
-                  onAction: () => fetcher.submit({}, { method: "POST" }),
-                  icon: PlayIcon
-                }}
-                image="https://cdn.shopify.com/s/files/1/0262/4071/2726/files/emptystate-files.png"
-              >
-                <p>Run a real-time audit on your last 20 orders to detect discount stacking and margin leaks.</p>
-              </EmptyState>
+              <Box paddingBlockStart="2000" paddingBlockEnd="2000">
+                <BlockStack gap="800" inlineAlign="center">
+                  <Box maxWidth="600px">
+                    <BlockStack gap="500" inlineAlign="center">
+                      <Text variant="heading4xl" as="h1" textAlign="center" fontWeight="bold">
+                        Is your store bleeding money?
+                      </Text>
+                      <Text variant="headingLg" as="p" textAlign="center" tone="subdued">
+                        Run a real-time audit on your last 20 orders to detect hidden discount stacking and margin leaks.
+                      </Text>
+                    </BlockStack>
+                  </Box>
+                  <Button 
+                    variant="primary" 
+                    size="large" 
+                    icon={PlayIcon} 
+                    onClick={() => fetcher.submit({}, { method: "POST" })}
+                  >
+                    <Text variant="headingLg" as="span" fontWeight="bold">Run Profit Audit Now</Text>
+                  </Button>
+                </BlockStack>
+              </Box>
             </Layout.Section>
           )}
 
           {isLoading && (
             <Layout.Section>
-              <Box padding="1000">
-                <BlockStack inlineAlign="center" gap="500">
+              <Box padding="2000">
+                <BlockStack inlineAlign="center" gap="600">
                   <Spinner size="large" />
-                  <Text variant="headingLg" as="p">Analyzing recent orders and calculating margins...</Text>
+                  <Text variant="heading2xl" as="p">Analyzing recent orders and calculating margins...</Text>
                 </BlockStack>
               </Box>
             </Layout.Section>
@@ -203,7 +215,7 @@ export default function Index() {
                 <Box paddingBlockStart="600" paddingBlockEnd="400">
                   <InlineStack align="space-between" blockAlign="center">
                     <Text variant="heading2xl" as="h1" fontWeight="bold">Profit Guard: Live Audit</Text>
-                    <Button variant="primary" onClick={() => fetcher.submit({}, { method: "POST" })} loading={isLoading}>Run Again</Button>
+                    <Button variant="primary" size="large" onClick={() => fetcher.submit({}, { method: "POST" })} loading={isLoading}>Run Again</Button>
                   </InlineStack>
                 </Box>
                 <Box paddingBlockEnd="600">
