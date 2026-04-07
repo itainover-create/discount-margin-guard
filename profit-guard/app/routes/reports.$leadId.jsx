@@ -1,94 +1,90 @@
-// app/routes/reports.$leadId.jsx
-import { useSearchParams, useParams } from "react-router"; // תיקון ייבוא
+import { useSearchParams } from "react-router";
 
 export default function ShockReport() {
-  const { leadId } = useParams();
   const [searchParams] = useSearchParams();
 
-  // הגדרת הנתונים - כולל ה-evidence שהיה חסר וגרם לקריסה
   const data = {
     storeName: searchParams.get("store") || "VisionTek",
-    originalPrice: parseFloat(searchParams.get("orig") || "22.99"),
-    salePrice: parseFloat(searchParams.get("sale") || "19.99"),
-    couponPercent: parseFloat(searchParams.get("cpn") || "15"),
-    couponCode: searchParams.get("code") || "WELCOME15",
-    risk: searchParams.get("risk") || "Yellow",
-    // הוספת המערך שהיה חסר:
-    evidence: [
-      "Sale price was visible on the product page.",
-      "Additional coupon was accepted on top of sale pricing.",
-      "Final effective discount materially deeper than the base promotion."
+    risk: searchParams.get("risk") || "Red",
+    // נתוני שלושת המוצרים שדגמת
+    items: [
+      { name: "USB-C to USB-A", orig: 6.99, sale: 5.99, final: 5.10, discount: "27%" },
+      { name: "HDMI 2.1 Cable", orig: 12.99, sale: 12.99, final: 11.05, discount: "15%" },
+      { name: "USB-C to DisplayPort", orig: 22.99, sale: 19.99, final: 17.00, discount: "26%" }
     ]
   };
 
-  // לוגיקה פיננסית
-  const finalPrice = (data.salePrice * (1 - data.couponPercent / 100)).toFixed(2);
-  const combinedDiscount = (((1 - finalPrice / data.originalPrice) * 100)).toFixed(1);
-
-  const riskStyles = {
-    Red: "bg-red-600 text-white",
-    Yellow: "bg-yellow-500 text-black",
-    Blue: "bg-blue-600 text-white"
+  const styles = {
+    container: { backgroundColor: '#f1f5f9', minHeight: '100vh', padding: '40px 20px', fontFamily: 'sans-serif' },
+    card: { maxWidth: '800px', margin: '0 auto', backgroundColor: '#ffffff', borderRadius: '16px', overflow: 'hidden', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' },
+    header: { backgroundColor: '#0f172a', padding: '30px', color: '#ffffff', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
+    riskBadge: { backgroundColor: '#dc2626', color: '#ffffff', padding: '8px 16px', borderRadius: '8px', fontWeight: 'bold', fontSize: '14px', textTransform: 'uppercase' },
+    section: { padding: '30px', borderBottom: '1px solid #f1f5f9' },
+    table: { width: '100%', borderCollapse: 'collapse', marginTop: '20px' },
+    th: { textAlign: 'left', padding: '12px', borderBottom: '2px solid #e2e8f0', color: '#64748b', fontSize: '12px', textTransform: 'uppercase' },
+    td: { padding: '12px', borderBottom: '1px solid #f1f5f9', fontSize: '14px' },
+    highlightRow: { backgroundColor: '#fef2f2', fontWeight: 'bold', color: '#b91c1c' },
+    footer: { padding: '20px', textAlign: 'center', color: '#94a3b8', fontSize: '12px', backgroundColor: '#f8fafc' }
   };
 
   return (
-    <div className="min-h-screen bg-slate-100 p-4 md:p-12 font-sans text-slate-900">
-      <div className="max-w-4xl mx-auto bg-white shadow-2xl rounded-2xl overflow-hidden border border-slate-200">
-        
-        {/* Header */}
-        <div className="bg-slate-900 p-8 text-white flex justify-between items-center">
-          <div className="space-y-1">
-            <h1 className="text-3xl font-black tracking-tighter">PROFIT GUARD</h1>
-            <p className="text-slate-400 text-xs uppercase tracking-widest">External Margin Audit Report</p>
+    <div style={styles.container}>
+      <div style={styles.card}>
+        {/* Header עם ה-LED האדום */}
+        <div style={styles.header}>
+          <div>
+            <h1 style={{ margin: 0, fontSize: '28px', fontWeight: '900', letterSpacing: '-1px' }}>PROFIT GUARD</h1>
+            <p style={{ margin: 0, fontSize: '12px', color: '#94a3b8' }}>SYSTEMIC MARGIN AUDIT REPORT</p>
           </div>
-          <div className={`px-4 py-2 rounded-lg font-bold text-sm uppercase ${riskStyles[data.risk]}`}>
-            {data.risk} Risk Level
-          </div>
+          <div style={styles.riskBadge}>● {data.risk} RISK DETECTED</div>
         </div>
 
         {/* Diagnosis */}
-        <div className="p-8 border-b border-slate-100">
-          <h2 className="text-2xl font-bold mb-3">Diagnostic: Potential Margin Leak</h2>
-          <p className="text-slate-600 text-lg">
-            Storefront audit for <span className="font-bold text-slate-900">{data.storeName}</span> identified a 
-            critical logic failure in discount combinations.
+        <div style={styles.section}>
+          <h2 style={{ fontSize: '22px', fontWeight: 'bold', margin: '0 0 10px 0' }}>Margin Leak Diagnosis: {data.storeName}</h2>
+          <p style={{ color: '#475569', lineHeight: '1.5' }}>
+            Our audit identified an active <strong>Discount Stacking</strong> logic failure. 
+            The system is currently allowing cumulative discounts that erode the contribution margin across multiple product categories.
           </p>
         </div>
 
-        {/* The Math */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 p-8 bg-slate-50">
-          <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-            <p className="text-xs text-slate-500 uppercase font-bold mb-2">Original MSRP</p>
-            <p className="text-3xl font-light">${data.originalPrice}</p>
-          </div>
-          <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-            <p className="text-xs text-orange-600 uppercase font-bold mb-2">Active Sale Price</p>
-            <p className="text-3xl font-bold text-orange-600">${data.salePrice}</p>
-          </div>
-          <div className="bg-red-50 p-6 rounded-xl border-2 border-red-500 shadow-sm">
-            <p className="text-xs text-red-700 uppercase font-bold mb-2 underline">Effective Discount</p>
-            <p className="text-4xl font-black text-red-700">{combinedDiscount}%</p>
-          </div>
-        </div>
-
-        {/* Evidence Breakdown - עכשיו בטוח לשימוש */}
-        <div className="p-8 space-y-6">
-          <div className="bg-slate-900 p-6 rounded-xl text-white">
-            <h3 className="text-xs font-bold text-slate-500 uppercase mb-4">Audit Findings</h3>
-            <ul className="space-y-4">
-              {data.evidence.map((item, index) => (
-                <li key={index} className="flex items-center gap-3">
-                  <span className="w-2 h-2 bg-red-500 rounded-full"></span>
-                  <span className="text-sm">{item}</span>
-                </li>
+        {/* Evidence Table */}
+        <div style={styles.section}>
+          <h3 style={{ fontSize: '14px', fontWeight: 'bold', color: '#0f172a', textTransform: 'uppercase', marginBottom: '15px' }}>Observed Leaks (Live Checkout Data)</h3>
+          <table style={styles.table}>
+            <thead>
+              <tr>
+                <th style={styles.th}>Product</th>
+                <th style={styles.th}>MSRP</th>
+                <th style={styles.th}>Sale</th>
+                <th style={styles.th}>Final (Stacked)</th>
+                <th style={styles.th}>Total Loss %</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.items.map((item, idx) => (
+                <tr key={idx} style={item.discount === "27%" || item.discount === "26%" ? styles.highlightRow : {}}>
+                  <td style={styles.td}>{item.name}</td>
+                  <td style={styles.td}>${item.orig}</td>
+                  <td style={styles.td}>${item.sale}</td>
+                  <td style={styles.td}>${item.final}</td>
+                  <td style={styles.td}>{item.discount}</td>
+                </tr>
               ))}
-            </ul>
-          </div>
+            </tbody>
+          </table>
         </div>
 
-        {/* Footer */}
-        <div className="p-8 bg-slate-50 border-t border-slate-200 text-center text-xs text-slate-400">
-          Report generated by Profit Guard Engine (Render Production Node)
+        {/* Impact Message */}
+        <div style={{ padding: '30px', backgroundColor: '#0f172a', color: '#e2e8f0' }}>
+          <p style={{ margin: 0, fontSize: '14px', lineHeight: '1.6' }}>
+            <span style={{ color: '#f87171', fontWeight: 'bold' }}>Critical Impact:</span> In hardware retail, a cumulative discount of <strong>26-27%</strong> typically exceeds the net product margin. 
+            These orders are likely being processed at a <strong>net loss</strong> once transaction fees and logistics are factored in.
+          </p>
+        </div>
+
+        <div style={styles.footer}>
+          Generated by Profit Guard Engine • Confidential Audit • Render Node: Production
         </div>
       </div>
     </div>
