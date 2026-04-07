@@ -25,6 +25,6 @@ application_url = "https://discount-margin-guard.onrender.com"
 
 [auth]
 redirect_urls = [
-  "https://discount-margin-guard.onrender.com/api/auth",
-  "https://discount-margin-guard.onrender.com/api/auth/callback"
+  "https://discount-margin-guard.onrender.com/auth",
+  "https://discount-margin-guard.onrender.com/auth/callback"
 ]
