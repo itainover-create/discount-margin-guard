@@ -4,12 +4,23 @@ export default function ShockReport() {
   const [searchParams] = useSearchParams();
 
   const data = {
-    storeName: searchParams.get("store") || "VisionTek",
+    storeName: searchParams.get("store") || "Enigma Shop",
     riskStatus: "Stacking Risk Observed", 
     items: [
-      { name: "USB-C to USB-A", orig: 6.99, sale: 5.99, final: 5.10, impact: "27%" },
-      { name: "HDMI 2.1 Cable", orig: 12.99, sale: 12.99, final: 11.05, impact: "15%" },
-      { name: "USB-C to DisplayPort", orig: 22.99, sale: 19.99, final: 17.00, impact: "26%" }
+      { 
+        name: "Rohde & Schwarz NRP-Z11 RF Power Sensor", 
+        orig: 2505, 
+        sale: 2255, 
+        final: 2029, 
+        impact: "19%" 
+      },
+      { 
+        name: "Ma/Com MRF151G 300W MOSFET (Refurbished)", 
+        orig: 293, 
+        sale: 293, 
+        final: 264, 
+        impact: "10%" 
+      }
     ]
   };
 
@@ -38,33 +49,32 @@ export default function ShockReport() {
         </div>
 
         <div style={styles.section}>
-          <h2 style={{ fontSize: '20px', fontWeight: 'bold', margin: '0 0 10px 0' }}>Observed Pricing Overlap: {data.storeName} Storefront</h2>
+          <h2 style={{ fontSize: '20px', fontWeight: 'bold', margin: '0 0 10px 0' }}>Observed Pricing Overlap: {data.storeName}</h2>
           <p style={{ color: '#475569', lineHeight: '1.6', fontSize: '15px' }}>
-            This summary documents storefront examples where the <strong>WELCOME15</strong> code was accepted on top of existing Sale pricing. 
-            The following data points to a potential gap in discount exclusion logic.
+            This summary documents cases where a <strong>10% Welcome code</strong> stacked on top of existing Sale pricing and Refurbished item categories. 
+            The pricing path indicates a potential gap in discount exclusion rules for high-value RF equipment.
           </p>
         </div>
 
         <div style={styles.section}>
-          <h3 style={{ fontSize: '12px', fontWeight: 'bold', color: '#64748b', textTransform: 'uppercase', marginBottom: '15px' }}>Audited Case Data</h3>
+          <h3 style={{ fontSize: '12px', fontWeight: 'bold', color: '#64748b', textTransform: 'uppercase', marginBottom: '15px' }}>Audited Case Data (USD)</h3>
           <table style={styles.table}>
             <thead>
               <tr>
-                <th style={styles.th}>Product SKU</th>
+                <th style={styles.th}>Product / SKU</th>
                 <th style={styles.th}>MSRP</th>
-                <th style={styles.th}>Sale Price</th>
+                <th style={styles.th}>Site Price</th>
                 <th style={styles.th}>Final (Stacked)</th>
-                <th style={styles.th}>Est. Profit Impact</th>
+                <th style={styles.th}>Est. Margin Erosion</th>
               </tr>
             </thead>
             <tbody>
               {data.items.map((item, idx) => (
-                <tr key={idx} style={item.impact === "27%" || item.impact === "26%" ? styles.highlightRow : {}}>
+                <tr key={idx} style={item.impact === "19%" ? styles.highlightRow : {}}>
                   <td style={styles.td}>{item.name}</td>
-                  <td style={styles.td}>${item.orig}</td>
-                  <td style={styles.td}>${item.sale}</td>
-                  <td style={styles.td}>${item.final}</td>
-                  {/* תיקון: איחוד אובייקטים של סטייל למניעת כפל פרופס */}
+                  <td style={styles.td}>${item.orig.toLocaleString()}</td>
+                  <td style={styles.td}>${item.sale.toLocaleString()}</td>
+                  <td style={styles.td}>${item.final.toLocaleString()}</td>
                   <td style={{ ...styles.td, color: '#d97706', fontWeight: 'bold' }}>-{item.impact}</td>
                 </tr>
               ))}
@@ -74,9 +84,9 @@ export default function ShockReport() {
 
         <div style={{ padding: '30px', backgroundColor: '#f8fafc', color: '#334155', borderTop: '1px solid #e2e8f0' }}>
           <p style={{ margin: 0, fontSize: '13px', lineHeight: '1.6' }}>
-            <span style={{ fontWeight: 'bold', color: '#0f172a' }}>Analysis:</span> This level of overlap can materially erode contribution margin 
-            and may make some promotional orders uneconomic once transaction fees and logistics are considered. 
-            Profit Guard monitors these cases to provide margin visibility across all recent orders.
+            <span style={{ fontWeight: 'bold', color: '#0f172a' }}>Executive Analysis:</span> In this audited set, the cumulative discount path resulted in a 
+            <strong> 18.1% reduction from MSRP</strong>. For specialized hardware and refurbished components, this level of overlap often 
+            neutralizes the net margin after fulfillment and transaction costs.
           </p>
         </div>
 
