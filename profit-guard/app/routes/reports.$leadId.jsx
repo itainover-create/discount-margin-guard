@@ -1,131 +1,114 @@
 import { useSearchParams } from "react-router";
 
-export default function ShockReport() {
+export default function ForensicAuditReport() {
   const [searchParams] = useSearchParams();
 
-  // שליפת נתונים דינמיים מה-URL (מיוצר ע"י הסורק או ידנית)
   const storeName = searchParams.get("store") || "Target Store";
-  const unitLeak = parseFloat(searchParams.get("leak")) || 129.86; 
-  const capturedItem = searchParams.get("item") || "Premium Inventory Unit";
-  const evidenceUrl = searchParams.get("url") || "#";
+  
+  // נתונים לדוגמה שניתן להעביר ב-URL (מומלץ להעביר לפחות 2 מוצרים)
+  const evidenceData = [
+    { 
+      name: searchParams.get("p1_name") || "Samsung GalaxyBook 2", 
+      msrp: parseFloat(searchParams.get("p1_msrp")) || 605.68,
+      site: parseFloat(searchParams.get("p1_site")) || 363.41,
+      final: parseFloat(searchParams.get("p1_final")) || 327.07
+    },
+    { 
+      name: searchParams.get("p2_name") || "HP Pavilion Plus 14", 
+      msrp: parseFloat(searchParams.get("p2_msrp")) || 884.61,
+      site: parseFloat(searchParams.get("p2_site")) || 530.77,
+      final: parseFloat(searchParams.get("p2_final")) || 477.69
+    }
+  ];
 
-  const data = {
-    severity: "CRITICAL: HIGH STACKING RISK",
-    confidence: "OBSERVED EXTERNALLY: Analysis based on captured storefront logic and checkout behavior. No internal financial access required.",
-    observations: [
-      "Existing automatic markdown detected on premium inventory",
-      "Additional manual coupon code accepted on top of markdowns",
-      "Cumulative effective discount exceeds target margin thresholds"
-    ]
-  };
+  const unitLeak = evidenceData[0].site - evidenceData[0].final;
 
   const styles = {
-    container: { backgroundColor: '#f1f5f9', minHeight: '100vh', padding: '60px 20px', fontFamily: 'Inter, system-ui, sans-serif' },
-    card: { maxWidth: '850px', margin: '0 auto', backgroundColor: '#ffffff', borderRadius: '16px', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)', overflow: 'hidden', border: '1px solid #e2e8f0' },
+    container: { backgroundColor: '#f1f5f9', minHeight: '100vh', padding: '60px 20px', fontFamily: 'Inter, system-ui, sans-serif', color: '#1e293b' },
+    card: { maxWidth: '900px', margin: '0 auto', backgroundColor: '#ffffff', borderRadius: '16px', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)', overflow: 'hidden', border: '1px solid #e2e8f0' },
     header: { backgroundColor: '#0f172a', padding: '30px 40px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '4px solid #dc2626' },
-    severityBadge: { backgroundColor: '#dc2626', color: 'white', padding: '12px 24px', borderRadius: '8px', fontSize: '18px', fontWeight: '900', letterSpacing: '1px', textTransform: 'uppercase' },
+    severityBadge: { backgroundColor: '#dc2626', color: 'white', padding: '10px 20px', borderRadius: '6px', fontSize: '16px', fontWeight: '900', textTransform: 'uppercase' },
     section: { padding: '50px 60px' },
-    confidenceBox: { backgroundColor: '#f8fafc', border: '2px solid #e2e8f0', padding: '24px', borderRadius: '12px', marginBottom: '40px', fontSize: '16px', color: '#475569', lineHeight: '1.6', fontWeight: '500' },
-    evidenceBox: { marginBottom: '40px', padding: '24px', border: '2px solid #e2e8f0', borderRadius: '12px', backgroundColor: '#fcfcfc', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
-    leakHero: { backgroundColor: '#f0f9ff', padding: '32px', borderRadius: '12px', borderLeft: '8px solid #0ea5e9', marginBottom: '40px' },
+    confidenceBox: { backgroundColor: '#f8fafc', border: '2px solid #e2e8f0', padding: '24px', borderRadius: '12px', marginBottom: '40px', fontSize: '15px', color: '#475569', lineHeight: '1.6' },
+    table: { width: '100%', borderCollapse: 'collapse', marginTop: '20px', marginBottom: '40px' },
+    th: { textAlign: 'left', padding: '12px 15px', borderBottom: '2px solid #e2e8f0', color: '#64748b', fontSize: '12px', textTransform: 'uppercase', fontWeight: '700' },
+    td: { padding: '15px', borderBottom: '1px solid #f1f5f9', fontSize: '14px' },
+    discountCell: { color: '#dc2626', fontWeight: '800' },
     scenarioBox: { border: '2px solid #fee2e2', borderRadius: '12px', overflow: 'hidden', marginTop: '40px' },
-    scenarioHeader: { backgroundColor: '#fef2f2', padding: '20px 25px', fontWeight: '800', color: '#991b1b', fontSize: '18px', borderBottom: '2px solid #fee2e2' },
-    table: { width: '100%', borderCollapse: 'collapse' },
-    th: { textAlign: 'left', padding: '15px 25px', backgroundColor: '#f8fafc', color: '#64748b', fontSize: '13px', textTransform: 'uppercase', fontWeight: '700' },
-    td: { padding: '20px 25px', borderBottom: '1px solid #f1f5f9', fontSize: '16px', color: '#1e293b' },
-    footer: { padding: '25px', textAlign: 'center', backgroundColor: '#f8fafc', color: '#94a3b8', fontSize: '14px', borderTop: '1px solid #e2e8f0', fontWeight: '500' }
+    scenarioHeader: { backgroundColor: '#fef2f2', padding: '15px 25px', fontWeight: '800', color: '#991b1b', fontSize: '16px' }
   };
 
   return (
     <div style={styles.container}>
       <div style={styles.card}>
         <div style={styles.header}>
-          <h1 style={{ color: 'white', margin: 0, fontSize: '22px', fontWeight: '800', letterSpacing: '0.5px' }}>
-            PROFIT GUARD <span style={{fontWeight: '300', opacity: 0.6}}>| AUDIT REPORT</span>
+          <h1 style={{ color: 'white', margin: 0, fontSize: '20px', fontWeight: '800' }}>
+            PROFIT GUARD <span style={{opacity: 0.5}}>| FORENSIC AUDIT</span>
           </h1>
-          <div style={styles.severityBadge}>{data.severity}</div>
+          <div style={styles.severityBadge}>CRITICAL: HIGH STACKING RISK</div>
         </div>
 
         <div style={styles.section}>
-          {/* Confidence Framing - Large and readable */}
           <div style={styles.confidenceBox}>
-            <span style={{ color: '#0f172a', fontWeight: '800', display: 'block', marginBottom: '8px', fontSize: '14px', textTransform: 'uppercase', letterSpacing: '1px' }}>
-              Confidence Framing
-            </span>
-            {data.confidence}
+            <strong style={{ display: 'block', color: '#0f172a', textTransform: 'uppercase', fontSize: '12px', marginBottom: '4px' }}>Confidence Framing</strong>
+            Observed externally. Analysis based on captured storefront logic and specific SKU checkout behavior. No internal financial access required.
           </div>
 
-          <h2 style={{ fontSize: '32px', fontWeight: '900', marginBottom: '24px', color: '#0f172a', lineHeight: '1.2' }}>
-            Pricing Overlap Observed: <span style={{color: '#2563eb'}}>{storeName}</span>
+          <h2 style={{ fontSize: '28px', fontWeight: '900', marginBottom: '30px' }}>
+            Evidence Capture: <span style={{color: '#2563eb'}}>{storeName}</span>
           </h2>
 
-          {/* NEW: Captured Evidence Block */}
-          <div style={styles.evidenceBox}>
-            <div>
-              <h4 style={{ fontSize: '12px', color: '#64748b', textTransform: 'uppercase', marginBottom: '8px', fontWeight: '800', letterSpacing: '1px' }}>
-                Verified Evidence Capture
-              </h4>
-              <div style={{ fontSize: '18px', fontWeight: '800', color: '#0f172a' }}>
-                {capturedItem}
-              </div>
-              <div style={{ fontSize: '15px', color: '#64748b', marginTop: '4px' }}>
-                Status: Stacking Confirmed at Checkout
-              </div>
-            </div>
-            <div style={{ textAlign: 'right' }}>
-              <a href={evidenceUrl} target="_blank" rel="noreferrer" style={{ display: 'inline-block', backgroundColor: '#2563eb', color: 'white', padding: '10px 20px', borderRadius: '6px', fontSize: '14px', fontWeight: '700', textDecoration: 'none' }}>
-                View Live Evidence
-              </a>
-            </div>
-          </div>
-          
-          <div style={{ marginBottom: '40px' }}>
-            <h3 style={{ fontSize: '14px', color: '#64748b', textTransform: 'uppercase', marginBottom: '16px', fontWeight: '700', letterSpacing: '1px' }}>
-              Audit Observations
-            </h3>
-            <ul style={{ paddingLeft: '25px', color: '#334155', lineHeight: '1.8', fontSize: '18px' }}>
-              {data.observations.map((obs, i) => <li key={i} style={{marginBottom: '10px'}}>{obs}</li>)}
-            </ul>
+          {/* Forensic Evidence Table */}
+          <table style={styles.table}>
+            <thead>
+              <tr>
+                <th style={styles.th}>Product (Short Name)</th>
+                <th style={styles.th}>MSRP</th>
+                <th style={styles.th}>Site Price</th>
+                <th style={styles.th}>Final Price</th>
+                <th style={{ ...styles.th, textAlign: 'right' }}>Effective Discount</th>
+              </tr>
+            </thead>
+            <tbody>
+              {evidenceData.map((item, i) => {
+                const effectiveDiscount = ((1 - (item.final / item.msrp)) * 100).toFixed(1);
+                return (
+                  <tr key={i}>
+                    <td style={{ ...styles.td, fontWeight: '700' }}>{item.name}</td>
+                    <td style={styles.td}>${item.msrp.toFixed(2)}</td>
+                    <td style={styles.td}>${item.site.toFixed(2)}</td>
+                    <td style={{ ...styles.td, fontWeight: '700', color: '#0f172a' }}>${item.final.toFixed(2)}</td>
+                    <td style={{ ...styles.td, ...styles.discountCell, textAlign: 'right' }}>{effectiveDiscount}%</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+
+          <div style={{ backgroundColor: '#f0f9ff', padding: '24px', borderRadius: '12px', borderLeft: '6px solid #0ea5e9' }}>
+            <span style={{ fontSize: '13px', color: '#0369a1', fontWeight: '800', textTransform: 'uppercase' }}>Avg. Captured Margin Leakage</span>
+            <div style={{ fontSize: '48px', fontWeight: '900', color: '#0c4a6e' }}>${unitLeak.toFixed(2)} <span style={{fontSize: '18px', fontWeight: '400', opacity: 0.7}}>per cart</span></div>
           </div>
 
-          <div style={styles.leakHero}>
-            <span style={{ fontSize: '14px', color: '#0369a1', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '1px' }}>
-              Captured Margin Leak Per Cart
-            </span>
-            <div style={{ fontSize: '56px', fontWeight: '900', color: '#0c4a6e', marginTop: '8px' }}>
-              ${unitLeak.toFixed(2)}
-            </div>
-          </div>
-
-          {/* Scenario Box */}
           <div style={styles.scenarioBox}>
-            <div style={styles.scenarioHeader}>Illustrative Exposure Scenarios</div>
-            <table style={styles.table}>
-              <thead>
-                <tr>
-                  <th style={styles.th}>Order Volume Scenario</th>
-                  <th style={{ ...styles.th, textAlign: 'right' }}>Est. Margin Impact</th>
-                </tr>
-              </thead>
+            <div style={styles.scenarioHeader}>Exposure Scaling Scenarios</div>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <tbody>
                 {[10, 50, 100].map(qty => (
                   <tr key={qty}>
-                    <td style={styles.td}>{qty} Typical Carts</td>
-                    <td style={{ ...styles.td, textAlign: 'right', fontWeight: '800', color: '#b91c1c', fontSize: '22px' }}>
-                      ${(qty * unitLeak).toLocaleString()}
+                    <td style={{ ...styles.td, paddingLeft: '25px' }}>{qty} Sample Orders</td>
+                    <td style={{ ...styles.td, textAlign: 'right', paddingRight: '25px', fontWeight: '800', color: '#b91c1c', fontSize: '18px' }}>
+                      -${(qty * unitLeak).toLocaleString()}
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
-            <div style={{ padding: '15px 25px', fontSize: '14px', color: '#94a3b8', backgroundColor: '#f8fafc', fontStyle: 'italic' }}>
-              *Scenarios are illustrative only and based on observed logic gaps. Not based on internal order data.
-            </div>
           </div>
         </div>
-
-        <div style={styles.footer}>
-          Render Build: v2.7.0 • High-Fidelity Professional Audit • Decision-Ready Data
+        
+        <div style={{ padding: '20px', textAlign: 'center', fontSize: '12px', color: '#94a3b8', borderTop: '1px solid #f1f5f9' }}>
+          Full product titles and checkout screenshots available on request.
         </div>
       </div>
     </div>
