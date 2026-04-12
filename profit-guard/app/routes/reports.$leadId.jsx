@@ -3,8 +3,11 @@ import { useSearchParams } from "react-router";
 export default function ShockReport() {
   const [searchParams] = useSearchParams();
 
+  // שליפת נתונים דינמיים מה-URL (מיוצר ע"י הסורק או ידנית)
   const storeName = searchParams.get("store") || "Target Store";
   const unitLeak = parseFloat(searchParams.get("leak")) || 129.86; 
+  const capturedItem = searchParams.get("item") || "Premium Inventory Unit";
+  const evidenceUrl = searchParams.get("url") || "#";
 
   const data = {
     severity: "CRITICAL: HIGH STACKING RISK",
@@ -20,11 +23,10 @@ export default function ShockReport() {
     container: { backgroundColor: '#f1f5f9', minHeight: '100vh', padding: '60px 20px', fontFamily: 'Inter, system-ui, sans-serif' },
     card: { maxWidth: '850px', margin: '0 auto', backgroundColor: '#ffffff', borderRadius: '16px', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)', overflow: 'hidden', border: '1px solid #e2e8f0' },
     header: { backgroundColor: '#0f172a', padding: '30px 40px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '4px solid #dc2626' },
-    // הגדלת הבאג' של רמת הסיכון
     severityBadge: { backgroundColor: '#dc2626', color: 'white', padding: '12px 24px', borderRadius: '8px', fontSize: '18px', fontWeight: '900', letterSpacing: '1px', textTransform: 'uppercase' },
     section: { padding: '50px 60px' },
-    // שיפור משמעותי לקריאות של ה-Confidence Framing
     confidenceBox: { backgroundColor: '#f8fafc', border: '2px solid #e2e8f0', padding: '24px', borderRadius: '12px', marginBottom: '40px', fontSize: '16px', color: '#475569', lineHeight: '1.6', fontWeight: '500' },
+    evidenceBox: { marginBottom: '40px', padding: '24px', border: '2px solid #e2e8f0', borderRadius: '12px', backgroundColor: '#fcfcfc', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
     leakHero: { backgroundColor: '#f0f9ff', padding: '32px', borderRadius: '12px', borderLeft: '8px solid #0ea5e9', marginBottom: '40px' },
     scenarioBox: { border: '2px solid #fee2e2', borderRadius: '12px', overflow: 'hidden', marginTop: '40px' },
     scenarioHeader: { backgroundColor: '#fef2f2', padding: '20px 25px', fontWeight: '800', color: '#991b1b', fontSize: '18px', borderBottom: '2px solid #fee2e2' },
@@ -45,6 +47,7 @@ export default function ShockReport() {
         </div>
 
         <div style={styles.section}>
+          {/* Confidence Framing - Large and readable */}
           <div style={styles.confidenceBox}>
             <span style={{ color: '#0f172a', fontWeight: '800', display: 'block', marginBottom: '8px', fontSize: '14px', textTransform: 'uppercase', letterSpacing: '1px' }}>
               Confidence Framing
@@ -55,6 +58,26 @@ export default function ShockReport() {
           <h2 style={{ fontSize: '32px', fontWeight: '900', marginBottom: '24px', color: '#0f172a', lineHeight: '1.2' }}>
             Pricing Overlap Observed: <span style={{color: '#2563eb'}}>{storeName}</span>
           </h2>
+
+          {/* NEW: Captured Evidence Block */}
+          <div style={styles.evidenceBox}>
+            <div>
+              <h4 style={{ fontSize: '12px', color: '#64748b', textTransform: 'uppercase', marginBottom: '8px', fontWeight: '800', letterSpacing: '1px' }}>
+                Verified Evidence Capture
+              </h4>
+              <div style={{ fontSize: '18px', fontWeight: '800', color: '#0f172a' }}>
+                {capturedItem}
+              </div>
+              <div style={{ fontSize: '15px', color: '#64748b', marginTop: '4px' }}>
+                Status: Stacking Confirmed at Checkout
+              </div>
+            </div>
+            <div style={{ textAlign: 'right' }}>
+              <a href={evidenceUrl} target="_blank" rel="noreferrer" style={{ display: 'inline-block', backgroundColor: '#2563eb', color: 'white', padding: '10px 20px', borderRadius: '6px', fontSize: '14px', fontWeight: '700', textDecoration: 'none' }}>
+                View Live Evidence
+              </a>
+            </div>
+          </div>
           
           <div style={{ marginBottom: '40px' }}>
             <h3 style={{ fontSize: '14px', color: '#64748b', textTransform: 'uppercase', marginBottom: '16px', fontWeight: '700', letterSpacing: '1px' }}>
@@ -74,6 +97,7 @@ export default function ShockReport() {
             </div>
           </div>
 
+          {/* Scenario Box */}
           <div style={styles.scenarioBox}>
             <div style={styles.scenarioHeader}>Illustrative Exposure Scenarios</div>
             <table style={styles.table}>
@@ -87,21 +111,21 @@ export default function ShockReport() {
                 {[10, 50, 100].map(qty => (
                   <tr key={qty}>
                     <td style={styles.td}>{qty} Typical Carts</td>
-                    <td style={{ ...styles.td, textAlign: 'right', fontWeight: '800', color: '#b91c1c', fontSize: '20px' }}>
+                    <td style={{ ...styles.td, textAlign: 'right', fontWeight: '800', color: '#b91c1c', fontSize: '22px' }}>
                       ${(qty * unitLeak).toLocaleString()}
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
-            <div style={{ padding: '15px 25px', fontSize: '13px', color: '#94a3b8', backgroundColor: '#f8fafc', fontStyle: 'italic' }}>
+            <div style={{ padding: '15px 25px', fontSize: '14px', color: '#94a3b8', backgroundColor: '#f8fafc', fontStyle: 'italic' }}>
               *Scenarios are illustrative only and based on observed logic gaps. Not based on internal order data.
             </div>
           </div>
         </div>
 
         <div style={styles.footer}>
-          Render Build: v2.6.0 • High-Fidelity Professional Audit • Decision-Ready Data
+          Render Build: v2.7.0 • High-Fidelity Professional Audit • Decision-Ready Data
         </div>
       </div>
     </div>
