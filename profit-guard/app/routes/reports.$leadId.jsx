@@ -3,106 +3,78 @@ import { useSearchParams } from "react-router";
 export default function ShockReport() {
   const [searchParams] = useSearchParams();
 
+  const storeName = searchParams.get("store") || "Target Store";
+  const unitLeak = parseFloat(searchParams.get("leak")) || 129.86; 
+
   const data = {
-    storeName: searchParams.get("store") || "Wisetek Market",
-    riskStatus: "STACKING RISK OBSERVED", 
-    items: [
-      { 
-        name: "HP Pavilion Plus 14 (Core Ultra 5)", 
-        msrp: 884.61, 
-        autoPrice: 530.77, 
-        final: 477.69, 
-        effective: "46%" 
-      },
-      { 
-        name: "HP OmniBook X Copilot+ PC", 
-        msrp: 674.03, 
-        autoPrice: 404.00, 
-        final: 363.60, 
-        effective: "46%" 
-      },
-      { 
-        name: "Samsung GalaxyBook 2 (Touch i7)", 
-        msrp: 605.68, 
-        autoPrice: 363.41, 
-        final: 327.07, 
-        effective: "46%" 
-      }
-    ],
-    summary: {
-      totalMsrp: 2164.32,
-      afterAuto: 1298.60,
-      afterCode: 1168.74,
-      additionalSaving: 129.86
-    }
+    severity: "HIGH STACKING RISK",
+    confidence: "Observed externally. Analysis based on captured storefront logic and checkout behavior. No internal financial access required.",
+    observations: [
+      "Existing automatic markdown detected on premium inventory",
+      "Additional manual coupon code accepted on top of markdowns",
+      "Cumulative effective discount exceeds target margin thresholds"
+    ]
   };
 
   const styles = {
-    container: { backgroundColor: '#f8fafc', minHeight: '100vh', padding: '40px 20px', fontFamily: 'sans-serif', color: '#1e293b' },
-    card: { maxWidth: '850px', margin: '0 auto', backgroundColor: '#ffffff', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' },
-    header: { backgroundColor: '#0f172a', padding: '25px 40px', color: '#ffffff', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
-    riskBadge: { backgroundColor: '#f59e0b', color: '#ffffff', padding: '6px 12px', borderRadius: '6px', fontWeight: 'bold', fontSize: '11px', letterSpacing: '1px' },
+    container: { backgroundColor: '#f1f5f9', minHeight: '100vh', padding: '40px 20px', fontFamily: 'Inter, system-ui, sans-serif' },
+    card: { maxWidth: '800px', margin: '0 auto', backgroundColor: '#ffffff', borderRadius: '12px', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', overflow: 'hidden' },
+    header: { backgroundColor: '#0f172a', padding: '24px 40px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
+    severityBadge: { backgroundColor: '#dc2626', color: 'white', padding: '6px 14px', borderRadius: '6px', fontSize: '12px', fontWeight: 'bold' },
     section: { padding: '40px' },
-    table: { width: '100%', borderCollapse: 'collapse', marginTop: '20px' },
-    th: { textAlign: 'left', padding: '15px', borderBottom: '2px solid #f1f5f9', color: '#64748b', fontSize: '11px', textTransform: 'uppercase' },
-    td: { padding: '15px', borderBottom: '1px solid #f1f5f9', fontSize: '14px', color: '#334155' },
-    footerBox: { padding: '30px', backgroundColor: '#f8fafc', borderTop: '1px solid #e2e8f0', color: '#475569', fontSize: '14px', lineHeight: '1.6' },
-    brandFooter: { padding: '20px', textAlign: 'center', color: '#94a3b8', fontSize: '11px' }
+    confidenceBox: { backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', padding: '16px', borderRadius: '8px', marginBottom: '32px', fontSize: '13px', color: '#64748b', fontStyle: 'italic' },
+    leakHero: { backgroundColor: '#f0f9ff', padding: '24px', borderRadius: '10px', borderLeft: '5px solid #0ea5e9', marginBottom: '32px' },
+    scenarioBox: { border: '1px solid #fee2e2', borderRadius: '10px', overflow: 'hidden' },
+    scenarioHeader: { backgroundColor: '#fef2f2', padding: '15px 20px', fontWeight: 'bold', color: '#991b1b', fontSize: '15px' },
+    table: { width: '100%', borderCollapse: 'collapse' },
+    td: { padding: '15px 20px', borderBottom: '1px solid #f1f5f9', fontSize: '14px' }
   };
 
   return (
     <div style={styles.container}>
       <div style={styles.card}>
         <div style={styles.header}>
-          <div>
-            <h1 style={{ margin: 0, fontSize: '20px', fontWeight: '800', letterSpacing: '0.5px' }}>
-              PROFIT GUARD | <span style={{fontWeight: '400', color: '#94a3b8'}}>OBSERVED DISCOUNT STACKING SUMMARY</span>
-            </h1>
-          </div>
-          <div style={styles.riskBadge}>{data.riskStatus}</div>
+          <h1 style={{ color: 'white', margin: 0, fontSize: '18px', fontWeight: '800' }}>PROFIT GUARD | <span style={{opacity: 0.5}}>AUDIT</span></h1>
+          <div style={styles.severityBadge}>{data.severity}</div>
         </div>
 
         <div style={styles.section}>
-          <h2 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '15px' }}>
-            Observed Discount Stacking: {data.storeName}
-          </h2>
-          <p style={{ color: '#475569', fontSize: '16px', lineHeight: '1.6', margin: 0 }}>
-            This summary documents a checkout case where a <strong>10% cart code</strong> was accepted on top of existing 40% automatic discounts across multiple refurbished laptop items. The observed pricing path brought the effective total discount to about <strong>46% versus MSRP</strong>.
-          </p>
+          <div style={styles.confidenceBox}>
+            <strong>Confidence Framing:</strong> {data.confidence}
+          </div>
 
-          <h3 style={{ fontSize: '12px', fontWeight: 'bold', color: '#64748b', textTransform: 'uppercase', marginTop: '30px', marginBottom: '10px' }}>
-            Captured Checkout Example
-          </h3>
-          <table style={styles.table}>
-            <thead>
-              <tr>
-                <th style={styles.th}>Product</th>
-                <th style={styles.th}>MSRP</th>
-                <th style={styles.th}>Auto-Discount Price</th>
-                <th style={styles.th}>Final Price (After Code)</th>
-                <th style={styles.th}>Effective Discount vs MSRP</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.items.map((item, idx) => (
-                <tr key={idx}>
-                  <td style={styles.td}>{item.name}</td>
-                  <td style={styles.td}>${item.msrp.toFixed(2)}</td>
-                  <td style={styles.td}>${item.autoPrice.toFixed(2)}</td>
-                  <td style={styles.td}>${item.final.toFixed(2)}</td>
-                  <td style={{ ...styles.td, fontWeight: 'bold', color: '#0f172a' }}>-{item.effective}</td>
+          <h2 style={{ fontSize: '26px', fontWeight: '800', marginBottom: '20px', color: '#0f172a' }}>Pricing Overlap Observed: {storeName}</h2>
+          
+          <ul style={{ paddingLeft: '20px', color: '#334155', lineHeight: '1.8', marginBottom: '32px' }}>
+            {data.observations.map((obs, i) => <li key={i}>{obs}</li>)}
+          </ul>
+
+          <div style={styles.leakHero}>
+            <span style={{ fontSize: '13px', color: '#0369a1', fontWeight: 'bold', textTransform: 'uppercase' }}>Observed Margin Leak Per Cart</span>
+            <div style={{ fontSize: '42px', fontWeight: '900', color: '#0c4a6e' }}>${unitLeak.toFixed(2)}</div>
+          </div>
+
+          <div style={styles.scenarioBox}>
+            <div style={styles.scenarioHeader}>Illustrative Exposure Scenarios</div>
+            <table style={styles.table}>
+              <thead>
+                <tr style={{ backgroundColor: '#f8fafc' }}>
+                  <th style={{ ...styles.td, textAlign: 'left', fontWeight: 'bold', color: '#64748b' }}>VOLUME</th>
+                  <th style={{ ...styles.td, textAlign: 'right', fontWeight: 'bold', color: '#64748b' }}>POTENTIAL MARGIN IMPACT</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        <div style={styles.footerBox}>
-          <strong>Summary:</strong> On refurbished electronics, this level of overlap can materially erode margin and suggests a potential gap in discount exclusion logic. In the captured cart, the additional code reduced the already discounted subtotal by <strong>${data.summary.additionalSaving.toFixed(2)}</strong>.
-        </div>
-
-        <div style={styles.brandFooter}>
-          Internal Review Document • Profit Guard Audit Engine • Render Node: Production
+              </thead>
+              <tbody>
+                {[10, 50, 100].map(qty => (
+                  <tr key={qty}>
+                    <td style={styles.td}>{qty} Typical Carts</td>
+                    <td style={{ ...styles.td, textAlign: 'right', fontWeight: 'bold', color: '#b91c1c' }}>
+                      ${(qty * unitLeak).toLocaleString()}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>
