@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <title>example.com — product intro</title>
+    <script src="vendor/gsap.min.js"></script>
+    <style>
+      :root {
+        --bg: #05070a;
+        --bg-soft: #0c1017;
+        --text: #f5f7fa;
+        --muted: #8b96a5;
+        --accent: #4f8cff;
+      }
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+        background: var(--bg);
+      }
+      body {
+        font-family:
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          "Segoe UI",
+          Roboto,
+          Helvetica,
+          Arial,
+          sans-serif;
+      }
+      #root {
+        position: relative;
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+      }
+      #bg {
+        position: absolute;
+        inset: 0;
+        background:
+          radial-gradient(circle at 50% 38%, var(--bg-soft) 0%, var(--bg) 62%);
+      }
+      #grid {
+        position: absolute;
+        inset: 0;
+        background-image:
+          linear-gradient(rgba(79, 140, 255, 0.06) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(79, 140, 255, 0.06) 1px, transparent 1px);
+        background-size: 96px 96px;
+        background-position: center;
+      }
+      .clip {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      /* Scene 1 — wordmark */
+      .wordmark-wrap {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+      .wordmark {
+        font-size: 148px;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+        line-height: 1;
+        white-space: nowrap;
+      }
+      .wordmark-base {
+        color: var(--text);
+      }
+      .wordmark-accent {
+        color: var(--accent);
+      }
+      .rule {
+        display: block;
+        width: 360px;
+        height: 4px;
+        margin-top: 40px;
+        background: var(--accent);
+        border-radius: 2px;
+      }
+
+      /* Scene 2 — tagline */
+      .tagline-wrap {
+        max-width: 1400px;
+        padding: 0 80px;
+        text-align: center;
+      }
+      .tagline {
+        font-size: 58px;
+        font-weight: 500;
+        line-height: 1.35;
+        color: var(--muted);
+      }
+      .word {
+        display: inline-block;
+      }
+      .word--emphasis {
+        color: var(--text);
+        font-weight: 700;
+      }
+
+      /* Scene 3 — outro */
+      .outro-wrap {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 28px;
+      }
+      .url-pill {
+        display: flex;
+        align-items: center;
+        gap: 18px;
+        padding: 22px 44px;
+        border: 2px solid var(--accent);
+        border-radius: 999px;
+        background: rgba(79, 140, 255, 0.08);
+      }
+      .url-dot {
+        display: block;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: var(--accent);
+      }
+      .url-text {
+        font-size: 46px;
+        font-weight: 700;
+        color: var(--text);
+        letter-spacing: -0.01em;
+      }
+      .outro-sub {
+        font-size: 30px;
+        font-weight: 500;
+        color: var(--muted);
+      }
+    </style>
+  </head>
+  <body>
+    <div
+      id="root"
+      data-composition-id="main"
+      data-start="0"
+      data-duration="10"
+      data-fps="30"
+      data-width="1920"
+      data-height="1080"
+    >
+      <div id="bg"></div>
+      <div id="grid"></div>
+
+      <section id="scene-wordmark" class="clip" data-start="0" data-duration="3.5" data-track-index="1">
+        <div id="wordmark-wrap" class="wordmark-wrap">
+          <h1 id="wordmark" class="wordmark">
+            <span class="wordmark-base">example</span><span class="wordmark-accent">.com</span>
+          </h1>
+          <div id="wordmark-rule" class="rule"></div>
+        </div>
+      </section>
+
+      <section id="scene-tagline" class="clip" data-start="3.5" data-duration="4" data-track-index="1">
+        <div id="tagline-wrap" class="tagline-wrap">
+          <p id="tagline" class="tagline">
+            <span class="word">A</span> <span class="word">domain</span> <span class="word">reserved</span>
+            <span class="word">for</span> <span class="word word--emphasis">illustrative</span>
+            <span class="word word--emphasis">examples</span> <span class="word">on</span>
+            <span class="word">the</span> <span class="word">web.</span>
+          </p>
+        </div>
+      </section>
+
+      <section id="scene-outro" class="clip" data-start="7.5" data-duration="2.5" data-track-index="1">
+        <div id="outro-wrap" class="outro-wrap">
+          <div id="url-pill" class="url-pill">
+            <span class="url-dot"></span>
+            <span class="url-text">example.com</span>
+          </div>
+          <p id="outro-sub" class="outro-sub">A reserved example domain for the web</p>
+        </div>
+      </section>
+    </div>
+
+    <script>
+      window.__timelines = window.__timelines || {};
+      const tl = gsap.timeline({ paused: true });
+
+      // Scene 1 — wordmark (0 - 3.5)
+      tl.fromTo(
+        "#wordmark",
+        { opacity: 0, y: 34, scale: 0.92 },
+        { opacity: 1, y: 0, scale: 1, duration: 0.65, ease: "back.out(1.6)" },
+        0.15,
+      );
+      tl.fromTo(
+        "#wordmark-rule",
+        { scaleX: 0 },
+        { scaleX: 1, duration: 0.5, ease: "power2.out" },
+        0.65,
+      );
+      tl.fromTo(
+        "#wordmark-wrap",
+        { opacity: 1, scale: 1 },
+        { opacity: 0, scale: 1.04, duration: 0.4, ease: "power2.in" },
+        3.0,
+      );
+
+      // Scene 2 — tagline (3.5 - 7.5)
+      tl.fromTo(
+        "#scene-tagline .word",
+        { opacity: 0, y: 22 },
+        { opacity: 1, y: 0, duration: 0.5, ease: "power3.out", stagger: 0.06 },
+        3.65,
+      );
+      tl.fromTo(
+        "#tagline-wrap",
+        { opacity: 1, y: 0 },
+        { opacity: 0, y: -14, duration: 0.4, ease: "power2.in" },
+        7.0,
+      );
+
+      // Scene 3 — outro (7.5 - 10)
+      tl.fromTo(
+        "#url-pill",
+        { opacity: 0, scale: 0.85 },
+        { opacity: 1, scale: 1, duration: 0.5, ease: "back.out(1.8)" },
+        7.65,
+      );
+      tl.fromTo(
+        "#outro-sub",
+        { opacity: 0, y: 14 },
+        { opacity: 1, y: 0, duration: 0.5, ease: "power2.out" },
+        7.95,
+      );
+
+      tl.seek(0);
+      window.__timelines["main"] = tl;
+    </script>
+  </body>
+</html>
