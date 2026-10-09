@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OPEN SKY — World Flight Simulator</title>
+<meta name="description" content="OPEN SKY — World Flight Simulator by ORION GAMES. Developed by Alon Novitarger. Where vision becomes reality.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Exo+2:wght@300;400;600;800&family=Heebo:wght@300;400;700&display=swap">
+<link rel="stylesheet" href="css/style.css">
+<link rel="icon" href="assets/orion-mark.svg" type="image/svg+xml">
+<script type="importmap">{ "imports": { "three": "./vendor/three.module.min.js" } }</script>
+</head>
+<body>
+<div id="app">
+  <div id="view"></div>
+
+  <!-- ===== Loading ===== -->
+  <section id="loading" class="screen show">
+    <div class="brand-block">
+      <img src="assets/orion-logo.svg" class="orion-logo" alt="ORION GAMES">
+      <h1 class="title">OPEN SKY</h1>
+      <div class="subtitle">WORLD FLIGHT SIMULATOR</div>
+      <div class="slogan">WHERE VISION BECOMES REALITY</div>
+    </div>
+    <div class="progress"><div id="progress-bar"></div></div>
+    <div id="progress-text">Starting…</div>
+    <div class="credit">Developed by ALON NOVITARGER · ORION GAMES</div>
+  </section>
+
+  <!-- ===== Main menu ===== -->
+  <section id="menu" class="screen">
+    <div class="menu-bg"></div>
+    <header class="menu-head">
+      <img src="assets/orion-logo.svg" class="orion-logo small" alt="ORION GAMES">
+      <div class="menu-title"><span class="title">OPEN SKY</span><span class="subtitle">WORLD FLIGHT SIMULATOR</span></div>
+      <div class="menu-tabs">
+        <button data-tab="home" class="active">Home</button>
+        <button data-tab="free">Free Flight</button>
+        <button data-tab="missions">Missions</button>
+        <button data-tab="settings">Settings</button>
+        <button data-tab="controls">Controls</button>
+        <button data-tab="about">About &amp; Data</button>
+      </div>
+      <button id="lang-toggle" class="pill" title="Hebrew explanations">עב / EN</button>
+    </header>
+
+    <div class="tab show" id="tab-home">
+      <div class="home-hero">
+        <div class="slogan big">WHERE VISION BECOMES REALITY</div>
+        <p class="lead">Fly a real-world open world. Start at a gate, start the engine, taxi with ATC, take off and land — over cities rebuilt from real map data.</p>
+        <p class="lead he" dir="rtl">טסים בעולם פתוח המבוסס על נתוני מפה אמיתיים: מתניעים בחניה, מסיעים עם הפיקוח, ממריאים ונוחתים.</p>
+        <div class="home-buttons">
+          <button class="big-btn primary" id="btn-quick">Quick flight — New York JFK</button>
+          <button class="big-btn" data-goto="missions">Missions &amp; Tutorial</button>
+          <button class="big-btn" data-goto="free">Choose a place on the globe</button>
+          <button class="big-btn" id="btn-continue" disabled>Continue from save point</button>
+        </div>
+        <div id="home-status" class="note"></div>
+      </div>
+    </div>
+
+    <div class="tab" id="tab-free">
+      <div class="free-layout">
+        <div class="globe-wrap"><canvas id="globe"></canvas><div id="globe-hint">Drag to rotate · wheel to zoom · click a place</div></div>
+        <aside class="free-side">
+          <input id="search" type="search" placeholder="Search country, city, airport name or code (e.g. JFK, LLBG, Paris)" autocomplete="off">
+          <div id="search-results"></div>
+          <div id="featured"></div>
+          <div id="place-info"></div>
+          <div class="setup">
+            <label>Start <select id="start-pos"><option value="stand">Parking (cold &amp; dark)</option><option value="runway">On the runway</option><option value="air">In the air (5 nm final)</option><option value="airHigh">In the air (3000 ft overhead)</option></select></label>
+            <label>Mode <select id="mode"><option value="accessible">Accessible (assists, quick start)</option><option value="simulation">Simulation (full procedures)</option></select></label>
+            <label>Time <select id="time"><option value="now">Now (real local time)</option><option value="7">Morning 07:00</option><option value="12" selected>Noon 12:00</option><option value="17.5">Evening 17:30</option><option value="19.8">Sunset</option><option value="22">Night 22:00</option></select></label>
+            <label>Weather <select id="weather"></select></label>
+            <label>Destination <input id="dest" type="search" placeholder="optional: airport code or name"></label>
+            <div id="route-info" class="note"></div>
+            <button class="big-btn primary" id="btn-fly" disabled>Fly</button>
+          </div>
+        </aside>
+      </div>
+    </div>
+
+    <div class="tab" id="tab-missions"><div id="mission-list"></div></div>
+    <div class="tab" id="tab-settings"><div id="settings-form"></div></div>
+    <div class="tab" id="tab-controls"><div id="controls-form"></div></div>
+    <div class="tab" id="tab-about"><div id="about"></div></div>
+    <footer class="menu-foot"><span>ORION GAMES</span><span>OPEN SKY v1.0 prototype</span><span>Developed by ALON NOVITARGER</span></footer>
+  </section>
+
+  <!-- ===== In-flight HUD ===== -->
+  <section id="hud" class="hidden">
+    <div id="hud-data" class="panel"></div>
+    <div id="hud-msg"></div>
+    <div id="tutorial" class="panel hidden"></div>
+    <div id="atc" class="panel"><div id="atc-head">RADIO</div><div id="atc-log"></div><div id="atc-menu" class="hidden"></div></div>
+    <div id="hud-status"></div>
+    <canvas id="minimap" class="panel" width="300" height="300"></canvas>
+    <div id="checklist" class="panel hidden"></div>
+    <div id="tooltip" class="hidden"></div>
+    <div id="hud-buttons">
+      <button data-act="atc" title="Radio (T)">📻 ATC</button>
+      <button data-act="viewNext" title="Next view (C)">🎥 View</button>
+      <button data-act="map" title="Map (M)">🗺 Map</button>
+      <button data-act="checklist" title="Checklist (G)">✔ List</button>
+      <button data-act="autoStart" title="Auto start / shutdown (Shift+E)">⚙ Start</button>
+      <button data-act="help" title="Controls (/)">? Help</button>
+      <button data-act="menu" title="Menu (Esc)">☰</button>
+    </div>
+  </section>
+
+  <section id="pause" class="overlay hidden"><div class="panel center">
+    <h2>Paused</h2>
+    <button class="big-btn" id="btn-resume">Resume</button>
+    <button class="big-btn" id="btn-save">Save point</button>
+    <button class="big-btn" id="btn-restart">Restart</button>
+    <button class="big-btn" id="btn-end">End flight &amp; debrief</button>
+    <button class="big-btn" id="btn-exit">Exit to menu</button>
+  </div></section>
+  <section id="help" class="overlay hidden"><div class="panel center wide" id="help-body"></div></section>
+  <section id="debrief" class="overlay hidden"><div class="panel center wide" id="debrief-body"></div></section>
+</div>
+<noscript>OPEN SKY needs JavaScript and WebGL 2.</noscript>
+<script type="module" src="js/main.js"></script>
+</body>
+</html>

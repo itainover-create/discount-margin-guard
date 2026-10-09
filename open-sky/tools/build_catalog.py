@@ -1,0 +1,50 @@
+"""Writes web/data/catalog.json: the list of real places the menu offers,
+with their tier, data statistics and accuracy notes (shown to the player)."""
+import json
+import os
+
+ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+DATA = os.path.join(ROOT, "web", "data")
+
+
+def size_of(path):
+    tot = 0
+    for dp, _, fs in os.walk(path):
+        tot += sum(os.path.getsize(os.path.join(dp, f)) for f in fs)
+    return tot
+
+
+def main():
+    regions = []
+    for rid in sorted(os.listdir(os.path.join(DATA, "regions"))):
+        mp = os.path.join(DATA, "regions", rid, "manifest.json")
+        if not os.path.exists(mp):
+            continue
+        m = json.load(open(mp))
+        s = m["stats"]
+        nb = s.get("buildings", 0)
+        measured = s.get("buildings_height_from_data", 0) + s.get("buildings_height_from_floors", 0)
+        regions.append({
+            "id": rid, "name": m["name"], "country": m["country"], "countryCode": m["countryCode"],
+            "character": m["character"], "characterHe": m.get("characterHe", ""), "tier": m["tier"],
+            "bbox": m["bbox"], "anchor": m["anchor"], "airports": m["airports"], "magVar": m["magVar"],
+            "style": m["style"],
+            "stats": {"buildings": nb, "buildingHeightsMeasuredPct": round(100 * measured / max(1, nb)),
+                      "roads": s.get("roads", 0), "rail": s.get("rail", 0), "trees": s.get("trees", 0),
+                      "sizeMB": round(size_of(os.path.dirname(mp)) / 1e6, 1)},
+        })
+    cat = {
+        "version": 1,
+        "regions": regions,
+        "tiers": {
+            "A": "Detailed: real buildings with measured heights, roads, coastline, land use, detailed airport (taxiways, gates, lights, signs), landmarks.",
+            "B": "Regional: real buildings (heights partly estimated), roads, coastline and land use; airport layout from map data.",
+            "G": "Global base: real runway positions/headings for 10,000+ airports; terrain from online elevation tiles (or a coarse ~10 km offline layer); generic airport buildings; no city buildings.",
+        },
+    }
+    json.dump(cat, open(os.path.join(DATA, "catalog.json"), "w"), indent=1)
+    print("catalog:", [(r["id"], r["stats"]) for r in regions])
+
+
+if __name__ == "__main__":
+    main()

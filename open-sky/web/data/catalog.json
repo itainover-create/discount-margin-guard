@@ -1,0 +1,337 @@
+{
+ "version": 1,
+ "regions": [
+  {
+   "id": "hnl",
+   "name": "Honolulu, O'ahu",
+   "country": "United States",
+   "countryCode": "US",
+   "character": "Volcanic island, reef and city",
+   "characterHe": "\u05d0\u05d9 \u05d2\u05e2\u05e9\u05d9, \u05e9\u05d5\u05e0\u05d9\u05ea \u05d5\u05e2\u05d9\u05e8",
+   "tier": "B",
+   "bbox": [
+    -158.1,
+    21.24,
+    -157.68,
+    21.46
+   ],
+   "anchor": {
+    "icao": "PHNL",
+    "lat": 21.31839,
+    "lon": -157.92567,
+    "elevation": 4.0
+   },
+   "airports": [
+    {
+     "icao": "PHNL",
+     "name": "Daniel K. Inouye International Airport",
+     "iata": "HNL",
+     "elevation": 4.0,
+     "x": 0.0,
+     "y": 0.0,
+     "runways": [
+      "04L/22R",
+      "04R/22L",
+      "04W/22W",
+      "08L/26R",
+      "08R/26L",
+      "08W/26W"
+     ],
+     "graphNodes": 3460,
+     "gates": 59,
+     "detail": true
+    }
+   ],
+   "magVar": 9.4,
+   "style": "tropical",
+   "stats": {
+    "buildings": 154895,
+    "buildingHeightsMeasuredPct": 63,
+    "roads": 41170,
+    "rail": 177,
+    "trees": 11538,
+    "sizeMB": 9.0
+   }
+  },
+  {
+   "id": "inn",
+   "name": "Innsbruck",
+   "country": "Austria",
+   "countryCode": "AT",
+   "character": "Alpine valley between high peaks",
+   "characterHe": "\u05e2\u05de\u05e7 \u05d0\u05dc\u05e4\u05d9\u05e0\u05d9 \u05d1\u05d9\u05df \u05e4\u05e1\u05d2\u05d5\u05ea",
+   "tier": "B",
+   "bbox": [
+    11.16,
+    47.18,
+    11.56,
+    47.34
+   ],
+   "anchor": {
+    "icao": "LOWI",
+    "lat": 47.2602,
+    "lon": 11.344,
+    "elevation": 581.3
+   },
+   "airports": [
+    {
+     "icao": "LOWI",
+     "name": "Innsbruck Airport",
+     "iata": "INN",
+     "elevation": 581.3,
+     "x": 0.0,
+     "y": 0.0,
+     "runways": [
+      "08/26",
+      "08G/28G"
+     ],
+     "graphNodes": 98,
+     "gates": 0,
+     "detail": true
+    }
+   ],
+   "magVar": 4.7,
+   "style": "alpine",
+   "stats": {
+    "buildings": 57944,
+    "buildingHeightsMeasuredPct": 13,
+    "roads": 19834,
+    "rail": 809,
+    "trees": 13289,
+    "sizeMB": 5.7
+   }
+  },
+  {
+   "id": "las",
+   "name": "Las Vegas",
+   "country": "United States",
+   "countryCode": "US",
+   "character": "Desert basin and resort strip",
+   "characterHe": "\u05d0\u05d2\u05df \u05de\u05d3\u05d1\u05e8\u05d9 \u05d5\u05e9\u05d3\u05e8\u05ea \u05d4\u05de\u05dc\u05d5\u05e0\u05d5\u05ea",
+   "tier": "B",
+   "bbox": [
+    -115.32,
+    35.98,
+    -115.02,
+    36.24
+   ],
+   "anchor": {
+    "icao": "KLAS",
+    "lat": 36.08336,
+    "lon": -115.15182,
+    "elevation": 664.8
+   },
+   "airports": [
+    {
+     "icao": "KLAS",
+     "name": "Harry Reid International Airport",
+     "iata": "LAS",
+     "elevation": 664.8,
+     "x": 0.0,
+     "y": 0.0,
+     "runways": [
+      "01L/19R",
+      "01R/19L",
+      "08L/26R",
+      "08R/26L"
+     ],
+     "graphNodes": 4294,
+     "gates": 110,
+     "detail": true
+    }
+   ],
+   "magVar": 11.0,
+   "style": "desert",
+   "stats": {
+    "buildings": 470830,
+    "buildingHeightsMeasuredPct": 88,
+    "roads": 134703,
+    "rail": 151,
+    "trees": 11432,
+    "sizeMB": 20.7
+   }
+  },
+  {
+   "id": "nyc",
+   "name": "New York City",
+   "country": "United States",
+   "countryCode": "US",
+   "character": "Megacity, harbour and skyline",
+   "characterHe": "\u05de\u05d8\u05e8\u05d5\u05e4\u05d5\u05dc\u05d9\u05df, \u05e0\u05de\u05dc \u05d5\u05e7\u05d5 \u05e8\u05e7\u05d9\u05e2",
+   "tier": "A",
+   "bbox": [
+    -74.28,
+    40.48,
+    -73.68,
+    40.92
+   ],
+   "anchor": {
+    "icao": "KJFK",
+    "lat": 40.63945,
+    "lon": -73.77932,
+    "elevation": 4.0
+   },
+   "airports": [
+    {
+     "icao": "KJFK",
+     "name": "John F. Kennedy International Airport",
+     "iata": "JFK",
+     "elevation": 4.0,
+     "x": 0.0,
+     "y": 0.0,
+     "runways": [
+      "04L/22R",
+      "04R/22L",
+      "13L/31R",
+      "13R/31L"
+     ],
+     "graphNodes": 2889,
+     "gates": 137,
+     "detail": true
+    },
+    {
+     "icao": "KLGA",
+     "name": "LaGuardia Airport",
+     "iata": "LGA",
+     "elevation": 6.4,
+     "x": -7870.7,
+     "y": 15317.1,
+     "runways": [
+      "04/22",
+      "13/31"
+     ],
+     "graphNodes": 1226,
+     "gates": 80,
+     "detail": false
+    },
+    {
+     "icao": "KEWR",
+     "name": "Newark Liberty International Airport",
+     "iata": "EWR",
+     "elevation": 5.5,
+     "x": -33011.0,
+     "y": 5554.2,
+     "runways": [
+      "11/29",
+      "4L/22R",
+      "4R/22L"
+     ],
+     "graphNodes": 1839,
+     "gates": 101,
+     "detail": false
+    }
+   ],
+   "magVar": -12.9,
+   "style": "nyc",
+   "stats": {
+    "buildings": 1750970,
+    "buildingHeightsMeasuredPct": 94,
+    "roads": 263628,
+    "rail": 6320,
+    "trees": 71989,
+    "sizeMB": 64.8
+   }
+  },
+  {
+   "id": "sab",
+   "name": "Saba",
+   "country": "Caribbean Netherlands",
+   "countryCode": "BQ",
+   "character": "Tiny volcanic island, 400 m runway",
+   "characterHe": "\u05d0\u05d9 \u05d2\u05e2\u05e9\u05d9 \u05d6\u05e2\u05d9\u05e8, \u05de\u05e1\u05dc\u05d5\u05dc \u05e9\u05dc 400 \u05de'",
+   "tier": "B",
+   "bbox": [
+    -63.275,
+    17.6,
+    -63.205,
+    17.67
+   ],
+   "anchor": {
+    "icao": "TNCS",
+    "lat": 17.64533,
+    "lon": -63.22051,
+    "elevation": 18.3
+   },
+   "airports": [
+    {
+     "icao": "TNCS",
+     "name": "Juancho E. Yrausquin Airport",
+     "iata": "SAB",
+     "elevation": 18.3,
+     "x": 0.0,
+     "y": 0.0,
+     "runways": [
+      "12/30"
+     ],
+     "graphNodes": 24,
+     "gates": 2,
+     "detail": true
+    }
+   ],
+   "magVar": -14.5,
+   "style": "tropical",
+   "stats": {
+    "buildings": 1482,
+    "buildingHeightsMeasuredPct": 1,
+    "roads": 418,
+    "rail": 0,
+    "trees": 97,
+    "sizeMB": 0.2
+   }
+  },
+  {
+   "id": "tlv",
+   "name": "Tel Aviv",
+   "country": "Israel",
+   "countryCode": "IL",
+   "character": "Mediterranean coastal city",
+   "characterHe": "\u05e2\u05d9\u05e8 \u05d7\u05d5\u05e3 \u05d9\u05dd-\u05ea\u05d9\u05db\u05d5\u05e0\u05d9\u05ea",
+   "tier": "B",
+   "bbox": [
+    34.7,
+    31.88,
+    35.02,
+    32.16
+   ],
+   "anchor": {
+    "icao": "LLBG",
+    "lat": 32.0114,
+    "lon": 34.8867,
+    "elevation": 41.1
+   },
+   "airports": [
+    {
+     "icao": "LLBG",
+     "name": "Ben Gurion International Airport",
+     "iata": "TLV",
+     "elevation": 41.1,
+     "x": 0.0,
+     "y": 0.0,
+     "runways": [
+      "03/21",
+      "08/26",
+      "12/30"
+     ],
+     "graphNodes": 1694,
+     "gates": 38,
+     "detail": true
+    }
+   ],
+   "magVar": 5.3,
+   "style": "mediterranean",
+   "stats": {
+    "buildings": 219575,
+    "buildingHeightsMeasuredPct": 6,
+    "roads": 86997,
+    "rail": 524,
+    "trees": 4899,
+    "sizeMB": 13.1
+   }
+  }
+ ],
+ "tiers": {
+  "A": "Detailed: real buildings with measured heights, roads, coastline, land use, detailed airport (taxiways, gates, lights, signs), landmarks.",
+  "B": "Regional: real buildings (heights partly estimated), roads, coastline and land use; airport layout from map data.",
+  "G": "Global base: real runway positions/headings for 10,000+ airports; terrain from online elevation tiles (or a coarse ~10 km offline layer); generic airport buildings; no city buildings."
+ }
+}

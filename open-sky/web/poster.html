@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OPEN SKY Poster</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Exo+2:wght@300;400;600;800;900&display=swap">
+<link rel="icon" href="assets/orion-mark.svg" type="image/svg+xml">
+<style>
+  :root { --orange: #e8641b; --amber: #ffb35c; --navy: #0b1424; --ink: #eaf2ff; }
+  html, body { margin: 0; background: #05080f; }
+  body { display: flex; justify-content: center; align-items: flex-start; min-height: 100vh; font-family: 'Exo 2', Arial, sans-serif; }
+  .poster { position: relative; width: min(100vw, 1200px); aspect-ratio: 2 / 3; overflow: hidden; color: var(--ink);
+    background: #0b1424 url('assets/poster-bg.jpg') center 58% / cover no-repeat; container-type: inline-size; }
+  .shade { position: absolute; inset: 0;
+    background:
+      linear-gradient(180deg, rgba(5, 9, 18, 0.92) 0%, rgba(5, 9, 18, 0.55) 18%, rgba(5, 9, 18, 0) 38%),
+      linear-gradient(0deg, rgba(5, 9, 18, 0.97) 0%, rgba(5, 9, 18, 0.82) 20%, rgba(5, 9, 18, 0) 46%); }
+  .top { position: absolute; top: 4.2cqw; left: 0; right: 0; text-align: center; }
+  .top img { width: 36cqw; filter: drop-shadow(0 0.6cqw 2cqw rgba(232, 100, 27, 0.45)); }
+  .presents { margin-top: 1.2cqw; font-size: 1.7cqw; letter-spacing: 1.2cqw; font-weight: 600; color: #c9d7ee; }
+  .bottom { position: absolute; left: 0; right: 0; bottom: 4.5cqw; text-align: center; }
+  h1 { margin: 0; font-weight: 900; font-size: 15.5cqw; line-height: 0.9; letter-spacing: 1.4cqw; padding-left: 1.4cqw;
+    background: linear-gradient(180deg, #ffffff 0%, #dbe8ff 55%, #9fb9e4 100%); -webkit-background-clip: text; background-clip: text; color: transparent;
+    filter: drop-shadow(0 0.5cqw 1.6cqw rgba(0, 0, 0, 0.6)); }
+  .sub { margin-top: 1.4cqw; font-size: 3.1cqw; font-weight: 600; letter-spacing: 1.65cqw; padding-left: 1.65cqw; color: var(--amber); }
+  .rule { width: 46cqw; height: 0.25cqw; margin: 3cqw auto; background: linear-gradient(90deg, transparent, var(--orange), transparent); }
+  .slogan { font-size: 2.6cqw; font-weight: 800; letter-spacing: 0.9cqw; padding-left: 0.9cqw; }
+  .dev { margin-top: 2.4cqw; font-size: 1.9cqw; letter-spacing: 0.55cqw; color: #c9d7ee; }
+  .dev b { color: #fff; font-weight: 800; letter-spacing: 0.7cqw; }
+  .billing { margin: 3.4cqw auto 0; width: 84cqw; font-size: 1.12cqw; line-height: 1.55; letter-spacing: 0.18cqw; color: #8ea3c4; text-transform: uppercase; }
+  .billing span { color: #c9d7ee; }
+  .badge { position: absolute; right: 4cqw; bottom: 4cqw; width: 7cqw; opacity: 0.9; }
+  .sig { position: absolute; left: 4cqw; bottom: 4.6cqw; font-family: 'Brush Script MT', 'Segoe Script', cursive; font-size: 2.6cqw; color: rgba(255, 255, 255, 0.75); transform: rotate(-6deg); }
+  .shot-note { position: absolute; top: 47%; right: 2.5cqw; writing-mode: vertical-rl; font-size: 0.95cqw; letter-spacing: 0.3cqw; color: rgba(255, 255, 255, 0.45); }
+</style>
+</head>
+<body>
+<div class="poster" id="poster">
+  <div class="shade"></div>
+  <div class="top">
+    <img src="assets/orion-logo.svg" alt="ORION GAMES">
+    <div class="presents">ORION GAMES PRESENTS</div>
+  </div>
+  <div class="shot-note">IN-ENGINE SCREENSHOT · NEW YORK · REAL MAP DATA</div>
+  <div class="bottom">
+    <h1>OPEN SKY</h1>
+    <div class="sub">WORLD FLIGHT SIMULATOR</div>
+    <div class="rule"></div>
+    <div class="slogan">WHERE VISION BECOMES REALITY</div>
+    <div class="dev">DEVELOPED BY <b>ALON NOVITARGER</b></div>
+    <div class="billing">
+      An <span>ORION GAMES</span> production · <span>OPEN SKY</span> — World Flight Simulator ·
+      flight dynamics &amp; systems in C++ · real-world cities from map data ·
+      map data © <span>OpenStreetMap contributors</span>, <span>Overture Maps Foundation</span> ·
+      land cover <span>ESA WorldCover</span> · elevation <span>Terrain Tiles on AWS</span> · airports <span>OurAirports</span> ·
+      coastlines <span>Natural Earth</span>
+    </div>
+  </div>
+  <div class="sig">Alon Novitarger</div>
+  <img class="badge" src="assets/orion-mark.svg" alt="">
+</div>
+</body>
+</html>
