@@ -1,5 +1,6 @@
 // In-flight HUD: flight data, warnings, tutorial panel, radio log & menu,
 // minimap, live checklists, help and the debrief screen.
+import { badge, gameTitle, GAME, RIGHTS } from './brand.js';
 import { ACTIONS, keyLabel } from '../input/input.js';
 import { VIEW_NAMES } from '../camera/cameras.js';
 import { PHASE } from '../sim/traffic.js';
@@ -68,6 +69,36 @@ export class Hud {
     $('atc-menu').classList.add('hidden');
     this.applyVisibility();
     this.msgCount = 0;
+    this.boot();
+  }
+
+  // Avionics boot sequence shown when a flight starts (brand + copyright).
+  boot() {
+    const el = $('hud-boot'), g = this.g;
+    clearTimeout(this.bootTimer);
+    clearInterval(this.bootTyper);
+    el.className = '';
+    el.innerHTML = '<div class="boot-head"></div><pre></pre><div class="rights"></div>';
+    el.querySelector('.boot-head').append(badge(), gameTitle('boot'));
+    el.querySelector('.rights').textContent = RIGHTS;
+    const ac = g.player && g.player.def ? g.player.def.name : 'SKYLARK T1';
+    const lines = [
+      `GLOBAL SKIES FLIGHT SYSTEM ${GAME.version} · ORION GAMES`,
+      `FLIGHT CORE ........ C++ ${g.core.backend === 'wasm' ? 'WEBASSEMBLY' : 'JS'} OK`,
+      `AIRCRAFT ........... ${ac.toUpperCase()} OK`,
+      `NAV DATABASE ....... ${(g.world.airportDb ? g.world.airportDb.rows.length : 0).toLocaleString('en-US')} AIRPORTS OK`,
+      `WORLD .............. ${(g.world.status.place || '').toUpperCase()}`,
+      'SYSTEMS READY',
+    ];
+    const pre = el.querySelector('pre');
+    let i = 0, c = 0;
+    this.bootTyper = setInterval(() => {
+      if (i >= lines.length) { clearInterval(this.bootTyper); return; }
+      c += 3;
+      if (c >= lines[i].length) { c = 0; i++; }
+      pre.textContent = lines.slice(0, i).join('\n') + (i < lines.length ? (i ? '\n' : '') + lines[i].slice(0, c) : '');
+    }, 16);
+    this.bootTimer = setTimeout(() => { el.classList.add('fade'); this.bootTimer = setTimeout(() => el.classList.add('hidden'), 700); }, 3600);
   }
 
   applyVisibility() {

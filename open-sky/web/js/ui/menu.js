@@ -48,6 +48,7 @@ export class Menu {
   }
 
   renderAll() {
+    document.body.classList.toggle('he-on', !!this.g.settings.hebrew);
     this.renderFeatured();
     this.renderMissions();
     this.renderSettings();
@@ -187,8 +188,11 @@ export class Menu {
       </fieldset>
       <fieldset><legend>AUDIO &amp; LANGUAGE</legend>
         <div class="row">Master volume <input type="range" id="set-vol" min="0" max="1" step="0.05" value="${s.volume}"></div>
-        <div class="row">ATC voice (browser speech) <input type="checkbox" id="set-voice" ${s.atcVoice ? 'checked' : ''}></div>
-        <div class="row">Hebrew explanations <input type="checkbox" id="set-he" ${s.hebrew ? 'checked' : ''}></div>
+        <div class="row">Music volume <input type="range" id="set-music" min="0" max="1" step="0.05" value="${s.music ?? 0.7}"></div>
+        <div class="row">ATC voice (English, browser speech) <input type="checkbox" id="set-voice" ${s.atcVoice ? 'checked' : ''}></div>
+        <div class="row">Hebrew explanations (optional) <input type="checkbox" id="set-he" ${s.hebrew ? 'checked' : ''}></div>
+        <div class="row">Play the opening at start <input type="checkbox" id="set-intro" ${s.intro !== false ? 'checked' : ''}></div>
+        <button class="big-btn" id="replay-intro">Replay the ORION GAMES opening</button>
       </fieldset></div>`;
     const save = () => { g.saveSettings(); };
     $('set-q').onchange = (e) => { s.quality = e.target.value; s.trafficDensity = null; s.carDensity = null; save(); g.applyQuality(); this.renderSettings(); };
@@ -201,6 +205,9 @@ export class Menu {
     $('set-vol').oninput = (e) => { s.volume = +e.target.value; g.audio.volume.master = s.volume; if (g.audio.master) g.audio.master.gain.value = s.volume; save(); };
     $('set-voice').onchange = (e) => { s.atcVoice = e.target.checked; save(); };
     $('set-he').onchange = (e) => { s.hebrew = e.target.checked; save(); this.renderAll(); };
+    $('set-music').oninput = (e) => { s.music = +e.target.value; save(); if (g.music) { g.music.resume(s.music); if (s.music > 0) g.music.startAmbient(); else g.music.stopAll(0.3); } };
+    $('set-intro').onchange = (e) => { s.intro = e.target.checked; save(); };
+    $('replay-intro').onclick = () => g.playIntro(false);
     $('bench').onclick = () => this.benchmark();
   }
 
@@ -280,9 +287,10 @@ export class Menu {
     const g = this.g;
     const regions = g.world.catalog.regions.map((r) => `<tr><td><b>${esc(r.name)}</b><br><span class="tier ${r.tier}">${r.tier === 'A' ? 'Detailed' : 'Regional'}</span></td><td>${esc(r.airports.map((a) => a.icao).join(', '))}</td><td>${r.stats.buildings.toLocaleString()} buildings (${r.stats.buildingHeightsMeasuredPct}% measured heights), ${r.stats.roads.toLocaleString()} roads, ${r.stats.trees.toLocaleString()} mapped trees · ${r.stats.sizeMB} MB</td></tr>`).join('');
     $('about').innerHTML = `
-      <h2>OPEN SKY — World Flight Simulator</h2>
-      <p>An ORION GAMES project. <b>Developed by ALON NOVITARGER.</b> <i>Where vision becomes reality.</i></p>
-      <p>Version 1.0 (prototype). The flight model, aircraft systems, autopilot, runway control and AI traffic are written in C++ and run in the browser as WebAssembly; rendering, world streaming and the interface use WebGL 2 (three.js).</p>
+      <h2>GLOBAL SKIES: Infinite Horizon</h2>
+      <p>An ORION GAMES production. <i>Where vision becomes reality.</i></p>
+      <p><b>Developed by ALON NOVITARGER. All Rights Reserved.</b> © 2026 ALON NOVITARGER. Lead developer and IP owner: ALON NOVITARGER.</p>
+      <p>Version 2.0. The flight model, aircraft systems, autopilot, runway control and AI traffic are written in C++ and run in the browser as WebAssembly; rendering, world streaming and the interface use WebGL 2 (three.js).</p>
       <h2>What is real and what is reconstructed</h2>
       <table><tr><th>Place</th><th>Airports</th><th>Real data used</th></tr>${regions}${(g.world.catalog.planned || []).map((r) => `<tr><td><b>${esc(r.name)}</b><br><span class="tier dev">${r.status}</span></td><td>${r.anchor.icao}</td><td>Flyable now at the global tier (real runways, streamed terrain). Detailed city data: ${r.status === 'in development' ? 'next region in the data pipeline' : 'on the roadmap'}.</td></tr>`).join('')}</table>
       <p class="note">Everywhere else (${this.rows.length.toLocaleString()} airports): runways at their real coordinates, headings, lengths and widths; terrain from online elevation tiles when reachable (cached locally) or a coarse built-in global layer; generic taxiway, apron, terminal and tower; no city buildings. Building heights without data are estimated from footprint and type. Statue of Liberty and suspension-bridge towers/cables are hand-built approximations from public dimensions.</p>
@@ -292,7 +300,7 @@ export class Menu {
         <li>Airports and runways: <b>OurAirports</b> (public domain).</li>
         <li>Elevation: <b>Terrain Tiles on AWS</b> (Mapzen/Tilezen, sources incl. SRTM, USGS 3DEP, GMTED, ETOPO1 — attribution per their terms).</li>
         <li>Coastlines for the global layer: <b>Natural Earth</b> (public domain).</li>
-        <li>3D engine: three.js (MIT). Fonts: Exo 2, Heebo (SIL OFL) via Google Fonts.</li>
+        <li>3D engine: three.js (MIT). Fonts: Exo 2, Heebo, Cinzel, Montserrat, Great Vibes (SIL OFL) via Google Fonts. Music and sound effects: original, synthesised in the game.</li>
       </ul>
       <p class="note">Aircraft: the "Skylark T1" is an original design calibrated to the performance class of a 180 hp four-seat trainer; it is not a licensed replica. Real aircraft names (e.g. Boeing 737/787, F-16, F/A-18) are trademarks of their owners and will only be used with appropriate rights; until then the roadmap uses generic class names. Radio frequencies are for simulation only.</p>
       <h2>Performance</h2>

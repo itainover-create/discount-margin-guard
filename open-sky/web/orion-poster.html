@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ORION Brand Poster</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Exo+2:wght@600;800;900&family=Cinzel:wght@500;600;700&family=Montserrat:wght@400;500;600&family=Great+Vibes&display=swap">
+<link rel="stylesheet" href="css/style.css">
+<link rel="icon" href="assets/orion-mark.svg" type="image/svg+xml">
+<style>
+  html, body { overflow: auto; height: auto; }
+  body { display: flex; justify-content: center; background: #05080f; }
+  .poster { position: relative; width: min(100vw, 1100px); aspect-ratio: 4 / 5; container-type: inline-size; overflow: hidden;
+    background: radial-gradient(ellipse at 50% 38%, #182235 0%, #0d1422 55%, #070b13 100%); display: flex; align-items: center; justify-content: center; }
+  .poster::before { content: ''; position: absolute; inset: 0; background: radial-gradient(circle at 50% 30%, rgba(232, 196, 128, 0.08), transparent 45%); }
+  .poster .brand-lockup { --emblem-w: 52cqw; --word-size: 13cqw; position: relative; }
+  .poster .brand-sig { margin-top: 3cqw; }
+  .poster .brand-rule span { width: 20cqw; }
+  .foot { position: absolute; bottom: 3cqw; left: 0; right: 0; text-align: center; font-family: var(--font-caps); color: rgba(214, 190, 140, 0.7); font-size: 1.35cqw; letter-spacing: 0.2em; }
+</style>
+</head>
+<body>
+<div class="poster" id="poster"><div id="mount"></div><div class="foot">© 2026 ALON NOVITARGER · ALL RIGHTS RESERVED</div></div>
+<script type="module">
+  import { loadEmblem, lockup } from './js/ui/brand.js';
+  await loadEmblem();
+  document.getElementById('mount').replaceWith(lockup({ signature: true }));
+  await document.fonts.ready;
+  document.body.dataset.ready = '1';
+</script>
+</body>
+</html>

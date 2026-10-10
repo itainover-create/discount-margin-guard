@@ -72,7 +72,7 @@ export function tutorialSteps(game) {
   const acc = () => !game.player.simMode;
   const fieldFt = () => (o().z - (game.atc.airport ? game.atc.airport.elev : 0)) * FT;
   return [
-    { t: 'Welcome to OPEN SKY. Hold the right mouse button and drag to look around. Press 2 for the outside view and 1 to come back.', he: 'ברוכים הבאים! גררו עם הכפתור הימני של העכבר כדי להסתכל סביב. מקש 2 – מבט מבחוץ, מקש 1 – חזרה לתא.', done: (s) => s.time > 10 || s.viewsSeen >= 2 },
+    { t: 'Welcome to GLOBAL SKIES. Hold the right mouse button and drag to look around. Press 2 for the outside view and 1 to come back.', he: 'ברוכים הבאים! גררו עם הכפתור הימני של העכבר כדי להסתכל סביב. מקש 2 – מבט מבחוץ, מקש 1 – חזרה לתא.', done: (s) => s.time > 10 || s.viewsSeen >= 2 },
     { t: 'Before start: parking brake ON (B), master battery ON (click the red BAT switch) and the beacon (BCN) ON.', he: 'לפני ההתנעה: בלם חניה מופעל (B), מתג המצבר (BAT האדום) ומתג משואת ההבהוב (BCN) דלוקים.', done: () => sw().parkBrake && sw().battery && sw().beacon, hint: 'Switches are on the lower left of the panel. Hover to see names.' },
     { t: 'Set the mixture full rich (U or drag the red knob in), fuel selector BOTH, and crack the throttle (about 1/10).', he: 'תערובת עשירה מלאה (U), בורר דלק על BOTH, ומצערת פתוחה מעט (כעשירית).', done: () => sw().mixture > 0.9 && sw().fuelSelector === 2 && sw().throttle > 0.04 && sw().throttle < 0.25, hint: 'Throttle: = / − keys or drag the black knob. Accessible mode: Shift+E runs the whole start procedure for you.' },
     { t: 'Prime the engine: fuel pump ON for about 3 seconds, then OFF.', he: 'הזרקת דלק התחלתית: הפעילו את משאבת הדלק (PUMP) לכ-3 שניות ואז כבו אותה.', skip: acc, done: () => o().prime > 1.5 && !sw().fuelPump },

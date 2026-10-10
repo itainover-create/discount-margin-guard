@@ -3,10 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>OPEN SKY — World Flight Simulator</title>
-<meta name="description" content="OPEN SKY — World Flight Simulator by ORION GAMES. Developed by Alon Novitarger. Where vision becomes reality.">
+<title>GLOBAL SKIES: Infinite Horizon</title>
+<meta name="description" content="GLOBAL SKIES: Infinite Horizon, an ORION GAMES flight simulator. Developed by ALON NOVITARGER. All Rights Reserved. Where vision becomes reality.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Exo+2:wght@300;400;600;800&family=Heebo:wght@300;400;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Exo+2:wght@300;400;600;800&family=Heebo:wght@300;400;700&family=Cinzel:wght@500;600;700&family=Montserrat:wght@400;500;600&family=Great+Vibes&display=swap">
 <link rel="stylesheet" href="css/style.css">
 <link rel="icon" href="assets/orion-mark.svg" type="image/svg+xml">
 <script type="importmap">{ "imports": { "three": "./vendor/three.module.min.js" } }</script>
@@ -17,23 +17,17 @@
 
   <!-- ===== Loading ===== -->
   <section id="loading" class="screen show">
-    <div class="brand-block">
-      <img src="assets/orion-logo.svg" class="orion-logo" alt="ORION GAMES">
-      <h1 class="title">OPEN SKY</h1>
-      <div class="subtitle">WORLD FLIGHT SIMULATOR</div>
-      <div class="slogan">WHERE VISION BECOMES REALITY</div>
-    </div>
+    <div class="brand-block" id="loading-brand"></div>
     <div class="progress"><div id="progress-bar"></div></div>
     <div id="progress-text">Starting…</div>
-    <div class="credit">Developed by ALON NOVITARGER · ORION GAMES</div>
+    <div class="credit">Developed by ALON NOVITARGER. All Rights Reserved.<br>© 2026 ALON NOVITARGER · ORION GAMES</div>
   </section>
 
   <!-- ===== Main menu ===== -->
   <section id="menu" class="screen">
     <div class="menu-bg"></div>
     <header class="menu-head">
-      <img src="assets/orion-logo.svg" class="orion-logo small" alt="ORION GAMES">
-      <div class="menu-title"><span class="title">OPEN SKY</span><span class="subtitle">WORLD FLIGHT SIMULATOR</span></div>
+      <div id="menu-brand" class="menu-brand"></div>
       <div class="menu-tabs">
         <button data-tab="home" class="active">Home</button>
         <button data-tab="free">Free Flight</button>
@@ -85,12 +79,13 @@
     <div class="tab" id="tab-settings"><div id="settings-form"></div></div>
     <div class="tab" id="tab-controls"><div id="controls-form"></div></div>
     <div class="tab" id="tab-about"><div id="about"></div></div>
-    <footer class="menu-foot"><span>ORION GAMES</span><span>OPEN SKY v1.0 prototype</span><span>Developed by ALON NOVITARGER</span></footer>
+    <footer class="menu-foot"><span>ORION GAMES · WHERE VISION BECOMES REALITY</span><span>GLOBAL SKIES: Infinite Horizon v2.0</span><span class="rights">Developed by ALON NOVITARGER. All Rights Reserved. © 2026 ALON NOVITARGER</span></footer>
   </section>
 
   <!-- ===== In-flight HUD ===== -->
   <section id="hud" class="hidden">
     <div id="hud-data" class="panel"></div>
+    <div id="hud-boot" class="hidden"></div>
     <div id="hud-msg"></div>
     <div id="tutorial" class="panel hidden"></div>
     <div id="atc" class="panel"><div id="atc-head">RADIO</div><div id="atc-log"></div><div id="atc-menu" class="hidden"></div></div>
@@ -120,7 +115,7 @@
   <section id="help" class="overlay hidden"><div class="panel center wide" id="help-body"></div></section>
   <section id="debrief" class="overlay hidden"><div class="panel center wide" id="debrief-body"></div></section>
 </div>
-<noscript>OPEN SKY needs JavaScript and WebGL 2.</noscript>
+<noscript>GLOBAL SKIES needs JavaScript and WebGL 2. Developed by ALON NOVITARGER. All Rights Reserved.</noscript>
 <script type="module" src="js/main.js"></script>
 </body>
 </html>

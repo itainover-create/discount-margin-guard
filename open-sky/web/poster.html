@@ -3,65 +3,60 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>OPEN SKY Poster</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Exo+2:wght@300;400;600;800;900&family=Great+Vibes&display=swap">
+<title>GLOBAL SKIES Poster</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Exo+2:wght@600;800;900&family=Cinzel:wght@500;600;700&family=Montserrat:wght@400;500;600&family=Great+Vibes&display=swap">
+<link rel="stylesheet" href="css/style.css">
 <link rel="icon" href="assets/orion-mark.svg" type="image/svg+xml">
 <style>
-  :root { --orange: #e8641b; --amber: #ffb35c; --navy: #0b1424; --ink: #eaf2ff; }
-  html, body { margin: 0; background: #05080f; }
-  body { display: flex; justify-content: center; align-items: flex-start; min-height: 100vh; font-family: 'Exo 2', Arial, sans-serif; }
-  .poster { position: relative; width: min(100vw, 1200px); aspect-ratio: 2 / 3; overflow: hidden; color: var(--ink);
+  html, body { overflow: auto; height: auto; }
+  body { display: flex; justify-content: center; background: #05080f; }
+  .poster { position: relative; width: min(100vw, 1200px); aspect-ratio: 2 / 3; overflow: hidden; color: var(--text);
     background: #0b1424 url('assets/poster-bg.jpg') center 58% / cover no-repeat; container-type: inline-size; }
   .shade { position: absolute; inset: 0;
-    background:
-      linear-gradient(180deg, rgba(5, 9, 18, 0.92) 0%, rgba(5, 9, 18, 0.55) 18%, rgba(5, 9, 18, 0) 38%),
-      linear-gradient(0deg, rgba(5, 9, 18, 0.97) 0%, rgba(5, 9, 18, 0.82) 20%, rgba(5, 9, 18, 0) 46%); }
-  .top { position: absolute; top: 4.2cqw; left: 0; right: 0; text-align: center; }
-  .top img { width: 36cqw; filter: drop-shadow(0 0.6cqw 2cqw rgba(232, 100, 27, 0.45)); }
-  .presents { margin-top: 1.2cqw; font-size: 1.7cqw; letter-spacing: 1.2cqw; font-weight: 600; color: #c9d7ee; }
-  .bottom { position: absolute; left: 0; right: 0; bottom: 3.2cqw; text-align: center; }
-  h1 { margin: 0; font-weight: 900; font-size: 15.5cqw; line-height: 0.9; letter-spacing: 1.4cqw; padding-left: 1.4cqw;
-    background: linear-gradient(180deg, #ffffff 0%, #dbe8ff 55%, #9fb9e4 100%); -webkit-background-clip: text; background-clip: text; color: transparent;
-    filter: drop-shadow(0 0.5cqw 1.6cqw rgba(0, 0, 0, 0.6)); }
-  .sub { margin-top: 1.4cqw; font-size: 3.1cqw; font-weight: 600; letter-spacing: 1.65cqw; padding-left: 1.65cqw; color: var(--amber); }
-  .rule { width: 46cqw; height: 0.25cqw; margin: 2.4cqw auto; background: linear-gradient(90deg, transparent, var(--orange), transparent); }
-  .slogan { font-size: 2.6cqw; font-weight: 800; letter-spacing: 0.9cqw; padding-left: 0.9cqw; }
-  .dev { margin-top: 2.4cqw; font-size: 1.9cqw; letter-spacing: 0.55cqw; color: #c9d7ee; }
-  .dev b { color: #fff; font-weight: 800; letter-spacing: 0.7cqw; }
-  .billing { margin: 2.6cqw auto 0; width: 84cqw; font-size: 1.12cqw; line-height: 1.55; letter-spacing: 0.18cqw; color: #8ea3c4; text-transform: uppercase; }
+    background: linear-gradient(180deg, rgba(5, 9, 18, 0.94) 0%, rgba(5, 9, 18, 0.6) 22%, rgba(5, 9, 18, 0) 40%),
+                linear-gradient(0deg, rgba(5, 9, 18, 0.98) 0%, rgba(5, 9, 18, 0.85) 24%, rgba(5, 9, 18, 0) 48%); }
+  .top { position: absolute; top: 3.2cqw; left: 0; right: 0; display: flex; flex-direction: column; align-items: center; }
+  .top .brand-lockup { --emblem-w: 15cqw; --word-size: 6.2cqw; }
+  .presents { margin-top: 1.6cqw; font-family: var(--font-caps); font-size: 1.5cqw; letter-spacing: 1.1cqw; padding-left: 1.1cqw; color: #c9d7ee; }
+  .bottom { position: absolute; left: 0; right: 0; bottom: 3cqw; text-align: center; }
+  .bottom .game-title { --gt-size: 12.4cqw; }
+  .rule { width: 46cqw; height: 0.2cqw; margin: 2.6cqw auto 2cqw; background: linear-gradient(90deg, transparent, var(--gold), transparent); }
+  .slogan2 { font-family: var(--font-caps); font-weight: 600; font-size: 2.3cqw; letter-spacing: 0.9cqw; padding-left: 0.9cqw; color: var(--gold2); }
+  .dev { margin-top: 2cqw; font-family: var(--font-caps); font-size: 1.7cqw; letter-spacing: 0.5cqw; color: #c9d7ee; }
+  .dev b { color: #fff; letter-spacing: 0.65cqw; }
+  .billing { margin: 2.4cqw auto 0; width: 86cqw; font-family: var(--font-caps); font-size: 1.05cqw; line-height: 1.6; letter-spacing: 0.16cqw; color: #8ea3c4; text-transform: uppercase; }
   .billing span { color: #c9d7ee; }
-  .sign-row { display: flex; align-items: center; justify-content: space-between; width: 84cqw; margin: 2.2cqw auto 0; }
-  .badge { width: 5.5cqw; opacity: 0.9; }
-  .sig { font-family: 'Great Vibes', 'Segoe Script', cursive; font-size: 3.6cqw; color: rgba(255, 255, 255, 0.82); transform: rotate(-4deg); }
-  .shot-note { position: absolute; top: 47%; right: 2.5cqw; writing-mode: vertical-rl; font-size: 0.95cqw; letter-spacing: 0.3cqw; color: rgba(255, 255, 255, 0.45); }
+  .sign-row { display: flex; align-items: center; justify-content: space-between; width: 86cqw; margin: 2cqw auto 0; }
+  .sig { font-family: var(--font-sig); font-size: 3.6cqw; color: #e2bd78; transform: rotate(-4deg); }
+  .copy { font-family: var(--font-caps); font-size: 1.1cqw; letter-spacing: 0.2cqw; color: rgba(214, 190, 140, 0.8); }
+  .shot-note { position: absolute; top: 47%; right: 2.5cqw; writing-mode: vertical-rl; font-family: var(--font-caps); font-size: 0.95cqw; letter-spacing: 0.3cqw; color: rgba(255, 255, 255, 0.45); }
 </style>
 </head>
 <body>
 <div class="poster" id="poster">
   <div class="shade"></div>
-  <div class="top">
-    <img src="assets/orion-logo.svg" alt="ORION GAMES">
-    <div class="presents">ORION GAMES PRESENTS</div>
-  </div>
+  <div class="top"><div id="brand"></div><div class="presents">PRESENTS</div></div>
   <div class="shot-note">IN-ENGINE SCREENSHOT · NEW YORK · REAL MAP DATA</div>
   <div class="bottom">
-    <h1>OPEN SKY</h1>
-    <div class="sub">WORLD FLIGHT SIMULATOR</div>
+    <div id="title"></div>
     <div class="rule"></div>
-    <div class="slogan">WHERE VISION BECOMES REALITY</div>
+    <div class="slogan2">WHERE VISION BECOMES REALITY</div>
     <div class="dev">DEVELOPED BY <b>ALON NOVITARGER</b></div>
     <div class="billing">
-      An <span>ORION GAMES</span> production · <span>OPEN SKY</span> — World Flight Simulator ·
-      flight dynamics &amp; systems in C++ · real-world cities from map data ·
-      map data © <span>OpenStreetMap contributors</span>, <span>Overture Maps Foundation</span> ·
-      land cover <span>ESA WorldCover</span> · elevation <span>Terrain Tiles on AWS</span> · airports <span>OurAirports</span> ·
-      coastlines <span>Natural Earth</span>
+      An <span>ORION GAMES</span> production · <span>GLOBAL SKIES: Infinite Horizon</span> · flight dynamics &amp; systems in C++ ·
+      real-world cities from map data · map data © <span>OpenStreetMap contributors</span>, <span>Overture Maps Foundation</span> ·
+      land cover <span>ESA WorldCover</span> · elevation <span>Terrain Tiles on AWS</span> · airports <span>OurAirports</span> · coastlines <span>Natural Earth</span>
     </div>
-    <div class="sign-row">
-      <div class="sig">Alon Novitarger</div>
-      <img class="badge" src="assets/orion-mark.svg" alt="ORION GAMES">
-    </div>
+    <div class="sign-row"><div class="sig">Alon Novitarger</div><div class="copy">© 2026 ALON NOVITARGER · ALL RIGHTS RESERVED</div></div>
   </div>
 </div>
+<script type="module">
+  import { loadEmblem, lockup, gameTitle } from './js/ui/brand.js';
+  await loadEmblem();
+  document.getElementById('brand').replaceWith(lockup({ slogan: false }));
+  document.getElementById('title').replaceWith(gameTitle());
+  await document.fonts.ready;
+  document.body.dataset.ready = '1';
+</script>
 </body>
 </html>

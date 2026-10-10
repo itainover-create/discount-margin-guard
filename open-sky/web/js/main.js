@@ -1,4 +1,5 @@
-// OPEN SKY — World Flight Simulator (ORION GAMES). Game orchestrator.
+// GLOBAL SKIES: Infinite Horizon (ORION GAMES). Game orchestrator.
+// Developed by ALON NOVITARGER. All Rights Reserved.
 import * as THREE from 'three';
 import { loadCore } from './core/core.js';
 import { World } from './world/world.js';
@@ -12,6 +13,8 @@ import { TrafficView, Vehicles } from './sim/traffic.js';
 import { MISSIONS, MissionRuntime, Scorer } from './sim/missions.js';
 import { Hud } from './ui/hud.js';
 import { Menu } from './ui/menu.js';
+import { Intro } from './ui/intro.js';
+import { loadEmblem, lockup, gameTitle, badge } from './ui/brand.js';
 import { haversine } from './world/geo.js';
 import { OskIn } from './core/layout.js';
 
@@ -32,14 +35,15 @@ class Game {
     this.state = 'boot';
     this.paused = false;
     this.settings = Object.assign({
-      quality: 'high', trafficDensity: null, carDensity: null, atcVoice: false, hebrew: true, hud: true, online: true,
-      volume: 0.8, mode: 'accessible', units: 'aviation',
+      quality: 'high', trafficDensity: null, carDensity: null, atcVoice: true, hebrew: false, hud: true, online: true,
+      volume: 0.8, music: 0.7, intro: true, mode: 'accessible', units: 'aviation',
     }, this._loadSettings());
+    this.audio = new AudioEngine();  // created early: the intro plays music before the world has loaded
     this.fps = { frames: 0, t: 0, value: 0, hist: [] };
   }
 
-  _loadSettings() { try { return JSON.parse(localStorage.getItem('opensky.settings') || '{}'); } catch { return {}; } }
-  saveSettings() { try { localStorage.setItem('opensky.settings', JSON.stringify(this.settings)); } catch { /* ignore */ } }
+  _loadSettings() { try { return JSON.parse(localStorage.getItem('globalskies.settings') || '{}'); } catch { return {}; } }
+  saveSettings() { try { localStorage.setItem('globalskies.settings', JSON.stringify(this.settings)); } catch { /* ignore */ } }
 
   progress(msg, frac) {
     $('progress-text').textContent = msg;
@@ -47,6 +51,9 @@ class Game {
   }
 
   async boot() {
+    await loadEmblem();
+    $('loading-brand').append(lockup({ slogan: true }), gameTitle());
+    $('menu-brand').append(badge(), gameTitle('menu'));
     this.progress('Starting renderer', 0.05);
     const renderer = new THREE.WebGLRenderer({ antialias: true, logarithmicDepthBuffer: true, powerPreference: 'high-performance' });
     renderer.setSize(innerWidth, innerHeight);
@@ -71,7 +78,6 @@ class Game {
     this.player.root.visible = false;
     this.rig = new CameraRig(this.camera, this.world);
     this.input = new Input(renderer.domElement);
-    this.audio = new AudioEngine();
     this.atc = new ATC(this);
     this.traffic = new TrafficView(this);
     this.vehicles = new Vehicles(this.world);
@@ -115,11 +121,21 @@ class Game {
     ['pause', 'debrief', 'help'].forEach((id) => $(id).classList.add('hidden'));
     this.audio.setPaused(true);
     this.menu.show();
+    if (this.music && !this.introRunning && (this.settings.music ?? 0.7) > 0) { this.music.resume(this.settings.music); this.music.startAmbient(); }
+  }
+
+  // Opening sequence (logo, music, title); also replayable from the About tab.
+  async playIntro(gate = true) {
+    if (this.introRunning) return;
+    this.introRunning = true;
+    if (this.music) this.music.stopAll(0.3);
+    try { await new Intro(this).run({ gate }); } finally { this.introRunning = false; }
   }
 
   // spec: { icao?, lat?, lon?, start, mode, hour, weather, missionId?, dest?, save? }
   async startFlight(spec) {
     this.state = 'loading';
+    if (this.music) this.music.stopAll(1.2);
     $('menu').classList.remove('show');
     $('loading').classList.add('show');
     this.audio.start();
@@ -644,6 +660,7 @@ class Game {
 }
 
 const game = new Game();
+if (Intro.wanted(game)) game.playIntro(true);
 game.boot().catch((e) => {
   console.error(e);
   $('progress-text').textContent = 'Failed to start: ' + e.message + ' — WebGL 2 is required.';
