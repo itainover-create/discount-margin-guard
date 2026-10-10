@@ -11,8 +11,22 @@ let emblemText = null;
 let instance = 0;
 
 export async function loadEmblem() {
-  if (!emblemText) emblemText = await (await fetch('assets/orion-emblem.svg')).text();
+  if (!emblemText) emblemText = await (await fetch(new URL('../../assets/orion-emblem.svg', import.meta.url))).text();
   return emblemText;
+}
+
+// The emblem as an <img> (for canvas textures: aircraft fins, cockpit displays).
+let emblemImg = null;
+export function emblemImage() {
+  if (!emblemImg) {
+    emblemImg = loadEmblem().then((txt) => new Promise((res) => {
+      const img = new Image();
+      img.onload = () => res(img);
+      img.onerror = () => res(null);
+      img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(txt);
+    })).catch(() => null);
+  }
+  return emblemImg;
 }
 
 // Inline copy of the emblem with ids unique to this instance (several logos

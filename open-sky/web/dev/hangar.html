@@ -1,0 +1,37 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Hangar check</title>
+<style>html,body{margin:0;background:#0a1018;color:#ddd;font:14px sans-serif}canvas{width:100vw;height:100vh;display:block}#s{position:fixed;left:10px;top:8px}</style>
+<script type="importmap">{ "imports": { "three": "../vendor/three.module.min.js" } }</script></head>
+<body><canvas id="c"></canvas><div id="s"></div>
+<script type="module">
+import { Hangar } from '../js/ui/hangar.js';
+import { FLEET } from '../js/aircraft/fleet.js';
+import { loadEmblem } from '../js/ui/brand.js';
+const q = new URLSearchParams(location.search);
+const h = new Hangar(document.getElementById('c'));
+window.__h = h;
+(async () => {
+  try { await loadEmblem(); } catch {}
+  const id = +(q.get('id') || 1);
+  const f = FLEET.find((x) => x.id === id);
+  h.show(f);
+  h.resize();
+  h.angle = +(q.get('a') || 0.9);
+  if (q.get('gear')) h.pose.gearPos = +q.get('gear');
+  if (q.get('flaps')) h.pose.flapsDeg = +q.get('flaps');
+  if (q.get('ab')) { h.pose.afterburner = 1; h.pose.atThr = 1; }
+  if (q.get('sb')) h.pose.speedbrake = +q.get('sb');
+  if (q.get('dist')) h.dist *= +q.get('dist');
+  if (q.get('top')) { h.frame = function (dt) { this.camera.position.set(0.01, this.dist * 1.1, 0); this.camera.lookAt(0, 0, 0); this.renderer.render(this.scene, this.camera); }; }
+  if (q.get('side')) { h.frame = function (dt) { this.camera.position.set(this.dist, this.target.y, 0.01); this.camera.lookAt(0, this.target.y, 0); this.renderer.render(this.scene, this.camera); }; }
+  if (q.get('elev')) h.pose.elev = +q.get('elev');
+  if (q.get('ail')) h.pose.ail = +q.get('ail');
+  if (q.get('rud')) h.pose.rud = +q.get('rud');
+  if (q.get('rev')) h.pose.reverser = 1;
+  document.getElementById('s').textContent = f.name + ' · ' + f.classRef;
+  for (let i = 0; i < 30; i++) h.frame(1 / 30, false);
+  window.__ready = true;
+  const loop = () => { h.frame(1 / 60, !q.get('a')); requestAnimationFrame(loop); };
+  loop();
+})().catch((e) => { document.getElementById('s').textContent = 'ERROR ' + e.stack; window.__error = String(e.stack); });
+</script></body></html>

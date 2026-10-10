@@ -3,11 +3,13 @@
 // Body FRD (x fwd, y right, z down) maps to model (y, -z, -x).
 import * as THREE from 'three';
 
-const B = (x, y, z) => new THREE.Vector3(y, -z, -x); // body FRD -> model
+export const B = (x, y, z) => new THREE.Vector3(y, -z, -x); // body FRD -> model
 
 // Loft a closed tube through cross-sections (superellipse) along body x.
-function loft(stations, segs = 20, power = 2.6) {
-  const pos = [], idx = [];
+// UVs: u along the stations (0 = first), v around (0 = right side, 0.25 = top).
+export function loft(stations, segs = 20, power = 2.6) {
+  const pos = [], idx = [], uv = [];
+  const x0 = stations[0].x, x1 = stations[stations.length - 1].x;
   stations.forEach((s, i) => {
     for (let k = 0; k < segs; k++) {
       const a = (k / segs) * Math.PI * 2;
@@ -15,6 +17,7 @@ function loft(stations, segs = 20, power = 2.6) {
       const ex = Math.sign(c) * Math.pow(Math.abs(c), 2 / power), ey = Math.sign(sn) * Math.pow(Math.abs(sn), 2 / power);
       const v = B(s.x, (s.w / 2) * ex, s.zc - (s.h / 2) * ey);
       pos.push(v.x, v.y, v.z);
+      uv.push((s.x - x0) / (x1 - x0 || 1), k / segs);
     }
     if (i > 0) {
       const a0 = (i - 1) * segs, a1 = i * segs;
@@ -29,6 +32,7 @@ function loft(stations, segs = 20, power = 2.6) {
   const s0 = stations[0], sN = stations[stations.length - 1];
   let v = B(s0.x, 0, s0.zc); pos.push(v.x, v.y, v.z);
   v = B(sN.x, 0, sN.zc); pos.push(v.x, v.y, v.z);
+  uv.push(0, 0.5, 1, 0.5);
   const last = (stations.length - 1) * segs;
   for (let k = 0; k < segs; k++) {
     const k1 = (k + 1) % segs;
@@ -37,6 +41,7 @@ function loft(stations, segs = 20, power = 2.6) {
   }
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
   g.setIndex(idx);
   g.computeVertexNormals();
   return g;
@@ -44,7 +49,7 @@ function loft(stations, segs = 20, power = 2.6) {
 
 // Wing/tail panel with a simple airfoil (thickness t of chord), from root to tip.
 // root/tip: {x: leading edge body x, y: body y, z: body z, c: chord}
-function panel(root, tip, t = 0.12, n = 10) {
+export function panel(root, tip, t = 0.12, n = 10) {
   const prof = [];
   for (let i = 0; i <= n; i++) {
     const xc = 1 - Math.cos((i / n) * Math.PI / 2);   // cosine spacing
