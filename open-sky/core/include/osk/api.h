@@ -1,4 +1,4 @@
-// OPEN SKY core — shared layout of the input / output blocks exchanged with
+// GLOBAL SKIES core — shared layout of the input / output blocks exchanged with
 // the JS host. tools/gen_layout.mjs parses these enums and writes
 // web/js/core/layout.js, so the two sides never drift apart.
 #pragma once
@@ -40,6 +40,13 @@ enum OskIn {
   IN_BARO,             // altimeter setting, Pa
   IN_MAG_VAR,          // magnetic variation, rad (east positive)
   IN_ASSISTS,          // bitmask, see OskAssist
+  IN_GEAR_LEVER,       // 1 down, 0 up (retractable gear)
+  IN_SPEEDBRAKE,       // 0..1 speed brake / spoiler lever
+  IN_SPOILER_ARM,      // 0/1 ground spoilers armed (deploy at touchdown)
+  IN_REVERSE,          // 0/1 thrust reversers (on the ground)
+  IN_AT_ENGAGED,       // 0/1 autothrottle
+  IN_AT_SPEED,         // autothrottle target indicated airspeed, m/s
+  IN_FIRE_HANDLES,     // bitmask of pulled engine fire handles (cut fuel, discharge bottle)
   IN_COUNT
 };
 
@@ -89,6 +96,16 @@ enum OskOut {
   OUT_MASS, OUT_SIM_TIME,
   OUT_WIND_E, OUT_WIND_N, OUT_WIND_U,
   OUT_PRIME, OUT_LOW_VOLTS, OUT_LOW_FUEL_L, OUT_LOW_FUEL_R, OUT_OIL_WARN,
+  // Jets & systems
+  OUT_AIRCRAFT,                                   // aircraft id
+  OUT_N1_0, OUT_N1_1, OUT_N1_2, OUT_N1_3,         // % per engine
+  OUT_N2_AVG, OUT_ENG_MASK, OUT_FIRE_MASK,        // running engines / engine fires (bit per engine)
+  OUT_GEAR_POS, OUT_SPEEDBRAKE, OUT_REVERSER, OUT_AFTERBURNER, OUT_AT_THR, OUT_FBW,
+  // Damage (0 intact .. 1 destroyed)
+  OUT_DMG_WING_L, OUT_DMG_WING_R, OUT_DMG_TAIL, OUT_DMG_FUS,
+  OUT_DMG_ENG_0, OUT_DMG_ENG_1, OUT_DMG_ENG_2, OUT_DMG_ENG_3,
+  OUT_PARTS_LOST,                                 // bits: 1 L wing, 2 R wing, 4 tail, 8/16/32 gear legs
+  OUT_HYD, OUT_FUEL_LEAK, OUT_ELEC_FAIL,
   OUT_COUNT
 };
 
@@ -106,6 +123,10 @@ enum OskEvent {
   EV_LOW_VOLTAGE = 1024,
   EV_AP_DISCONNECT = 2048,
   EV_BOUNCE = 4096,
+  EV_DAMAGE = 8192,          // structural damage taken this frame
+  EV_ENGINE_FIRE = 16384,
+  EV_PART_LOST = 32768,      // a wing section, the tail or a gear leg separated
+  EV_GEAR_WARN = 65536,      // landing configuration with the gear up
 };
 
 enum OskCrash {
@@ -116,6 +137,7 @@ enum OskCrash {
   CR_WATER = 4,
   CR_OBSTACLE = 5,
   CR_OVERSTRESS = 6,
+  CR_BREAKUP = 7,            // fuselage destroyed (impact, fire)
 };
 
 enum OskFailure {
@@ -128,5 +150,8 @@ enum OskFailure {
   FAIL_FUEL_LEAK_L,
   FAIL_COUNT
 };
+
+// Parts that the host can damage (building / obstacle collisions).
+enum OskPart { PART_WING_L = 0, PART_WING_R, PART_TAIL, PART_FUSELAGE, PART_ENGINE_0, PART_ENGINE_1, PART_ENGINE_2, PART_ENGINE_3 };
 
 enum OskSurface { SURF_NONE = 0, SURF_ASPHALT = 1, SURF_GRASS = 2, SURF_WATER = 3, SURF_CONCRETE = 4 };

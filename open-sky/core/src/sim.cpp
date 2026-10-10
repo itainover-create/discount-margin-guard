@@ -1,4 +1,4 @@
-// OPEN SKY core — aircraft simulation implementation.
+// GLOBAL SKIES core — aircraft simulation implementation.
 // See include/osk/sim.h for frames and docs/FLIGHT_MODEL.md for the model
 // description, simplifications and calibration results.
 #include "osk/sim.h"
@@ -17,11 +17,13 @@ static double tanh_(double x) {
 // ---------------------------------------------------------------------------
 // Setup
 // ---------------------------------------------------------------------------
-void Sim::init(int aircraftId) {
-  def = &aircraftDef(aircraftId);
+void Sim::init(int id) {
+  def = &aircraftDef(id);
+  aircraftId = (id > 0 && id < AC_COUNT) ? id : 0;
   for (int i = 0; i < IN_COUNT; i++) in[i] = 0;
   for (int i = 0; i < OUT_COUNT; i++) out[i] = 0;
   in[IN_BARO] = P0_ISA;
+  in[IN_GEAR_LEVER] = 1;
   for (int i = 0; i < FAIL_COUNT; i++) fail[i] = false;
   fuelKg[0] = def->fuel.capacityKg[0] * 0.75;
   fuelKg[1] = def->fuel.capacityKg[1] * 0.75;
@@ -41,7 +43,7 @@ void Sim::updateMass() {
 }
 
 void Sim::setPayload(double pilotKg, double paxKg, double baggageKg) {
-  payloadKg = clamp(pilotKg + paxKg + baggageKg, 0, 600);
+  payloadKg = clamp(pilotKg + paxKg + baggageKg, 0, maxf(600.0, def->mass.mtowKg - def->mass.emptyKg));
   updateMass();
 }
 
@@ -77,10 +79,51 @@ void Sim::crash(int reason) {
   crashReason = reason;
   eng.running = false;
   eng.starter = false;
+  for (int i = 0; i < 4; i++) jets[i].running = false;
+}
+
+void Sim::damage(int part, double amount) {
+  if (crashed || amount <= 0) return;
+  events |= EV_DAMAGE;
+  if (part == PART_WING_L || part == PART_WING_R) dmg.wing[part] += amount;
+  else if (part == PART_TAIL) dmg.tail += amount;
+  else if (part == PART_FUSELAGE) dmg.fuselage += amount;
+  else if (part >= PART_ENGINE_0 && part <= PART_ENGINE_3) {
+    int k = part - PART_ENGINE_0;
+    double before = dmg.eng[k];
+    dmg.eng[k] = minf(1.0, dmg.eng[k] + amount);
+    if (before < 0.6 && dmg.eng[k] >= 0.6 && isJet() && k < def->jet.count) { jets[k].fire = true; events |= EV_ENGINE_FIRE; }
+  }
+}
+
+// Structural contact with the ground: damage depends on the impact
+// (vertical speed into the surface) and the sliding speed.
+void Sim::hitPart(int tag, int index, double impact, double speed) {
+  const GearPointDef& g = def->gear[index];
+  int side = g.pos.y < 0 ? 0 : 1;
+  switch (tag) {
+    case 1: damage(PART_TAIL, 0.02 * impact); damage(PART_FUSELAGE, 0.04 * impact); break;
+    case 2: damage(side == 0 ? PART_WING_L : PART_WING_R, 0.12 * impact + 0.004 * speed); break;
+    case 3: break;  // propeller strike handled by the engine
+    case 5: {
+      // nearest engine on that side
+      int best = 0;
+      double bd = 1e9;
+      for (int k = 0; k < def->jet.count; k++) {
+        double d = fabs(def->jet.pos[k].y - g.pos.y);
+        if (d < bd) { bd = d; best = k; }
+      }
+      damage(PART_ENGINE_0 + best, 0.12 * impact + 0.0015 * speed);
+      damage(side == 0 ? PART_WING_L : PART_WING_R, 0.04 * impact);
+      break;
+    }
+    default: damage(PART_FUSELAGE, 0.07 * impact); break;
+  }
 }
 
 double Sim::stallAngle() const {
   double ff = def->flaps.maxDeg > 0 ? flapDeg / def->flaps.maxDeg : 0.0;
+  if (def->flaps.liftExp > 0) ff = pow(ff, def->flaps.liftExp);
   return def->aero.alphaStall - def->aero.alphaStallFlapDelta * ff;
 }
 
@@ -111,12 +154,21 @@ void Sim::reset(double e, double n, double z, double hdg, double tasIn, bool onG
   ap = AutopilotState();
   as = AssistState();
   td = TouchdownState();
+  dmg = DamageState();
+  for (int i = 0; i < 4; i++) jets[i] = JetState();
+  sb = 0;
+  reverser = false;
+  fbwNormal = true;
+  fbwI = fbwRollI = 0;
+  fbwRollHolding = fbwPathHolding = false;
   for (int i = 0; i < 12; i++) gearComp[i] = 0;
   updateMass();
+  if (onGnd || !def->gearSys.retractable) in[IN_GEAR_LEVER] = 1;
+  gearPos = in[IN_GEAR_LEVER] > 0.5 ? 1.0 : 0.0;
 
   double theta = 0;
   if (onGnd) {
-    double staticComp = 0.07;
+    double staticComp = isJet() ? clamp(0.46 * mass * G0 / def->gear[1].k, 0.02, 0.35) : 0.07;
     pos = {n, e, -(z + def->gear[1].pos.z - staticComp)};
     vel = {0, 0, 0};
     flapDeg = 0;
@@ -152,6 +204,18 @@ void Sim::reset(double e, double n, double z, double hdg, double tasIn, bool onG
     if (!onGnd) { in[IN_STROBE] = 1; in[IN_LANDING_LIGHT] = 1; }
     eng.running = true;
     eng.rpm = onGnd ? def->prop.rpmIdle : 2350;
+    if (isJet()) {
+      const JetDef& J = def->jet;
+      double thr = in[IN_THROTTLE];
+      double mil = J.abThrustN > 0 ? clamp(thr / 0.92, 0, 1) : thr;
+      for (int i = 0; i < J.count; i++) {
+        jets[i].running = true;
+        jets[i].n1 = J.idleN1 + (100.0 - J.idleN1) * mil;
+        jets[i].n2 = 58.0 + 42.0 * mil;
+        jets[i].egt = 773.0 + 400.0 * mil;
+      }
+      eng.rpm = jets[0].n1;
+    }
     eng.omega = eng.rpm * 2 * PI / 60;
     eng.oilT = 345; eng.oilP = 60;
     ins.gyroSpin = 1;
@@ -162,6 +226,12 @@ void Sim::reset(double e, double n, double z, double hdg, double tasIn, bool onG
     in[IN_BEACON] = in[IN_NAV_LIGHTS] = in[IN_STROBE] = in[IN_TAXI_LIGHT] = in[IN_LANDING_LIGHT] = 0;
     in[IN_PARK_BRAKE] = 1;
   }
+  atThr = in[IN_THROTTLE];
+  iasPrev = 0;
+  in[IN_AT_ENGAGED] = 0;
+  in[IN_REVERSE] = 0;
+  in[IN_SPEEDBRAKE] = 0;
+  in[IN_FIRE_HANDLES] = 0;
   in[IN_FLAPS_LEVER] = 0;
   in[IN_AP_MASTER] = 0;
   mixture = in[IN_MIXTURE];
@@ -241,6 +311,8 @@ void Sim::autopilot(double dt, double& pitchCmd, double& rollCmd) {
     double err = wrapPi(cmdTrk - trk);
     phiCmd = clamp(1.8 * err, -20 * DEG, 20 * DEG);
   }
+  if (isJet()) phiCmd = clamp(phiCmd * 1.25, -25 * DEG, 25 * DEG);
+  apPhiCmd = phiCmd;
   ap.iRoll = clamp(ap.iRoll + 0.3 * (phiCmd - phi) * dt, -0.15, 0.15);
   rollCmd = clamp(2.2 * (phiCmd - phi) - 0.5 * w.x + ap.iRoll, -0.6, 0.6);
 
@@ -248,7 +320,8 @@ void Sim::autopilot(double dt, double& pitchCmd, double& rollCmd) {
   double vs = -vel.z;
   double vsCmd = ap.vsTarget;
   if (ap.vert == 1) {
-    vsCmd = clamp(0.12 * (in[IN_AP_ALT] - ins.alt), -3.6, 3.6);
+    double vsLim = isJet() ? 12.0 : 3.6;
+    vsCmd = clamp(0.12 * (in[IN_AP_ALT] - ins.alt), -vsLim, vsLim);
   } else {
     ap.vsTarget = in[IN_AP_VS];
     vsCmd = ap.vsTarget;
@@ -256,6 +329,8 @@ void Sim::autopilot(double dt, double& pitchCmd, double& rollCmd) {
   double V = maxf(tas, 20.0);
   double gamma = asin(clamp(vsCmd / V, -0.3, 0.3));
   double thetaCmd = gamma + clamp(alpha, -0.1, 0.25) + 0.6 * (vsCmd - vs) / V;
+  apThetaCmd = thetaCmd;
+  if (def->law == ControlLaw::FlyByWireG && fbwNormal) return;  // FBW flies the targets, trims itself
   ap.iPitch = clamp(ap.iPitch + 1.0 * (thetaCmd - theta) * dt, -0.8, 0.8);
   pitchCmd = clamp(3.0 * (thetaCmd - theta) - 1.2 * w.y + ap.iPitch, -0.7, 0.7);
 
@@ -281,11 +356,12 @@ void Sim::computeControls(double dt) {
 
   double apPitch = 0, apRoll = 0;
   autopilot(dt, apPitch, apRoll);
-  if (ap.engaged) {
+  bool fbwOn = def->law == ControlLaw::FlyByWireG && fbwNormal;
+  if (ap.engaged && !fbwOn) {
     pitchIn = apPitch;
     rollIn = apRoll;
-  } else {
-    if (assist(AS_ATTITUDE_HOLD) && airborne) {
+  } else if (!ap.engaged) {
+    if (assist(AS_ATTITUDE_HOLD) && airborne && !fbwOn) {
       if (fabs(pitchIn) < 0.04) {
         if (!as.pitchHolding) { as.thetaHold = theta; as.pitchHolding = true; }
         double e = as.thetaHold - theta;
@@ -311,20 +387,29 @@ void Sim::computeControls(double dt) {
       as.iTheta = approach(as.iTheta, 0, 2.0, dt);
     }
   }
-  if (assist(AS_STALL_PROTECT) && airborne) {
-    double excess = alpha - (stallAngle() - 2.5 * DEG);
+  if (assist(AS_STALL_PROTECT) && airborne && !fbwOn) {
+    // predictive: angle of attack plus its rate (a zoom climb runs out of
+    // airspeed with the nose high, and the elevator weakens as it slows)
+    double excess = alpha + 0.8 * maxf(0.0, alphaDot) - (stallAngle() - 2.5 * DEG);
     if (excess > -0.06) {
-      double lim = -8.0 * excess - 0.5 * w.y;
+      double lim = maxf(-1.0, -8.0 * excess - 0.5 * w.y);
       if (pitchIn > lim) pitchIn = lim;
     }
+    // envelope: load factor below 90 % of the limit, pitch attitude below 30 deg
+    double gl = def->limits.gMax * 0.9;
+    if (nzFilt > gl - 0.3) pitchIn = minf(pitchIn, elev - 1.5 * (nzFilt - (gl - 0.3)));
+    if (theta > 25 * DEG) pitchIn = minf(pitchIn, maxf(-1.0, -3.0 * (theta - 25 * DEG) - 0.6 * w.y));
   }
-  if (assist(AS_AUTO_RUDDER)) {
+  if (assist(AS_AUTO_RUDDER) || isJet()) {
+    // turn coordination (jets: yaw damper, always on)
     if (airborne) {
       double V = maxf(tas, 20.0);
       double rCoord = G0 * sin(phi) / V;
-      yawIn = clamp(yawIn + clamp(3.0 * beta + 0.6 * (rCoord - w.z), -0.7, 0.7), -1, 1);
+      double kb = def->category == Category::Bomber ? 6.0 : 3.0;
+      yawIn = clamp(yawIn + clamp(kb * beta + 0.6 * (rCoord - w.z), -0.7, 0.7), -1, 1);
     }
   }
+  if (fbwOn) fbw(dt, pitchIn, rollIn, airborne, pitchIn, rollIn);
   double gs = sqrt(vel.x * vel.x + vel.y * vel.y);
   if (onGround && (assist(AS_AUTO_RUDDER) || assist(AS_TAXI_ASSIST)) && fabs(in[IN_YAW]) < 0.05 && gs > 12.0) {
     if (!as.groundHolding) { as.groundHdgHold = psi; as.groundHolding = true; }
@@ -333,9 +418,11 @@ void Sim::computeControls(double dt) {
     as.groundHolding = false;
   }
 
-  elev = slew(elev, pitchIn, 5.0, dt);
-  ail = slew(ail, rollIn, 5.0, dt);
-  rud = slew(rud, yawIn, 4.0, dt);
+  // hydraulic jets: surfaces move slowly (or freeze) without pressure
+  double hydRate = isJet() ? clamp(dmg.hyd, 0.02, 1.0) : 1.0;
+  elev = slew(elev, pitchIn, 5.0 * hydRate, dt);
+  ail = slew(ail, rollIn, 5.0 * hydRate, dt);
+  rud = slew(rud, yawIn, 4.0 * hydRate, dt);
 
   // Brakes and steering
   double park = in[IN_PARK_BRAKE] > 0.5 ? 1.0 : 0.0;
@@ -352,7 +439,37 @@ void Sim::computeControls(double dt) {
   int lever = (int)clamp(in[IN_FLAPS_LEVER], 0, def->flaps.detents - 1);
   double target = def->flaps.angleDeg[lever];
   bool flapPower = !def->flaps.electric || elec.busV > 20.0;
+  if (isJet()) flapPower = dmg.hyd > 0.3;
   if (flapPower && !fail[FAIL_FLAPS]) flapDeg = slew(flapDeg, target, def->flaps.rateDegPerSec, dt);
+
+  // Landing gear: hydraulic; without pressure it can only free-fall down
+  if (def->gearSys.retractable) {
+    double lever = in[IN_GEAR_LEVER] > 0.5 ? 1.0 : 0.0;
+    if (onGround && gearPos > 0.9) lever = 1.0;  // squat switch
+    double rate = 1.0 / maxf(1.0, def->gearSys.transitS);
+    if (dmg.hyd < 0.3) { if (lever > gearPos) gearPos = minf(1.0, gearPos + rate * 0.4 * dt); }
+    else gearPos = slew(gearPos, lever, rate, dt);
+  } else {
+    gearPos = 1.0;
+  }
+  // Speed brake and ground spoilers (armed: deploy on the ground at idle)
+  double sbCmd = clamp(in[IN_SPEEDBRAKE], 0, 1);
+  if (in[IN_SPOILER_ARM] > 0.5 && onGround && gs > 15.0 && in[IN_THROTTLE] < 0.15) sbCmd = 1.0;
+  if (def->spoiler.cdBrake <= 0) sbCmd = 0;
+  sb = slew(sb, sbCmd, 1.5 * hydRate, dt);
+  // Thrust reversers: on the ground only
+  bool mainsDown = gearComp[1] > 0 || gearComp[2] > 0;
+  reverser = isJet() && def->jet.reverseFrac > 0 && in[IN_REVERSE] > 0.5 && (onGround || mainsDown);
+  // Autothrottle: speed hold on the throttle (velocity-form PI)
+  if (isJet() && in[IN_AT_ENGAGED] > 0.5 && eng.running && !reverser) {
+    double err = in[IN_AT_SPEED] - ias;
+    double accel = (ias - iasPrev) / maxf(dt, 1e-4);
+    double maxT = def->jet.abThrustN > 0 ? 0.92 : 1.0;
+    atThr = clamp(atThr + (0.012 * err - 0.08 * accel) * dt, 0.0, maxT);
+  } else {
+    atThr = clamp(in[IN_THROTTLE], 0, 1);
+  }
+  iasPrev = ias;
 
   // Trim wheel
   trim = clamp(trim + clamp(in[IN_TRIM_RATE], -1, 1) * 0.2 * dt, -1, 1);
@@ -369,13 +486,121 @@ void Sim::computeControls(double dt) {
   }
 }
 
+// Fly-by-wire: the stick commands load factor (pitch) and roll rate; hands
+// off holds the flight path and the bank angle. Protections: load factor,
+// angle of attack, bank (where defined), overspeed. Direct law on the
+// ground and below 8 m in the flare. The autopilot flies pitch/bank targets.
+void Sim::fbw(double dt, double pitchIn, double rollIn, bool airborne, double& pitchOut, double& rollOut) {
+  const FbwDef& f = def->fbw;
+  const AeroDef& a = def->aero;
+  double phi, theta, psi;
+  qToEuler(q, phi, theta, psi);
+  if (!airborne || groundAgl() < 8.0) {
+    fbwI = approach(fbwI, 0.0, 1.5, dt);
+    fbwRollI = 0;
+    fbwRollHolding = false;
+    fbwPathHolding = false;
+    pitchOut = clamp(pitchIn + fbwI, -1, 1);
+    rollOut = rollIn;
+    return;
+  }
+  double V = maxf(tas, 40.0);
+  double cphi = cos(phi), cth = cos(theta);
+  double gamma = asin(clamp(-vel.z / maxf(length(vel), 1.0), -1, 1));
+  // Elevator needed per g at this flight condition (static stability and
+  // pitch damping against the elevator power) -> loop gains are normalised,
+  // so the law feels the same from the approach to Mach 2.
+  double elevPow = maxf(-a.Cmde * a.deUp, 1e-3);
+  double CLg = mass * G0 / maxf(qbar * a.S, 50.0);
+  double cmPerG = -a.Cma * CLg / a.CLa - a.Cmq * (a.c / (2.0 * V)) * (G0 / V);
+  double elevPerQ = clamp(maxf(cmPerG, 0.002) / elevPow, 0.005, 2.0) * V / G0;  // elevator per rad/s of steady pitch rate
+  // ---- pitch: load-factor demand (C*), flight path held hands-off
+  double cgam = cos(gamma);
+  double nzNeutral = (fabs(phi) < 33 * DEG ? 1.0 / maxf(cphi, 0.5) : 1.0) * cgam;
+  double qBase = G0 * (nzNeutral - cgam * cphi) / V;  // turn compensation
+  double qCmd;
+  if (ap.engaged) {
+    fbwPathHolding = false;
+    qCmd = clamp(0.9 * (apThetaCmd - theta), -0.08, 0.08) + qBase;
+  } else {
+    double nzCmd;
+    if (fabs(pitchIn) < 0.03) {
+      if (!fbwPathHolding && fabs(w.y) < 0.02) { fbwGammaHold = gamma; fbwPathHolding = true; }
+      nzCmd = nzNeutral;
+      if (fbwPathHolding) nzCmd += clamp(0.35 * (fbwGammaHold - gamma) * V / G0, -0.3, 0.3);
+    } else {
+      fbwPathHolding = false;
+      nzCmd = nzNeutral + (pitchIn >= 0 ? pitchIn * (f.nzMax - 1.0) : pitchIn * (1.0 - f.nzMin));
+    }
+    nzCmd = clamp(nzCmd, f.nzMin, f.nzMax);
+    // pitch rate for that load factor, plus load-factor feedback (C*)
+    qCmd = G0 * (nzCmd - cgam * cphi) / V + 0.6 * G0 * (nzCmd - nzFilt) / V;
+  }
+  (void)cth;
+  // pitch attitude protection (Airbus-style laws): +30 / -15 deg
+  if (f.bankMax > 0) {
+    if (theta > 25 * DEG) qCmd = minf(qCmd, 0.6 * (30 * DEG - theta));
+    if (theta < -10 * DEG) qCmd = maxf(qCmd, 0.6 * (-15 * DEG - theta));
+  }
+  // angle-of-attack protection (fighters with thrust vectoring may go beyond the stall)
+  double aMax = def->jet.tvc > 0 ? f.alphaMax : minf(f.alphaMax, stallAngle() - 1.0 * DEG);
+  double aLim = aMax - 3.0 * DEG;
+  if (alpha > aLim) {
+    // alpha rate = q - flight path rate: limit q relative to the path
+    double gammaDot = G0 * (nzFilt - cgam * cphi) / V;
+    qCmd = minf(qCmd, gammaDot + 2.0 * (aMax - alpha) - 0.4 * alphaDot);
+  }
+  // overspeed protection: gentle nose-up demand beyond VMO / MMO
+  double vmo = def->limits.vnoKias * KT;
+  double over = maxf(ias / vmo - 1.02, def->machDef.mmo > 0 ? mach / def->machDef.mmo - 1.01 : 0.0);
+  if (over > 0) qCmd = maxf(qCmd, minf(0.05, 0.8 * over));
+  double qErr = qCmd - w.y;
+  fbwI = clamp(fbwI + 1.5 * elevPerQ * qErr * dt, -1.0, 1.0);
+  double ff = elevPerQ * (qCmd - qBase);
+  pitchOut = clamp(fbwI + ff + 2.0 * elevPerQ * qErr, -1, 1);
+  // auto-trim: offload the integrator into the stabiliser trim (no nose-up
+  // trim inside the alpha protection range, limited travel)
+  double ratio = elevPow / maxf(a.CmTrimMax, 1e-3);
+  bool inhibit = fbwI > 0 && alpha > aLim;
+  if (fabs(fbwI) > 0.02 && !inhibit) {
+    double nt = clamp(trim + sign(fbwI) * 0.05 * dt, -0.6, 0.6);
+    fbwI -= (nt - trim) / ratio;
+    trim = nt;
+  }
+  // ---- roll: rate demand, bank held hands-off, bank angle protection
+  double pCmd;
+  double bmax = f.bankMax;
+  if (ap.engaged) {
+    pCmd = clamp(1.2 * (apPhiCmd - phi), -0.15, 0.15);
+    fbwRollHolding = false;
+  } else if (fabs(rollIn) < 0.03) {
+    if (!fbwRollHolding) { fbwPhiHold = fabs(phi) < 3 * DEG ? 0.0 : phi; fbwRollHolding = true; }
+    if (bmax > 0 && fabs(fbwPhiHold) > 33 * DEG) fbwPhiHold = sign(fbwPhiHold) * 33 * DEG;  // spiral stability
+    double rmax = minf(f.rollRateMax, 0.35);
+    pCmd = clamp(1.5 * (fbwPhiHold - phi), -rmax, rmax);
+  } else {
+    fbwRollHolding = false;
+    pCmd = rollIn * f.rollRateMax;
+    if (bmax > 0 && sign(pCmd) == sign(phi)) {
+      double room = (bmax - fabs(phi) - 0.8 * fabs(w.x)) / (15.0 * DEG);
+      if (room < 1.0) pCmd *= maxf(room, 0.0);
+      if (fabs(phi) > bmax) pCmd = -sign(phi) * 0.5 * (fabs(phi) - bmax);
+    }
+  }
+  double rollPow = a.Clda * a.daMax + def->spoiler.rollCl;
+  double pEff = maxf(0.1, -rollPow / minf(a.Clp, -0.05) * 2.0 * V / a.b);
+  double pErr = pCmd - w.x;
+  fbwRollI = clamp(fbwRollI + 0.8 * pErr / pEff * dt, -0.3, 0.3);
+  rollOut = clamp((pCmd + 1.2 * pErr) / pEff + fbwRollI, -1, 1);
+}
+
 // ---------------------------------------------------------------------------
 // Systems
 // ---------------------------------------------------------------------------
 void Sim::updateElectrical(double dt, const AirData&) {
   const ElectricalDef& E = def->elec;
   bool batt = in[IN_BATTERY] > 0.5;
-  if (!batt) {
+  if (!batt || dmg.elecDead) {
     elec.busV = 0;
     elec.battA = 0;
     elec.avionics = false;
@@ -396,8 +621,15 @@ void Sim::updateElectrical(double dt, const AirData&) {
   if (eng.starter) loads += 140.0;
 
   double altMax = 0;
-  if (in[IN_ALTERNATOR] > 0.5 && !fail[FAIL_ALTERNATOR])
-    altMax = E.altAmps * smoothstep(E.altMinRpm * 0.85, E.altMinRpm + 700.0, eng.rpm);
+  if (in[IN_ALTERNATOR] > 0.5 && !fail[FAIL_ALTERNATOR]) {
+    if (isJet()) {
+      int gens = 0;
+      for (int i = 0; i < def->jet.count; i++) if (jets[i].running && jets[i].n2 > 50.0) gens++;
+      altMax = E.altAmps * minf(1.0, gens);
+    } else {
+      altMax = E.altAmps * smoothstep(E.altMinRpm * 0.85, E.altMinRpm + 700.0, eng.rpm);
+    }
+  }
   if (altMax > loads + 0.5) {
     elec.busV = E.altVolts;
     double charge = minf(altMax - loads, 2.0 + 30.0 * (1.0 - elec.soc));
@@ -418,6 +650,18 @@ void Sim::updateElectrical(double dt, const AirData&) {
 }
 
 void Sim::updateFuel(double dt) {
+  if (isJet()) {
+    for (int i = 0; i < def->jet.count; i++) {
+      double burn = jets[i].ff * dt;
+      double y = def->jet.pos[i].y;
+      int t = y < -0.3 ? 0 : (y > 0.3 ? 1 : (fuelKg[0] >= fuelKg[1] ? 0 : 1));
+      if (fuelKg[t] <= 0.0) t = 1 - t;
+      fuelKg[t] -= burn;
+    }
+    fuelKg[0] = maxf(0, fuelKg[0]);
+    fuelKg[1] = maxf(0, fuelKg[1]);
+    return;
+  }
   int sel = (int)in[IN_FUEL_SELECTOR];
   double burn = eng.fuelFlow * dt;
   if (burn > 0) {
@@ -435,6 +679,135 @@ void Sim::updateFuel(double dt) {
   if (fail[FAIL_FUEL_LEAK_L]) fuelKg[0] -= 0.006 * dt;
   fuelKg[0] = maxf(0, fuelKg[0]);
   fuelKg[1] = maxf(0, fuelKg[1]);
+}
+
+// Turbofans. N1 follows the throttle with spool-up lag (slow off idle);
+// thrust = static thrust x spool fraction x lapse(density, Mach); fuel from
+// TSFC. Start: starter (magnetos START) spins N2 to ~25 %, fuel lever on ->
+// light-off. Afterburner above the 92 % throttle detent where fitted.
+void Sim::updateJets(double dt, const AirData& air) {
+  const JetDef& J = def->jet;
+  double sigma = air.rho / RHO0_ISA;
+  double thr = atThr;
+  bool abCap = J.abThrustN > 0;
+  double mil = abCap ? clamp(thr / 0.92, 0, 1) : clamp(thr, 0, 1);
+  double abFrac = abCap && thr > 0.92 ? clamp((thr - 0.92) / 0.08, 0, 1) : 0.0;
+  int mags = (int)in[IN_MAGNETOS];
+  bool fuelLever = in[IN_MIXTURE] > 0.04;
+  bool tankFuel = fuelKg[0] > 0.3 || fuelKg[1] > 0.3;
+  bool power = elec.busV > 18.0;
+  bool easy = assist(AS_EASY_START);
+  // high-bypass fans lose thrust quickly with speed at first (ram drag),
+  // then flatten (ram recovery); low-bypass engines gain from ram pressure
+  double mLapse = J.lapseM < 0 ? 1.0 + 2.0 * J.lapseM * mach - 1.2 * J.lapseM * mach * mach : 1.0 + J.lapseM * mach;
+  double lapse = maxf(0.05, pow(sigma, J.densExp) * mLapse);
+  double lapseAb = maxf(0.05, pow(sigma, 0.7) * (1.0 + 0.5 * mach));
+  double wmN = clamp(ias / KT * 0.07, 0.0, 22.0);  // windmilling
+  double total = 0, ff = 0, n1s = 0, n2s = 0, egts = 0;
+  int running = 0;
+  for (int i = 0; i < J.count; i++) {
+    JetState& e = jets[i];
+    bool handle = (((int)in[IN_FIRE_HANDLES]) >> i) & 1;
+    bool failed = dmg.eng[i] >= 0.55 || (i == 0 && fail[FAIL_ENGINE]);
+    bool fuel = fuelLever && tankFuel && !handle && !failed;
+    if (!e.running) {
+      // pneumatic starter motors N2 to ~25 % (max motoring), fuel lever on -> light-off
+      bool starting = mags == 4 && power && !failed;
+      if (starting) e.n2 = minf(28.0, e.n2 + (easy ? 2.6 : 1.15) * clamp((29.0 - e.n2) / 7.0, 0.12, 1.0) * dt);
+      else e.n2 = approach(e.n2, wmN, 5.0, dt);
+      e.n1 = approach(e.n1, starting ? 0.3 * e.n2 : wmN, 2.5, dt);
+      if (starting && fuel && e.n2 > 20.0) { e.running = true; e.lit = true; }
+    } else if (!fuel || mags == 0) {
+      e.running = false;
+      e.lit = false;
+      if (failed && i == 0 && fail[FAIL_ENGINE]) events |= EV_ENGINE_FAIL;
+      if (!tankFuel) events |= EV_FUEL_STARVATION;
+    }
+    if (e.running && e.lit) {
+      // light-off to stabilised idle (~25 s): starter assisted until ~56 % N2
+      e.n2 = minf(58.0, e.n2 + (easy ? 3.0 : 1.4) * dt);
+      e.n1 = approach(e.n1, J.idleN1 * clamp((e.n2 - 18.0) / 40.0, 0, 1), 1.0, dt);
+      e.egt = approach(e.egt, 960.0, 4.0, dt);
+      e.thrust = J.thrustN * J.idleFrac * lapse * clamp((e.n2 - 20.0) / 38.0, 0, 1);
+      e.ff = J.tsfc * J.thrustN * 0.05 * sigma * clamp((e.n2 - 15.0) / 43.0, 0.3, 1);
+      e.ab = false;
+      if (e.n2 >= 58.0) e.lit = false;
+      running++;
+    } else if (e.running) {
+      double target = J.idleN1 + (100.0 - J.idleN1) * (reverser ? clamp(thr, 0, 1) : mil);
+      if (dmg.eng[i] > 0.25) target = minf(target, 100.0 - 70.0 * dmg.eng[i]);
+      double x0 = clamp((e.n1 - J.idleN1) / (100.0 - J.idleN1), 0, 1);
+      double up = target > e.n1;
+      double tau = (up ? J.spoolUp * (1.0 + 1.5 * (1.0 - x0) * (1.0 - x0)) : J.spoolDown) / 3.0;
+      e.n1 += (target - e.n1) * clamp(dt / tau, 0, 1);
+      double x = clamp((e.n1 - J.idleN1) / (100.0 - J.idleN1), 0, 1.05);
+      e.n2 = approach(e.n2, 58.0 + 42.0 * x, 0.5, dt);
+      double frac = J.idleFrac + (1.0 - J.idleFrac) * pow(x, 1.6);
+      double T = J.thrustN * frac * lapse;
+      double Tab = 0;
+      e.ab = abFrac > 0 && e.n1 > 95.0 && !reverser;
+      if (e.ab) Tab = (J.abThrustN - J.thrustN) * abFrac * lapseAb;
+      e.thrust = reverser ? -J.reverseFrac * T : T + Tab;
+      e.ff = J.tsfc * (1.0 + 0.6 * mach) * maxf(T, J.thrustN * 0.05 * sigma) + J.abTsfc * Tab;
+      e.egt = approach(e.egt, 773.0 + 400.0 * x + (e.ab ? 150.0 : 0.0) + (e.fire ? 350.0 : 0.0), 2.0, dt);
+      running++;
+    } else {
+      e.thrust = -0.0015 * J.thrustN * sq(tas / 100.0);
+      e.ff = 0;
+      e.ab = false;
+      e.egt = approach(e.egt, air.T + (e.fire ? 600.0 : 0.0), 6.0, dt);
+    }
+    // engine fire: damage spreads to the engine and the wing; the fire handle
+    // cuts fuel and fires the bottle (out after ~2 s)
+    if (e.fire) {
+      events |= EV_ENGINE_FIRE;
+      dmg.eng[i] = minf(1.0, dmg.eng[i] + 0.03 * dt);
+      int side = J.pos[i].y < 0 ? 0 : 1;
+      if (fabs(J.pos[i].y) > 0.5) dmg.wing[side] += 0.004 * dt;
+      else dmg.fuselage += 0.002 * dt;
+      if (handle) { e.fireTimer += dt; if (e.fireTimer > 2.0) e.fire = false; }
+    }
+    total += e.thrust;
+    ff += e.ff;
+    n1s += e.n1;
+    n2s += e.n2;
+    egts += e.egt;
+  }
+  int n = maxf(1, J.count);
+  eng.thrust = total;
+  eng.fuelFlow = ff;
+  eng.rpm = n1s / n;
+  eng.running = running > 0;
+  eng.egt = egts / n;
+  eng.oilP = approach(eng.oilP, running ? 45.0 : 0.0, 2.0, dt);
+  eng.oilT = approach(eng.oilT, running ? 360.0 : air.T, 120.0, dt);
+  eng.starter = false;
+  for (int i = 0; i < J.count; i++) if (mags == 4 && (!jets[i].running || jets[i].lit)) eng.starter = true;
+  eng.power = total * tas;
+  eng.propAngle = 0;
+}
+
+void Sim::updateDamage(double dt) {
+  for (int s = 0; s < 2; s++) {
+    if (!dmg.wingLost[s] && dmg.wing[s] >= 1.0) { dmg.wingLost[s] = true; events |= EV_PART_LOST; }
+  }
+  if (!dmg.tailLost && dmg.tail >= 1.0) { dmg.tailLost = true; events |= EV_PART_LOST; }
+  if (dmg.fuselage >= 1.0) { crash(CR_BREAKUP); return; }
+  double engMax = 0;
+  for (int i = 0; i < 4; i++) engMax = maxf(engMax, dmg.eng[i]);
+  // hydraulics: engine pumps or the ram-air turbine; leaks from damage
+  bool pumps = eng.running || tas > 55.0;
+  double leak = clamp(0.9 * maxf(dmg.wing[0], dmg.wing[1]) + 0.7 * dmg.tail + 0.4 * engMax, 0, 1);
+  dmg.hyd = approach(dmg.hyd, pumps ? 1.0 - leak : 0.0, 1.5, dt);
+  // fuel leaks from damaged wing tanks
+  double rate = isJet() ? 3.0 : 0.05;
+  dmg.fuelLeak = rate * (minf(1.0, dmg.wing[0]) + minf(1.0, dmg.wing[1])) * (dmg.wing[0] > 0.15 || dmg.wing[1] > 0.15 ? 1.0 : 0.0);
+  fuelKg[0] = maxf(0.0, fuelKg[0] - rate * (dmg.wing[0] > 0.15 ? minf(1.0, dmg.wing[0]) : 0.0) * dt);
+  fuelKg[1] = maxf(0.0, fuelKg[1] - rate * (dmg.wing[1] > 0.15 ? minf(1.0, dmg.wing[1]) : 0.0) * dt);
+  // electrical: wiring in the fuselage
+  dmg.elecDead = dmg.fuselage > 0.65;
+  // without hydraulics or with the tail gone, fly-by-wire degrades to direct law
+  if (def->law == ControlLaw::FlyByWireG && (dmg.hyd < 0.3 || dmg.tailLost || dmg.elecDead)) fbwNormal = false;
 }
 
 void Sim::updateEngine(double dt, const AirData& air, double axial) {
@@ -566,9 +939,15 @@ void Sim::aero(const AirData& air, const Vec3& vb, Vec3& F, Vec3& M) {
   double ff = def->flaps.maxDeg > 0 ? flapDeg / def->flaps.maxDeg : 0.0;
 
   // Propeller slipstream increases dynamic pressure over the tail.
-  double Adisk = PI * sq(def->prop.propD) * 0.25;
-  double qSlip = a.tailSlipstream * maxf(0.0, eng.thrust) / Adisk;
+  double qSlip = 0;
+  if (def->prop.propD > 0) qSlip = a.tailSlipstream * maxf(0.0, eng.thrust) / (PI * sq(def->prop.propD) * 0.25);
   double qTail = qbar + qSlip;
+  // Damage: a damaged or missing tail loses stability and control power;
+  // a damaged wing loses lift on its side (rolling moment) and its aileron.
+  double kTail = dmg.tailLost ? 0.0 : 1.0 - 0.5 * minf(1.0, dmg.tail);
+  double lossL = dmg.wingLost[0] ? 0.42 : 0.25 * minf(1.0, dmg.wing[0]);
+  double lossR = dmg.wingLost[1] ? 0.42 : 0.25 * minf(1.0, dmg.wing[1]);
+  double kAil = 1.0 - 0.5 * ((dmg.wingLost[0] ? 1.0 : 0.3 * minf(1.0, dmg.wing[0])) + (dmg.wingLost[1] ? 1.0 : 0.3 * minf(1.0, dmg.wing[1])));
   double de = elev > 0 ? -elev * a.deUp : -elev * a.deDown;  // TE down positive
   double da = ail * a.daMax;
   double dr = rud * a.drMax;
@@ -577,18 +956,18 @@ void Sim::aero(const AirData& air, const Vec3& vb, Vec3& F, Vec3& M) {
   // Elevator + trim moment, saturating as the horizontal tail approaches its own stall.
   double cmCtl = a.Cmde * de + a.CmTrimMax * trim;
   cmCtl = cmCtl > 0 ? a.CmElevMaxUp * tanh_(cmCtl / a.CmElevMaxUp) : a.CmElevMaxDown * tanh_(cmCtl / a.CmElevMaxDown);
-  M.y += qTail * a.S * a.c * cmCtl;
-  F.z -= qTail * a.S * a.CLde * de;
-  F.y += qTail * a.S * a.CYdr * dr;
-  M.z += qTail * a.S * a.b * a.Cndr * dr;
-  M.x += qTail * a.S * a.b * a.Cldr * dr;
+  M.y += qTail * a.S * a.c * cmCtl * kTail;
+  F.z -= qTail * a.S * a.CLde * de * kTail;
+  F.y += qTail * a.S * a.CYdr * dr * kTail;
+  M.z += qTail * a.S * a.b * a.Cndr * dr * kTail;
+  M.x += qTail * a.S * a.b * a.Cldr * dr * kTail;
 
   stallWarn = false;
   if (V < 0.5) { stalled = false; return; }
 
   double alphaS = stallAngle();
   double alphaSN = -14.0 * DEG;
-  double CL0e = a.CL0 + a.CLflapFull * pow(ff, 0.85);
+  double CL0e = a.CL0 + a.CLflapFull * pow(ff, def->flaps.liftExp > 0 ? def->flaps.liftExp : 0.85);
   const double rnd = 4.0 * DEG;
   auto CLlin = [&](double al) { return CL0e + a.CLa * al; };
   double CLatt;
@@ -615,17 +994,44 @@ void Sim::aero(const AirData& air, const Vec3& vb, Vec3& F, Vec3& M) {
   double pHat = w.x * a.b / (2.0 * V), qHat = w.y * a.c / (2.0 * V), rHat = w.z * a.b / (2.0 * V);
   double adHat = alphaDot * a.c / (2.0 * V);
   double CL = CLw + (a.CLq * qHat + a.CLadot * adHat) * (1.0 - sigma);
+  // spoilers / speed brake: lift dump (full on the ground), drag
+  double dump = def->spoiler.clDump * sb * (onGround ? 1.0 : 0.3);
+  CL *= 1.0 - dump;
+  // damaged wings
+  double ClDmg = 0.15 * CL * (lossR - lossL);
+  CL *= 1.0 - 0.5 * (lossL + lossR);
+
+  // Compressibility: wave drag beyond the critical Mach number (Lock's
+  // 20 (M - Mcrit)^4, capped at the transonic peak, falling off supersonic).
+  double CDwave = 0, kInd = a.kInduced;
+  const MachDef& md = def->machDef;
+  if (md.cdWave > 0 && mach > md.mcrit) {
+    double Mp = 1.05;
+    if (mach < Mp) CDwave = minf(md.cdWave, 20.0 * sq(sq(mach - md.mcrit)) + md.cdWave * sq(smoothstep(0.95, Mp, mach)));
+    else CDwave = md.cdWave * pow(Mp / mach, 1.2);
+    if (mach > 0.95) kInd *= 1.0 + 0.8 * (mach - 0.95);
+  }
 
   double flapDrag = a.CDflapFull * pow(ff, 1.6);
-  double CDatt = a.CD0 + a.kInduced * ge * CLw * CLw + flapDrag;
-  double CDpost = a.CD0 + a.CDpostScale * sq(sin(alpha)) + flapDrag + 0.2 * a.kInduced * CLw * CLw;
-  double CD = (1.0 - sigma) * CDatt + sigma * CDpost + 0.25 * sq(sin(beta));
+  double extraDrag = def->gearSys.cdGear * gearPos + def->spoiler.cdBrake * sb + CDwave +
+                     0.03 * (minf(1.0, dmg.wing[0]) + minf(1.0, dmg.wing[1])) + 0.02 * minf(1.0, dmg.fuselage) +
+                     (dmg.gearLost[0] || dmg.gearLost[1] || dmg.gearLost[2] ? 0.01 : 0.0);
+  double CDatt = a.CD0 + kInd * ge * CLw * CLw + flapDrag;
+  double CDpost = a.CD0 + a.CDpostScale * sq(sin(alpha)) + flapDrag + 0.2 * kInd * CLw * CLw;
+  double CD = (1.0 - sigma) * CDatt + sigma * CDpost + 0.25 * sq(sin(beta)) + extraDrag;
 
+  // stability with a damaged tail (the wing-body alone is unstable in pitch and yaw)
+  double Cma = a.Cma * kTail + 0.25 * (1.0 - kTail);
+  double Cmq = a.Cmq * (0.15 + 0.85 * kTail);
+  double Cnb = a.Cnb * kTail - 0.02 * (1.0 - kTail);
+  double Cnr = a.Cnr * (0.2 + 0.8 * kTail);
   double CY = a.CYb * beta + a.CYp * pHat + a.CYr * rHat;
+  double hydAil = isJet() ? clamp(dmg.hyd * 1.5, 0, 1) : 1.0;
   double Cl = a.Clb * beta * (1.0 + 2.0 * sigma) + a.Clp * pHat * (1.0 - 0.85 * sigma) +
-              (a.Clr + a.ClrPerCL * CL) * rHat + a.Clda * da * (1.0 - 0.5 * sigma) + sigma * stallAsym;
-  double Cn = a.Cnb * beta + (a.Cnp + a.CnpPerCL * CL) * pHat + a.Cnr * rHat + a.Cnda * da;
-  double Cm = a.Cm0 * (1.0 - sigma) + a.Cma * sin(alpha) + a.Cmq * qHat + a.Cmadot * adHat +
+              (a.Clr + a.ClrPerCL * CL) * rHat + (a.Clda * da * kAil + def->spoiler.rollCl * ail * hydAil) * (1.0 - 0.5 * sigma) +
+              sigma * stallAsym + ClDmg;
+  double Cn = Cnb * beta + (a.Cnp + a.CnpPerCL * CL) * pHat + Cnr * rHat + a.Cnda * da * kAil;
+  double Cm = a.Cm0 * (1.0 - sigma) + Cma * sin(alpha) + Cmq * qHat + a.Cmadot * adHat * kTail +
               a.CmFlapFull * ff + a.CmStallBreak * sigma;
 
   dbgCL = CL; dbgCD = CD; dbgSigma = sigma;
@@ -659,8 +1065,15 @@ void Sim::contacts(double dt, Vec3& Fned, Vec3& Mb) {
   if (surf == SURF_GRASS) { muRoll = 0.06; muLat = 0.55; muBrake = 0.28; }
   Vec3 n = ground.nNed;  // up-pointing normal in NED
 
+  bool retract = def->gearSys.retractable != 0;
   for (int i = 0; i < def->nGear; i++) {
     const GearPointDef& g = def->gear[i];
+    // retracted or separated gear legs, separated wing tips and tail
+    bool gone = false;
+    if (g.isWheel && i < 3) gone = dmg.gearLost[i] || (retract && gearPos < 0.3);
+    if (g.tag == 2) gone = dmg.wingLost[g.pos.y < 0 ? 0 : 1];
+    if (g.tag == 1) gone = dmg.tailLost;
+    if (gone) { gearComp[i] = 0; anchorSet[i] = false; continue; }
     Vec3 rw = qrot(q, g.pos);
     Vec3 P = pos + rw;
     double hg = ground.heightAt(P.x, P.y);
@@ -680,11 +1093,24 @@ void Sim::contacts(double dt, Vec3& Fned, Vec3& Mb) {
     if (Fn < 0) Fn = 0;
 
     if (g.isWheel) {
-      anyWheel = true;
-      if (firstContact || dd > 0) {
-        if (dd > def->limits.vsGearCollapse * tol) { crash(CR_GEAR_COLLAPSE); return; }
+      // A leg fails (separates) beyond its design sink rate or when it is not
+      // down and locked; the airframe then lands on its belly / nacelles.
+      // Only a far harder impact destroys the aircraft outright.
+      double vc = def->limits.vsGearCollapse * tol;
+      bool unlocked = retract && gearPos < 0.98;
+      bool overload = ((firstContact || dd > 0) && dd > vc) || (d > g.travel * 1.6 && dd > 1.5 * tol);
+      if (overload || (unlocked && firstContact)) {
+        if (dd > vc * 2.2) { crash(CR_GEAR_COLLAPSE); return; }
+        if (i < 3) {
+          dmg.gearLost[i] = true;
+          events |= EV_PART_LOST | EV_DAMAGE;
+          damage(PART_FUSELAGE, 0.06 + 0.05 * maxf(0.0, dd - vc));
+          if (i == 0 && !isJet() && eng.rpm > 100) { events |= EV_PROP_STRIKE; fail[FAIL_ENGINE] = true; }
+          gearComp[i] = 0;
+          continue;
+        }
       }
-      if (d > g.travel * 1.6 && dd > 1.5 * tol) { crash(CR_GEAR_COLLAPSE); return; }
+      anyWheel = true;
       double s = g.steer ? steer : 0.0;
       Vec3 fwd = qrot(q, Vec3{cos(s), sin(s), 0.0});
       fwd = normalize(fwd - n * dot(fwd, n));
@@ -713,19 +1139,31 @@ void Sim::contacts(double dt, Vec3& Fned, Vec3& Mb) {
       Fned += F;
       Mb += cross(g.pos, qrotInv(q, F));
     } else {
+      // Structure on the ground: damage from the impact and from sliding;
+      // only a violent impact is an immediate crash.
       double speed = length(vP);
+      double impact = maxf(0.0, dd);
+      int side = g.pos.y < 0 ? 0 : 1;
       if (g.tag == 1) {
         events |= EV_TAIL_STRIKE;
-        if (dd > 2.5 * tol) { crash(CR_TERRAIN); return; }
+        if (impact > 6.0 * tol) { crash(CR_TERRAIN); return; }
+        if (speed > 2.0) damage(PART_TAIL, 0.0008 * speed * dt);
       } else if (g.tag == 2) {
         events |= EV_WINGTIP_STRIKE;
-        if (dd > 2.0 * tol || speed > 18.0 * tol) { crash(CR_WING_STRIKE); return; }
+        if (impact > 5.0 * tol || (speed > 45.0 * tol && impact > 2.5 * tol)) { crash(CR_WING_STRIKE); return; }
+        if (speed > 2.0) damage(side == 0 ? PART_WING_L : PART_WING_R, 0.004 * speed * dt / tol);
       } else if (g.tag == 3) {
         if (eng.rpm > 100) { events |= EV_PROP_STRIKE; fail[FAIL_ENGINE] = true; }
-        if (dd > 3.0 * tol) { crash(CR_TERRAIN); return; }
+        if (impact > 7.0 * tol) { crash(CR_TERRAIN); return; }
+      } else if (g.tag == 5) {
+        if (impact > 5.0 * tol) { crash(CR_TERRAIN); return; }
+        if (speed > 2.0) hitPart(5, i, 0.0, 0.12 * speed * dt / tol);
       } else {
-        if (dd > 2.0 * tol || speed > 25.0 * tol) { crash(CR_TERRAIN); return; }
+        if (impact > 6.0 * tol) { crash(CR_TERRAIN); return; }
+        if (speed > 2.0) damage(PART_FUSELAGE, 0.0006 * speed * dt / tol);
       }
+      if (firstContact && (impact > 0.6 || speed > 8.0)) hitPart(g.tag, i, impact / tol, speed / tol);
+      if (crashed) return;
       scrapeAcc += minf(1.0, speed / 10.0);
       Vec3 vt = vP - n * dot(vP, n);
       double vtl = length(vt);
@@ -748,7 +1186,7 @@ void Sim::updateInstruments(double dt, const AirData& air) {
   double phi, theta, psi;
   qToEuler(q, phi, theta, psi);
   double alt = -pos.z;
-  bool perfect = !simMode || assist(AS_PERFECT_GYROS);
+  bool perfect = !simMode || assist(AS_PERFECT_GYROS) || isJet();
 
   // Pitot-static
   if (fail[FAIL_PITOT]) {
@@ -765,7 +1203,7 @@ void Sim::updateInstruments(double dt, const AirData& air) {
   (void)alt;
 
   // Vacuum & gyros
-  ins.suction = fail[FAIL_VACUUM] ? 0.0 : 5.0 * smoothstep(450.0, 1300.0, eng.rpm);
+  ins.suction = isJet() ? 5.0 : (fail[FAIL_VACUUM] ? 0.0 : 5.0 * smoothstep(450.0, 1300.0, eng.rpm));
   if (perfect) {
     ins.gyroSpin = 1.0;
   } else {
@@ -842,7 +1280,8 @@ void Sim::step(double dt) {
 
   computeControls(dt);
   updateElectrical(dt, air);
-  updateEngine(dt, air, vb.x);
+  if (isJet()) updateJets(dt, air);
+  else updateEngine(dt, air, vb.x);
   updateFuel(dt);
 
   Vec3 Fb, Mb;
@@ -852,15 +1291,31 @@ void Sim::step(double dt) {
 
   // Thrust & propeller effects
   const PropEngineDef& P = def->prop;
-  double T = eng.thrust;
-  Fb.x += T;
-  Mb.y += P.thrustLineZ * T;
-  Mb.x -= eng.torqueProp;
-  Mb.z -= P.pFactor * maxf(T, 0.0) * clamp(sin(alpha), -0.4, 0.4);
-  Mb.z -= P.swirl * maxf(T, 0.0) * (30.0 / (30.0 + tas));
+  if (isJet()) {
+    // each engine at its own position: asymmetric thrust yaws the aircraft
+    const JetDef& J = def->jet;
+    double Tsum = 0;
+    for (int i = 0; i < J.count; i++) {
+      double Ti = jets[i].thrust;
+      Fb.x += Ti;
+      Mb.y += J.pos[i].z * Ti;
+      Mb.z -= J.pos[i].y * Ti;
+      Tsum += Ti;
+    }
+    if (J.tvc > 0 && !onGround) Mb.y += J.tvc * elev * maxf(Tsum, 0.0) * 0.5;  // pitch vectoring nozzles
+  } else {
+    double T = eng.thrust;
+    Fb.x += T;
+    Mb.y += P.thrustLineZ * T;
+    Mb.x -= eng.torqueProp;
+    Mb.z -= P.pFactor * maxf(T, 0.0) * clamp(sin(alpha), -0.4, 0.4);
+    Mb.z -= P.swirl * maxf(T, 0.0) * (30.0 / (30.0 + tas));
+  }
 
   Vec3 Fc, Mc;
   contacts(dt, Fc, Mc);
+  if (crashed) return;
+  updateDamage(dt);
   if (crashed) return;
 
   Vec3 gravity{0, 0, mass * G0};
@@ -894,11 +1349,41 @@ void Sim::step(double dt) {
   double nz = -accelBody.z / G0;
   nzFilt += (nz - nzFilt) * clamp(dt / 0.08, 0, 1);
   double tol = assist(AS_CRASH_TOLERANT) ? 1.6 : 1.0;
-  overspeed = ias > def->limits.vneKias * KT;
+  double vne = def->limits.vneKias * KT;
+  double mmo = def->machDef.mmo > 0 ? def->machDef.mmo : 10.0;
+  overspeed = ias > vne || (isJet() && mach > mmo + 0.01);
   if (overspeed) events |= EV_VNE;
-  if (ias > def->limits.vneKias * KT * 1.25 * tol) { crash(CR_OVERSTRESS); return; }
+  // Overspeed beyond the demonstrated margin: flutter / control-surface
+  // failure tears the tail and the wings progressively.
+  double over = maxf(ias / vne - 1.12 * tol, mach / (mmo + 0.06) - tol);
+  if (over > 0) {
+    double r = 2.0 * over + 0.05;
+    damage(PART_TAIL, r * dt);
+    damage(PART_WING_L, r * (0.8 + 0.4 * rng.uniform()) * 0.7 * dt);
+    damage(PART_WING_R, r * (0.8 + 0.4 * rng.uniform()) * 0.7 * dt);
+  }
   if (!onGround && (nz > def->limits.gMax || nz < def->limits.gMin)) events |= EV_G_LIMIT;
-  if (!onGround && (nz > def->limits.gMax * 1.5 * tol || nz < def->limits.gMin * 1.5 * tol)) { crash(CR_OVERSTRESS); return; }
+  // Load factor: permanent deformation above the limit load, failure beyond
+  // the ultimate load (1.5 x limit). Separation is a few tenths of a second.
+  bool touching = onGround;
+  for (int i = 0; i < def->nGear; i++) if (gearComp[i] > 0) touching = true;
+  if (!touching) {
+    double gx = maxf(nzFilt / (def->limits.gMax * 1.5 * tol), nzFilt / (def->limits.gMin * 1.5 * tol));
+    if (gx > 1.0) {
+      double r = 20.0 * (gx - 1.0) + 1.0;
+      damage(PART_WING_L, r * (0.85 + 0.3 * rng.uniform()) * dt);
+      damage(PART_WING_R, r * (0.85 + 0.3 * rng.uniform()) * dt);
+      damage(PART_TAIL, 0.4 * r * dt);
+    } else if (gx > 0.77) {
+      for (int s = 0; s < 2; s++) if (dmg.wing[s] < 0.35) dmg.wing[s] += 0.02 * dt;
+    }
+  }
+  // Gear limits and the landing-gear warning
+  if (def->gearSys.retractable) {
+    if (gearPos > 0.05 && ias > def->gearSys.vleKias * KT * 1.15) { dmg.fuselage += 0.01 * dt; events |= EV_DAMAGE; }
+    double flapF = def->flaps.maxDeg > 0 ? flapDeg / def->flaps.maxDeg : 0;
+    if (!onGround && gearPos < 0.95 && agl < 250.0 && vel.z > 0.5 && (flapF > 0.6 || atThr < 0.1)) events |= EV_GEAR_WARN;
+  }
   if (flapDeg > 1.0) {
     int idx = 0;
     for (int i = 0; i < def->flaps.detents; i++) if (def->flaps.angleDeg[i] <= flapDeg + 0.5) idx = i;
@@ -988,6 +1473,39 @@ void Sim::writeOutputs() {
   o[OUT_LOW_FUEL_L] = fuelKg[0] < 8.0 ? 1 : 0;
   o[OUT_LOW_FUEL_R] = fuelKg[1] < 8.0 ? 1 : 0;
   o[OUT_OIL_WARN] = (in[IN_BATTERY] > 0.5 && eng.oilP < 20.0) ? 1 : 0;
+  // jets & systems
+  o[OUT_AIRCRAFT] = aircraftId;
+  int engMask = 0, fireMask = 0;
+  double n2 = 0;
+  bool ab = false;
+  int nj = isJet() ? def->jet.count : 0;
+  for (int i = 0; i < 4; i++) {
+    o[OUT_N1_0 + i] = i < nj ? jets[i].n1 : 0.0;
+    if (i < nj && jets[i].running) engMask |= 1 << i;
+    if (i < nj && jets[i].fire) fireMask |= 1 << i;
+    if (i < nj) { n2 += jets[i].n2; ab = ab || jets[i].ab; }
+  }
+  if (!isJet() && eng.running) engMask = 1;
+  o[OUT_N2_AVG] = nj ? n2 / nj : 0.0;
+  o[OUT_ENG_MASK] = engMask;
+  o[OUT_FIRE_MASK] = fireMask;
+  o[OUT_GEAR_POS] = gearPos;
+  o[OUT_SPEEDBRAKE] = sb;
+  o[OUT_REVERSER] = reverser ? 1 : 0;
+  o[OUT_AFTERBURNER] = ab ? 1 : 0;
+  o[OUT_AT_THR] = atThr;
+  o[OUT_FBW] = def->law == ControlLaw::FlyByWireG ? (fbwNormal ? 1 : 2) : 0;
+  // damage
+  o[OUT_DMG_WING_L] = minf(1.0, dmg.wing[0]);
+  o[OUT_DMG_WING_R] = minf(1.0, dmg.wing[1]);
+  o[OUT_DMG_TAIL] = minf(1.0, dmg.tail);
+  o[OUT_DMG_FUS] = minf(1.0, dmg.fuselage);
+  for (int i = 0; i < 4; i++) o[OUT_DMG_ENG_0 + i] = dmg.eng[i];
+  o[OUT_PARTS_LOST] = (dmg.wingLost[0] ? 1 : 0) | (dmg.wingLost[1] ? 2 : 0) | (dmg.tailLost ? 4 : 0) |
+                      (dmg.gearLost[0] ? 8 : 0) | (dmg.gearLost[1] ? 16 : 0) | (dmg.gearLost[2] ? 32 : 0);
+  o[OUT_HYD] = isJet() ? dmg.hyd : 1.0;
+  o[OUT_FUEL_LEAK] = dmg.fuelLeak;
+  o[OUT_ELEC_FAIL] = dmg.elecDead ? 1 : 0;
 }
 
 }  // namespace osk

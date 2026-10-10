@@ -502,8 +502,12 @@ static void testCrosswindAndCrash() {
     sim.in[IN_PITCH] = -0.6;
     sim.advance(FDT);
   }
-  check("Steep impact causes crash", o(OUT_CRASHED), 1, 1, 1, "");
+  // the gear legs fail (the airframe survives on its belly) or it is destroyed
+  bool collapsed = ((int)o(OUT_PARTS_LOST) & (8 | 16 | 32)) != 0;
+  check("Steep impact: gear collapse or crash", (collapsed || o(OUT_CRASHED) > 0.5) ? 1 : 0, 1, 1, 1, "");
 }
+
+#include "test_fleet.h"
 
 static void testTrafficCore() {
   TrafficSystem ts;
@@ -538,7 +542,9 @@ static void testTrafficCore() {
 
 int main(int argc, char** argv) {
   bool verbose = argc > 1 && std::strcmp(argv[1], "-v") == 0;
-  (void)verbose;
+  fleetVerbose = verbose;
+  bool fleetOnly = argc > 2 && std::strcmp(argv[2], "fleet") == 0;
+  if (!fleetOnly) {
   testStaticAndStart();
   testStartAfterWait();
   testBatteryDrain();
@@ -552,6 +558,8 @@ int main(int argc, char** argv) {
   testAssists();
   testCrosswindAndCrash();
   testTrafficCore();
+  }
+  testFleet();
 
   int fails = 0;
   std::printf("| Test | Result | Reference | Accepted range | Status |\n|---|---|---|---|---|\n");

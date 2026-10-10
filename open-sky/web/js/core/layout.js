@@ -35,7 +35,14 @@ export const OskIn = Object.freeze({
   IN_BARO: 32,
   IN_MAG_VAR: 33,
   IN_ASSISTS: 34,
-  IN_COUNT: 35,
+  IN_GEAR_LEVER: 35,
+  IN_SPEEDBRAKE: 36,
+  IN_SPOILER_ARM: 37,
+  IN_REVERSE: 38,
+  IN_AT_ENGAGED: 39,
+  IN_AT_SPEED: 40,
+  IN_FIRE_HANDLES: 41,
+  IN_COUNT: 42,
 });
 export const OskAssist = Object.freeze({
   AS_AUTO_RUDDER: 1,
@@ -147,7 +154,33 @@ export const OskOut = Object.freeze({
   OUT_LOW_FUEL_L: 96,
   OUT_LOW_FUEL_R: 97,
   OUT_OIL_WARN: 98,
-  OUT_COUNT: 99,
+  OUT_AIRCRAFT: 99,
+  OUT_N1_0: 100,
+  OUT_N1_1: 101,
+  OUT_N1_2: 102,
+  OUT_N1_3: 103,
+  OUT_N2_AVG: 104,
+  OUT_ENG_MASK: 105,
+  OUT_FIRE_MASK: 106,
+  OUT_GEAR_POS: 107,
+  OUT_SPEEDBRAKE: 108,
+  OUT_REVERSER: 109,
+  OUT_AFTERBURNER: 110,
+  OUT_AT_THR: 111,
+  OUT_FBW: 112,
+  OUT_DMG_WING_L: 113,
+  OUT_DMG_WING_R: 114,
+  OUT_DMG_TAIL: 115,
+  OUT_DMG_FUS: 116,
+  OUT_DMG_ENG_0: 117,
+  OUT_DMG_ENG_1: 118,
+  OUT_DMG_ENG_2: 119,
+  OUT_DMG_ENG_3: 120,
+  OUT_PARTS_LOST: 121,
+  OUT_HYD: 122,
+  OUT_FUEL_LEAK: 123,
+  OUT_ELEC_FAIL: 124,
+  OUT_COUNT: 125,
 });
 export const OskEvent = Object.freeze({
   EV_TAIL_STRIKE: 1,
@@ -163,6 +196,10 @@ export const OskEvent = Object.freeze({
   EV_LOW_VOLTAGE: 1024,
   EV_AP_DISCONNECT: 2048,
   EV_BOUNCE: 4096,
+  EV_DAMAGE: 8192,
+  EV_ENGINE_FIRE: 16384,
+  EV_PART_LOST: 32768,
+  EV_GEAR_WARN: 65536,
 });
 export const OskCrash = Object.freeze({
   CR_NONE: 0,
@@ -172,6 +209,7 @@ export const OskCrash = Object.freeze({
   CR_WATER: 4,
   CR_OBSTACLE: 5,
   CR_OVERSTRESS: 6,
+  CR_BREAKUP: 7,
 });
 export const OskFailure = Object.freeze({
   FAIL_ENGINE: 0,
@@ -182,6 +220,16 @@ export const OskFailure = Object.freeze({
   FAIL_FLAPS: 5,
   FAIL_FUEL_LEAK_L: 6,
   FAIL_COUNT: 7,
+});
+export const OskPart = Object.freeze({
+  PART_WING_L: 0,
+  PART_WING_R: 1,
+  PART_TAIL: 2,
+  PART_FUSELAGE: 3,
+  PART_ENGINE_0: 4,
+  PART_ENGINE_1: 5,
+  PART_ENGINE_2: 6,
+  PART_ENGINE_3: 7,
 });
 export const OskSurface = Object.freeze({
   SURF_NONE: 0,

@@ -7,7 +7,7 @@
 CXX      ?= g++
 CLANG    ?= clang++
 WASM2JS  ?= wasm2js
-SRC      := src/sim.cpp src/aircraft_trainer.cpp src/traffic.cpp src/api.cpp
+SRC      := src/sim.cpp src/aircraft_trainer.cpp src/aircraft_fleet.cpp src/traffic.cpp src/api.cpp
 HDR      := $(wildcard include/osk/*.h)
 OUTDIR   := ../web/wasm
 
@@ -15,7 +15,7 @@ OUTDIR   := ../web/wasm
 
 all: test wasm js layout
 
-build/test_native: $(SRC) $(HDR) tests/test_main.cpp
+build/test_native: $(SRC) $(HDR) tests/test_main.cpp tests/test_fleet.h
 	@mkdir -p build
 	$(CXX) -std=c++17 -O2 -Wall -Wextra -Wno-unused-parameter -Iinclude $(SRC) tests/test_main.cpp -o $@
 

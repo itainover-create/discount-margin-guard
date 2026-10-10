@@ -43,8 +43,14 @@ struct Atmosphere {
 };
 
 // Altitude an altimeter shows for static pressure p with Kollsman setting pset (Pa).
+// ISA calibration of the altimeter, including the isothermal stratosphere
+// above 11 km (pressure ratio 0.22336 there).
 inline double indicatedAltitude(double p, double pset) {
-  return (T0_ISA / LAPSE) * (1.0 - pow(p / pset, R_AIR * LAPSE / G0));
+  double r = p / pset;
+  const double r11 = 0.223361;
+  if (r >= r11) return (T0_ISA / LAPSE) * (1.0 - pow(r, R_AIR * LAPSE / G0));
+  double T11 = T0_ISA - LAPSE * 11000.0;
+  return 11000.0 - (R_AIR * T11 / G0) * log(r / r11);
 }
 
 // Wind field: steady wind with boundary-layer profile, discrete gusts and

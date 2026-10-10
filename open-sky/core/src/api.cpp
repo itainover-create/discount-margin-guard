@@ -53,6 +53,8 @@ OSK_EXPORT(osk_set_failure) void osk_set_failure(int id, int on) { g_sim.setFail
 OSK_EXPORT(osk_set_trim) void osk_set_trim(double t) { g_sim.setTrim(t); }
 OSK_EXPORT(osk_align_hi) void osk_align_hi() { g_sim.alignHeadingIndicator(); }
 OSK_EXPORT(osk_crash) void osk_crash(int reason) { g_sim.crash(reason); }
+OSK_EXPORT(osk_damage) void osk_damage(int part, double amount) { g_sim.damage(part, amount); }
+OSK_EXPORT(osk_aircraft_count) int osk_aircraft_count() { return AC_COUNT; }
 OSK_EXPORT(osk_clear_events) void osk_clear_events() { g_sim.clearEvents(); }
 OSK_EXPORT(osk_set_paused) void osk_set_paused(int p) { g_sim.setPaused(p != 0); }
 OSK_EXPORT(osk_set_sim_mode) void osk_set_sim_mode(int m) { g_sim.setSimMode(m != 0); }

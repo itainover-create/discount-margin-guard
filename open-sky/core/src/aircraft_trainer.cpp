@@ -12,6 +12,7 @@ static const AircraftDef kTrainer = {
     "skylark-t1",
     EngineType::PistonProp,
     ControlLaw::Direct,
+    Category::Trainer,
     // ---- Aerodynamics -------------------------------------------------
     {
         /*S*/ 16.17, /*b*/ 11.0, /*c*/ 1.49,
@@ -33,7 +34,7 @@ static const AircraftDef kTrainer = {
         /*stallWarnMargin*/ 3.0 * DEG,
     },
     // ---- Flaps (electric, 0/10/20/30) ----------------------------------
-    {4, {0, 10, 20, 30, 0, 0}, 30.0, 3.4, {0, 110, 85, 85, 0, 0}, true},
+    {4, {0, 10, 20, 30, 0, 0}, 30.0, 3.4, {0, 110, 85, 85, 0, 0}, true, 0.0},
     // ---- Mass -----------------------------------------------------------
     {/*empty*/ 767.0, /*Ixx*/ 1285.0, /*Iyy*/ 1825.0, /*Izz*/ 2667.0, /*Ixz*/ 0.0,
      /*ref*/ 1043.0, /*mtow*/ 1157.0},
@@ -69,11 +70,14 @@ static const AircraftDef kTrainer = {
     /*eye*/ {0.22, -0.28, -0.62},
     /*steerMax*/ 10.0 * DEG,
     /*casterMax*/ 30.0 * DEG,
+    /*jet*/ {},
+    /*gearSys*/ {0, 0, 0, 0},
+    /*spoiler*/ {0, 0, 0},
+    /*fbw*/ {0, 0, 0, 0, 0},
+    /*mach*/ {0.6, 0.0, 0.3},
+    /*rotate*/ 55.0, /*approach*/ 65.0, /*takeoff flaps*/ 0,
 };
 
-const AircraftDef& aircraftDef(int id) {
-  (void)id;
-  return kTrainer;
-}
+const AircraftDef& trainerDef() { return kTrainer; }
 
 }  // namespace osk

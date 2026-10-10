@@ -1,4 +1,4 @@
-// OPEN SKY core — aircraft simulation: 6-DOF rigid body flight dynamics,
+// GLOBAL SKIES core — aircraft simulation: 6-DOF rigid body flight dynamics,
 // powerplant, electrical, fuel, landing gear contact, instruments, assists
 // and autopilot. Internal frames: world NED (x north, y east, z down) with
 // z = -MSL altitude; body FRD (x forward, y right, z down).
@@ -31,6 +31,27 @@ struct EngineState {
   double prime = 0;          // seconds of priming
   double starve = 0;         // seconds without fuel
   double rough = 0;          // roughness 0..1 for sound/vibration
+};
+
+struct JetState {
+  double n1 = 0, n2 = 0, egt = 288, ff = 0, thrust = 0;
+  bool running = false, fire = false, ab = false;
+  bool lit = false;              // light-off: accelerating to idle on the starter
+  double fireTimer = 0;
+};
+
+// Structural damage and its consequences (0 = intact, 1 = destroyed).
+struct DamageState {
+  double wing[2] = {0, 0};      // left, right
+  bool wingLost[2] = {false, false};
+  double tail = 0;
+  bool tailLost = false;
+  double fuselage = 0;
+  double eng[4] = {0, 0, 0, 0};
+  bool gearLost[3] = {false, false, false};
+  double hyd = 1.0;             // hydraulic pressure fraction
+  double fuelLeak = 0;          // kg/s
+  bool elecDead = false;
 };
 
 struct ElecState {
@@ -89,6 +110,8 @@ class Sim {
   void setTrim(double t) { trim = clamp(t, -1, 1); }
   void alignHeadingIndicator() { ins.hiDrift = 0; ins.hi = magHeading(); }
   void crash(int reason);
+  // Damage a part (building / obstacle hits reported by the host).
+  void damage(int part, double amount);
   void clearEvents() { events = 0; }
   void setPaused(bool p) { paused = p; }
   void setSimMode(bool sim) { simMode = sim; }
@@ -100,6 +123,8 @@ class Sim {
     ground.refE += de;
     for (int i = 0; i < 12; i++) { anchorN[i] += dn; anchorE[i] += de; }
   }
+  // Vertical speed (m/s, up positive) — test hook for touchdown scenarios.
+  void setVerticalSpeed(double vu) { vel.z = -vu; }
   // Set ground speed along the current heading (used for runway-roll tests).
   void setGroundSpeed(double v) {
     double phi, theta, psi;
@@ -152,11 +177,25 @@ class Sim {
   AssistState as;
   TouchdownState td;
   Rng rng;
+  JetState jets[4];
+  DamageState dmg;
+  int aircraftId = 0;
+  double gearPos = 1.0, sb = 0, atThr = 0, iasPrev = 0;
+  bool reverser = false, fbwNormal = true;
+  double fbwI = 0, fbwRollI = 0, fbwPhiHold = 0;
+  bool fbwRollHolding = false, fbwPathHolding = false;
+  double fbwGammaHold = 0;
+  double apThetaCmd = 0, apPhiCmd = 0;
 
   void step(double dt);
   void updateMass();
   void updateElectrical(double dt, const AirData& air);
   void updateEngine(double dt, const AirData& air, double axialSpeed);
+  void updateJets(double dt, const AirData& air);
+  void updateDamage(double dt);
+  void fbw(double dt, double pitchIn, double rollIn, bool airborne, double& pitchOut, double& rollOut);
+  void hitPart(int tag, int index, double impact, double speed);
+  bool isJet() const { return def->engineType == EngineType::Turbofan; }
   void updateFuel(double dt);
   void updateInstruments(double dt, const AirData& air);
   void computeControls(double dt);

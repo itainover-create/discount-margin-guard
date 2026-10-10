@@ -1,4 +1,4 @@
-// OPEN SKY core — data-driven aircraft definition.
+// GLOBAL SKIES core — data-driven aircraft definition.
 // Each aircraft supplies its own aerodynamics, mass, gear, powerplant and
 // systems parameters; the flight model never swaps only the visual model.
 #pragma once
@@ -8,6 +8,7 @@ namespace osk {
 
 enum class EngineType : int { PistonProp = 0, Turbofan = 1 };
 enum class ControlLaw : int { Direct = 0, FlyByWireG = 1 };
+enum class Category : int { Trainer = 0, Airliner = 1, Fighter = 2, Bomber = 3, Bizjet = 4, Aerobatic = 5 };
 
 struct AeroDef {
   double S, b, c;                       // wing area m^2, span m, MAC m
@@ -41,6 +42,10 @@ struct FlapDef {
   double rateDegPerSec;
   double vfeKias[6];                    // max speed per detent (0 = n/a)
   bool electric;
+  // Lift (and slat stall-angle) increment vs. flap fraction: f^liftExp.
+  // 0 = plain flap (0.85, stall angle linear). Slatted Fowler flaps of
+  // airliners give most of their lift in the first detents (~0.3).
+  double liftExp;
 };
 
 struct GearPointDef {
@@ -68,6 +73,51 @@ struct PropEngineDef {
   double swirl;          // m, slipstream swirl yaw arm
   double bsfc;           // kg/(W s) brake specific fuel consumption
   double starterW;       // starter motor power, W
+};
+
+// Turbofan engines (all engines identical). Thrust = static thrust x
+// spool fraction x lapse(density, Mach); fuel = TSFC x thrust.
+struct JetDef {
+  int count;
+  double thrustN;          // max dry static thrust per engine, sea level ISA, N
+  double abThrustN;        // with afterburner, N (0 = none)
+  double idleN1;           // % N1 at idle
+  double idleFrac;         // idle thrust / max static thrust
+  double spoolUp;          // s, time constant idle -> max (at mid range)
+  double spoolDown;        // s
+  double tsfc;             // kg/(N s) at sea level static
+  double abTsfc;           // kg/(N s) with afterburner
+  double lapseM;           // thrust change per unit Mach (negative for high bypass)
+  double densExp;          // thrust ~ sigma^densExp
+  double reverseFrac;      // reverse thrust as fraction of forward (0 = none)
+  double tvc;              // pitch thrust-vectoring: moment arm x deflection, m (0 = none)
+  Vec3 pos[4];             // engine thrust points, body FRD, m
+};
+
+struct GearSysDef {
+  int retractable;
+  double transitS;         // s, full cycle
+  double vleKias;          // max speed gear extended
+  double cdGear;           // drag coefficient increment, gear down
+};
+
+struct SpoilerDef {
+  double cdBrake;          // drag at full speed brake
+  double clDump;           // lift reduction at full ground spoilers
+  double rollCl;           // roll moment from roll spoilers per unit aileron
+};
+
+struct FbwDef {
+  double nzMax, nzMin;     // load-factor limits commanded by full stick
+  double rollRateMax;      // rad/s at full stick
+  double alphaMax;         // alpha protection, rad
+  double bankMax;          // bank protection, rad (0 = none)
+};
+
+struct MachDef {
+  double mcrit;            // drag-divergence onset
+  double cdWave;           // peak wave-drag increment near M 1.05
+  double mmo;              // max operating Mach
 };
 
 struct FuelDef {
@@ -98,6 +148,7 @@ struct AircraftDef {
   const char* id;
   EngineType engineType;
   ControlLaw law;
+  Category category;
   AeroDef aero;
   FlapDef flaps;
   MassDef mass;
@@ -110,10 +161,22 @@ struct AircraftDef {
   Vec3 eye;                 // pilot eye point, body FRD, m
   double steerMaxRad;       // nose wheel steering via pedals
   double casterMaxRad;      // with differential braking
+  // Jets and newer systems (zero for the piston trainer)
+  JetDef jet;
+  GearSysDef gearSys;
+  SpoilerDef spoiler;
+  FbwDef fbw;
+  MachDef machDef;
+  double rotateKias;        // reference rotation speed (MTOW), for AI/tests
+  double approachKias;      // reference approach speed (landing flaps)
+  int takeoffDetent;        // normal takeoff flap detent
 };
 
 // Built-in aircraft catalogue.
-enum AircraftId : int { AC_TRAINER = 0, AC_COUNT = 1 };
+enum AircraftId : int {
+  AC_TRAINER = 0, AC_NB738, AC_A320, AC_B789, AC_B77W, AC_B744, AC_A359, AC_A388,
+  AC_F15, AC_F22, AC_F35, AC_B2, AC_G650, AC_EXTRA, AC_COUNT
+};
 const AircraftDef& aircraftDef(int id);
 
 }  // namespace osk
