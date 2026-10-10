@@ -1,5 +1,7 @@
 // Reader for "OSKP" data packs (see tools/pack_data.py): one HTTP request
 // fetches a spatial block of tiles; entries are sliced out on demand.
+import { fetchBytes } from './net.js';
+
 export class PackStore {
   constructor(maxPacks = 48) {
     this.packs = new Map(); // url -> Promise<Map<key, Uint8Array>>
@@ -10,11 +12,9 @@ export class PackStore {
   load(url) {
     let p = this.packs.get(url);
     if (!p) {
-      p = fetch(url).then((r) => {
-        if (!r.ok) throw new Error(`${r.status} ${url}`);
-        return r.arrayBuffer();
-      }).then((buf) => {
-        this.bytesLoaded += buf.byteLength;
+      p = fetchBytes(url).then((bytes) => {
+        this.bytesLoaded += bytes.byteLength;
+        const buf = bytes.byteOffset === 0 && bytes.byteLength === bytes.buffer.byteLength ? bytes.buffer : bytes.slice().buffer;
         return parsePack(buf);
       });
       p.catch(() => this.packs.delete(url));

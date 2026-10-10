@@ -1,6 +1,30 @@
 // Network helpers: gzip-aware fetch and a persistent cache for online tiles.
 
+// Binary transport. Some hosts serve only web media types; for them the
+// binary data files (.pack, .gz) are published as base64 JSON strings next to
+// where the binary would be (<name>.json). data/encoding.json selects it.
+let base64Json = false;
+export async function detectEncoding(dataBase) {
+  try {
+    const res = await fetch(dataBase + 'encoding.json');
+    if (res.ok) base64Json = (await res.json()).binary === 'base64-json';
+  } catch { /* plain binary */ }
+}
+
+function fromBase64(s) {
+  if (Uint8Array.fromBase64) return Uint8Array.fromBase64(s);
+  const bin = atob(s);
+  const out = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+  return out;
+}
+
 export async function fetchBytes(url) {
+  if (base64Json && /\.(pack|gz)$/.test(url)) {
+    const res = await fetch(url + '.json');
+    if (!res.ok) throw new Error(`${res.status} ${url}`);
+    return fromBase64(await res.json());
+  }
   const res = await fetch(url);
   if (!res.ok) throw new Error(`${res.status} ${url}`);
   return new Uint8Array(await res.arrayBuffer());

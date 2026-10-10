@@ -11,7 +11,7 @@ import { Landmarks } from './landmarks.js';
 import { Sky } from './sky.js';
 import { Weather } from './weather.js';
 import { PackStore } from '../util/pack.js';
-import { fetchJson, fetchJsonGz } from '../util/net.js';
+import { detectEncoding, fetchJson, fetchJsonGz } from '../util/net.js';
 
 export class World {
   constructor(renderer, opts = {}) {
@@ -34,6 +34,7 @@ export class World {
 
   async init(progress = () => {}) {
     progress('Loading catalogue');
+    await detectEncoding(this.base);
     this.catalog = await fetchJson(this.base + 'catalog.json');
     progress('Loading global elevation');
     this.globalDem = await GlobalDem.load(this.base + 'global/dem.png');
