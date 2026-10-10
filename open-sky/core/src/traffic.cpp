@@ -360,7 +360,16 @@ bool TrafficSystem::blockedAhead(const Agent& a, double range) const {
     if (o.phase == PH_APPROACH || o.phase == PH_CLIMB || o.phase == PH_GO_AROUND || o.phase == PH_TAKEOFF) continue;
     if (test(o.x, o.y, o.hdg, k, true)) return true;
   }
-  if (playerAgl < 5.0 && test(playerX, playerY, playerHdg, -1, false)) return true;
+  // The player on the ground: clearance sized to this aircraft's wingspan,
+  // including beside the wings (a turning airliner sweeps its wingtips).
+  if (playerAgl < 5.0) {
+    const AgentType& T = agentType(a.type);
+    double dx = playerX - a.x, dy = playerY - a.y;
+    double d = sqrt(dx * dx + dy * dy);
+    double fwd = dx * sh + dy * ch, lat = fabs(dx * ch - dy * sh);
+    double clear = T.wingspan * 0.5 + 14.0;
+    if (d < range + T.wingspan * 0.5 && fwd > -T.wingspan * 0.3 && lat < clear + maxf(fwd, 0.0) * 0.15) return true;
+  }
   return false;
 }
 

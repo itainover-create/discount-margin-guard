@@ -463,8 +463,10 @@ varying vec3 vCol; varying float vI;
 void main(){
   vec2 q = gl_PointCoord - 0.5;
   float r = length(q) * 2.0;
-  float a = exp(-r * r * 4.0) + 0.25 * exp(-r * r * 0.8);
-  if (a < 0.02) discard;
+  if (r > 1.0) discard;
+  // core + halo, windowed to zero at the sprite edge (no visible square)
+  float a = (exp(-r * r * 4.0) + 0.25 * exp(-r * r * 0.8)) * (1.0 - smoothstep(0.6, 1.0, r));
+  if (a < 0.01) discard;
   gl_FragColor = vec4(vCol * (1.2 + vI * 0.3), a);
 }`;
 export function lightMaterial(shared, renderer) {

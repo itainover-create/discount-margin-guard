@@ -28,7 +28,7 @@ export class TrafficView {
 
   // Player vs AI aircraft: fuselage and wing of the AI as two boxes in its
   // own axes, the player as a disc of its half-span.
-  _collide(x, y, zc, hdg, type) {
+  _collide(x, y, zc, hdg, type, phase, speed) {
     const p = this.game.player, o = p.o;
     if (o.crashed) return;
     const span = AI_SPAN[type] || 35, len = type === 3 ? 8.5 : span * 1.05;
@@ -42,6 +42,7 @@ export class TrafficView {
     if (hitFuselage || hitWing) {
       p.core.crash(5);
       p.crashText = 'collision with traffic';
+      p.crashInfo = { type, phase, aiSpeed: +speed.toFixed(1), part: hitFuselage ? 'fuselage' : 'wing', along: Math.round(along), lat: Math.round(lat), playerGs: +o.gs.toFixed(1) };
     }
   }
 
@@ -84,7 +85,7 @@ export class TrafficView {
       this._lights(i, o, lightsBits, type);
       const dist = Math.hypot(camPos.x - o.position.x, camPos.y - o.position.y, camPos.z - o.position.z);
       this.agents.push({ slot: i, phase, callsign, type, speed: st[s + 7], runway: st[s + 13] | 0, x: w.x, y: w.y, z, dist, waiting: st[s + 15] > 0.5 });
-      this._collide(w.x, w.y, o.position.y, hdg, type);
+      this._collide(w.x, w.y, o.position.y, hdg, type, phase, st[s + 7]);
     }
     this.lights.flush();
   }

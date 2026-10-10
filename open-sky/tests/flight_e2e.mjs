@@ -67,12 +67,15 @@ window.__tp = {
     st.trafficAhead=false;
     for(const a of g.traffic.agents){ const dx=a.x-o.x, dy=a.y-o.y, d=Math.hypot(dx,dy); if(d>110) continue;
       const f=dx*Math.sin(o.psi)+dy*Math.cos(o.psi), l=Math.abs(dx*Math.cos(o.psi)-dy*Math.sin(o.psi));
-      if(f>0 && l<40){ st.trafficAhead=true; vt=Math.min(vt, Math.max(0,(d-75)*0.15)); } }
+      const half=[17.5,13,30,5.5][a.type]||17.5;  // AI half-span; ours is 5.5 m
+      if(f>0 && l<half+8){ st.trafficAhead=true; vt=Math.min(vt, Math.max(0,(d-(half+45))*0.15)); } }
     input.yaw=this.clamp(err*2.2 - o.r*0.8,-1,1);
     const ev=vt-o.gs;
     g.player.sw.throttle=this.clamp(0.12+ev*0.12,0,0.45);
-    if(ev<-1.0 || (last && dist<10)){ input.brakeL=input.brakeR=this.clamp(-ev*0.4,0.2,1); g.player.sw.throttle=0; }
-    st.done = lim===r.path.length-1 && last && o.gs<0.6 && (dist<14 || (st.trafficAhead && dist<180));
+    if(ev<-1.0 || (last && dist<10) || vt<0.3){ input.brakeL=input.brakeR=vt<0.3?1:this.clamp(-ev*0.4,0.2,1); g.player.sw.throttle=0; }
+    const hn=nodes[r.path[r.path.length-1]], dHold=Math.hypot(hn[0]-loc.x,hn[1]-loc.y);
+    st.queued = st.trafficAhead && dHold<180;  // stopped in the departure queue behind traffic
+    st.done = lim===r.path.length-1 && o.gs<0.6 && ((last && dist<14) || st.queued);
   },
   // fly attitude: pitch/roll commands to targets (rad)
   att(input, o, pitchT, bankT){
@@ -132,12 +135,13 @@ try {
         maxKt = Math.max(maxKt, g.player.o.gs / 0.514444);
         if (g.player.o.crashed) break;
       }
-      return { done: !!st.done, simSec: Math.round(t), maxKt: Math.round(maxKt), atHold: g.mission.atHold(), crossings: (g.atc.route.crossings || []).map((c) => ({ rw: c.name, cleared: c.cleared, done: c.done })), violations: g.atc.violations.map((v) => v.text), crashed: g.player.o.crashed, atcLog: g.atc.log.filter((m) => /cross|hold short/i.test(m.text)).map((m) => m.station + ': ' + m.text) };
+      return { done: !!st.done, simSec: Math.round(t), maxKt: Math.round(maxKt), atHold: g.mission.atHold(), queuedBehindTraffic: !!st.queued, crossings: (g.atc.route.crossings || []).map((c) => ({ rw: c.name, cleared: c.cleared, done: c.done })), violations: g.atc.violations.map((v) => v.text), crashed: g.player.o.crashed, crashText: g.player.crashText, crashInfo: g.player.crashInfo, atcLog: g.atc.log.filter((m) => /cross|hold short/i.test(m.text)).map((m) => m.station + ': ' + m.text) };
     });
     record('Taxi along the route to the hold-short line (scripted pilot)', taxi.done && !taxi.crashed && taxi.violations.length === 0, taxi);
     await shot('g3-at-hold-short', 4);
     const ready = await page.evaluate(() => {
       const g = window.__game;
+      g.player.sw.parkBrake = true;  // holding: brakes set (idle thrust would creep)
       g.atc.request('ready');
       let t = 0;
       while (!g.atc.clearances.takeoff && t < 400) { g.debugStep(0.05, 40); t += 2; }

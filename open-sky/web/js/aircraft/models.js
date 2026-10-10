@@ -302,7 +302,7 @@ export function poseTrainer(m, o, dt) {
   const rpm = o.rpm || 0;
   m.prop.blades.rotation.z = -(o.propAngle || 0);
   const blur = THREE.MathUtils.smoothstep(rpm, 500, 1300);
-  m.prop.disc.material.opacity = blur * 0.22;
+  m.prop.disc.material.opacity = blur * (o.inside ? 0.035 : 0.22);  // from the seat a spinning prop is nearly invisible
   m.prop.blades.visible = blur < 0.98;
 }
 

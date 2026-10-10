@@ -227,7 +227,7 @@ export class PlayerAircraft {
     this.root.rotation.order = 'YXZ';
     this.root.rotation.set(o.theta, -o.psi, -o.phi);
     this.root.updateMatrixWorld(true);
-    poseTrainer(this.model, { flapsDeg: o.flapsDeg, ail: o.ail, elev: o.elev, rud: o.rud, steer: o.steer, rpm: o.rpm, propAngle: o.propAngle }, dt);
+    poseTrainer(this.model, { flapsDeg: o.flapsDeg, ail: o.ail, elev: o.elev, rud: o.rud, steer: o.steer, rpm: o.rpm, propAngle: o.propAngle, inside: this.cockpitView }, dt);
     this.cockpit.update(dt, o, this.sw, this.ui);
     // lights
     const pw = o.busV > 18;
