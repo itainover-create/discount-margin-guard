@@ -162,6 +162,7 @@ export class Hud {
 
   toggleAtc(force) {
     this.atcOpen = force !== undefined ? force : !this.atcOpen;
+    if (this.g.settings.radioWheel !== false) { $('atc-menu').classList.add('hidden'); this.showWheel(this.atcOpen); return; }
     const menu = $('atc-menu');
     menu.classList.toggle('hidden', !this.atcOpen);
     if (!this.atcOpen) return;
@@ -174,6 +175,39 @@ export class Hud {
       b.onclick = () => this.atcSelect(i);
       menu.appendChild(b);
     });
+  }
+
+  // Radio wheel: the calls that make sense now, around a circle; pick by
+  // pointing (mouse direction from the centre), clicking or number keys.
+  showWheel(on) {
+    const el = $('radio-wheel');
+    el.classList.toggle('hidden', !on);
+    if (!on) { this.wheelSel = -1; return; }
+    const g = this.g, opts = g.atc.options();
+    this.opts = opts;
+    const n = opts.length, A = g.atc, gnd = g.player.o.onGround && !['lineup', 'cleared', 'takeoff'].includes(A.state);
+    const st = A.airport && A.names ? (gnd ? A.names.gnd : A.names.twr) : 'Unicom';
+    const fq = A.freq ? (gnd ? A.freq.gnd : A.freq.twr) : '122.800';
+    const ui = { comStation: st, comFreq: fq };
+    const R = n > 6 ? 205 : 180;
+    el.innerHTML = `<div class="rw-ring"></div><div class="rw-center"><div class="rw-st">${esc(ui.comStation)}</div><div class="rw-fq">${esc(ui.comFreq || '')}</div><div class="rw-hint">${n ? `point & click · 1–${n} · Esc` : 'no calls available now'}</div></div>` +
+      opts.map((o, i) => {
+        const a = -Math.PI / 2 + (i * 2 * Math.PI) / Math.max(1, n);
+        return `<button class="rw-opt" data-i="${i}" style="left:calc(50% + ${Math.round(Math.cos(a) * R)}px);top:calc(50% + ${Math.round(Math.sin(a) * R)}px)"><span class="rw-n">${i + 1}</span>${esc(o.label)}${g.settings.hebrew ? `<small dir="rtl">${esc(o.he)}</small>` : ''}</button>`;
+      }).join('');
+    const btns = [...el.querySelectorAll('.rw-opt')];
+    btns.forEach((b) => { b.onclick = (e) => { e.stopPropagation(); this.atcSelect(+b.dataset.i); }; });
+    const pick = (e) => {
+      const r = el.getBoundingClientRect();
+      const dx = e.clientX - (r.left + r.width / 2), dy = e.clientY - (r.top + r.height / 2);
+      if (Math.hypot(dx, dy) < 60 || !n) { this.wheelSel = -1; } else {
+        const a = (Math.atan2(dy, dx) + Math.PI / 2 + Math.PI * 4) % (Math.PI * 2);
+        this.wheelSel = Math.round(a / ((2 * Math.PI) / n)) % n;
+      }
+      btns.forEach((b, i) => b.classList.toggle('sel', i === this.wheelSel));
+    };
+    el.onmousemove = pick;
+    el.onclick = (e) => { pick(e); if (this.wheelSel >= 0) this.atcSelect(this.wheelSel); else this.toggleAtc(false); };
   }
 
   atcSelect(i) {

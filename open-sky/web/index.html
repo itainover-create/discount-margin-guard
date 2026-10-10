@@ -14,6 +14,7 @@
 <body>
 <div id="app">
   <div id="view"></div>
+  <canvas id="windshield"></canvas>
 
   <!-- ===== Loading ===== -->
   <section id="loading" class="screen show">
@@ -65,7 +66,7 @@
           <div id="featured"></div>
           <div id="place-info"></div>
           <div class="setup">
-            <label>Start <select id="start-pos"><option value="stand">Parking (cold &amp; dark)</option><option value="runway">On the runway</option><option value="air">In the air (5 nm final)</option><option value="airHigh">In the air (3000 ft overhead)</option></select></label>
+            <label>Start <select id="start-pos"><option value="stand">Parking (cold &amp; dark)</option><option value="runway">On the runway</option><option value="air">In the air (5 nm final)</option><option value="airHigh">In the air (3000 ft overhead)</option><option value="cruise">In the air (cruise altitude)</option></select></label>
             <label>Aircraft <select id="aircraft-sel"></select></label>
             <label>Mode <select id="mode"><option value="accessible">Accessible (assists, quick start)</option><option value="simulation">Simulation (full procedures)</option></select></label>
             <label>Time <select id="time"><option value="now">Now (real local time)</option><option value="7">Morning 07:00</option><option value="12" selected>Noon 12:00</option><option value="17.5">Evening 17:30</option><option value="19.8">Sunset</option><option value="22">Night 22:00</option></select></label>
@@ -101,6 +102,7 @@
     <div id="hud-status"></div>
     <canvas id="minimap" class="panel" width="300" height="300"></canvas>
     <div id="checklist" class="panel hidden"></div>
+    <div id="radio-wheel" class="hidden"></div>
     <div id="tooltip" class="hidden"></div>
     <div id="hud-buttons">
       <button data-act="atc" title="Radio (T)">📻 ATC</button>

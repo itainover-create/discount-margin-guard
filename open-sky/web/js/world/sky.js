@@ -65,7 +65,7 @@ void main(){
 }`;
 const SKY_FS = /* glsl */ `
 uniform vec3 uSunDir; uniform vec3 uZenith; uniform vec3 uHorizon; uniform vec3 uSunGlow; uniform float uNight;
-uniform float uOvercast; uniform vec3 uMoonDir; uniform float uMoonPhase; uniform float uExposure;
+uniform float uOvercast; uniform vec3 uMoonDir; uniform float uMoonPhase; uniform float uExposure; uniform float uFlash;
 varying vec3 vDir;
 float h12(vec2 p){ vec3 p3 = fract(vec3(p.xyx) * .1031); p3 += dot(p3, p3.yzx + 33.33); return fract((p3.x + p3.y) * p3.z); }
 void main(){
@@ -91,6 +91,7 @@ void main(){
     float star = step(0.9965, s) * smoothstep(0.0, 0.15, d.y) * tw;
     col += vec3(star) * uNight * (1.0 - uOvercast) * 1.4;
   }
+  col += vec3(0.75, 0.8, 0.95) * uFlash * (0.6 + 0.4 * clamp(d.y * 3.0, 0.0, 1.0));
   col = col / (1.0 + col * 0.15);
   gl_FragColor = vec4(col, 1.0);
 }`;
@@ -99,7 +100,7 @@ export class Sky {
   constructor(world, scene) {
     this.world = world;
     this.uniforms = {
-      uSunDir: { value: new THREE.Vector3() }, uZenith: { value: new THREE.Color() }, uHorizon: { value: new THREE.Color() },
+      uSunDir: { value: new THREE.Vector3() }, uZenith: { value: new THREE.Color() }, uHorizon: { value: new THREE.Color() }, uFlash: world.shared.uFlash,
       uSunGlow: { value: new THREE.Color() }, uNight: { value: 0 }, uOvercast: { value: 0 },
       uMoonDir: { value: new THREE.Vector3(0, -1, 0) }, uMoonPhase: { value: 0.5 }, uExposure: { value: 1 },
     };

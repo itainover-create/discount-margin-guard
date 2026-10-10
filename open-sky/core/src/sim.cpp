@@ -466,10 +466,12 @@ void Sim::computeControls(double dt) {
   reverser = isJet() && def->jet.reverseFrac > 0 && in[IN_REVERSE] > 0.5 && (onGround || mainsDown);
   // Autothrottle: speed hold on the throttle (velocity-form PI)
   if (isJet() && in[IN_AT_ENGAGED] > 0.5 && eng.running && !reverser) {
+    if (iasPrev <= 0.1) iasPrev = ias;  // first step after a reset
     double err = in[IN_AT_SPEED] - ias;
-    double accel = (ias - iasPrev) / maxf(dt, 1e-4);
+    double accel = clamp((ias - iasPrev) / maxf(dt, 1e-4), -5.0, 5.0);
     double maxT = def->jet.abThrustN > 0 ? 0.92 : 1.0;
-    atThr = clamp(atThr + (0.012 * err - 0.08 * accel) * dt, 0.0, maxT);
+    double rate = clamp(0.012 * err - 0.08 * accel, -0.15, 0.15);  // thrust levers move at most 15 %/s
+    atThr = clamp(atThr + rate * dt, 0.0, maxT);
   } else {
     atThr = clamp(in[IN_THROTTLE], 0, 1);
   }

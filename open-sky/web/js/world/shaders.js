@@ -27,6 +27,7 @@ export function createSharedUniforms() {
     uLandPos: { value: new THREE.Vector3() },
     uLandDir: { value: new THREE.Vector3(0, 0, -1) },
     uLandOn: { value: 0 },
+    uFlash: { value: 0 },   // lightning flash 0..1
   };
 }
 
@@ -43,7 +44,7 @@ export const COMMON = /* glsl */ `
 uniform vec3 uSunDir; uniform vec3 uSunColor; uniform vec3 uSkyAmb; uniform vec3 uGroundAmb;
 uniform vec3 uFogColor; uniform float uFogDensity; uniform vec3 uZenith; uniform float uNight; uniform float uTime;
 uniform vec3 uCamPos; uniform float uWetness; uniform float uExposure;
-uniform vec3 uLandPos; uniform vec3 uLandDir; uniform float uLandOn;
+uniform vec3 uLandPos; uniform vec3 uLandDir; uniform float uLandOn; uniform float uFlash;
 float hash12(vec2 p){ vec3 p3 = fract(vec3(p.xyx) * .1031); p3 += dot(p3, p3.yzx + 33.33); return fract((p3.x + p3.y) * p3.z); }
 float hash13(vec3 p3){ p3 = fract(p3 * .1031); p3 += dot(p3, p3.zyx + 31.32); return fract((p3.x + p3.y) * p3.z); }
 float vnoise(vec2 p){ vec2 i = floor(p), f = fract(p); vec2 u = f*f*(3.0-2.0*f);
@@ -60,7 +61,7 @@ vec3 applyFog(vec3 col, vec3 wpos){
 vec3 lightDiffuse(vec3 n){
   float ndl = max(dot(n, uSunDir), 0.0);
   vec3 amb = mix(uGroundAmb, uSkyAmb, n.y * 0.5 + 0.5);
-  return uSunColor * ndl + amb;
+  return uSunColor * ndl + amb + vec3(0.85, 0.9, 1.0) * uFlash * 1.4;
 }
 // aircraft landing/taxi light (spot) for ground, runway and buildings
 vec3 landLight(vec3 wpos, vec3 n){
@@ -304,10 +305,19 @@ void main(){
   // ambient-occlusion-like darkening at the base, slight top highlight
   col *= 0.78 + 0.22 * clamp(v / 8.0, 0.0, 1.0);
   vec3 lit = col * (lightDiffuse(n) + landLight(vW, n));
-  // specular glint on glass
+  // glass: fresnel reflection of the sky (ground below the horizon) and the sun;
+  // each pane is tilted by a hair so a curtain wall does not look like one mirror
   vec3 vdir = normalize(uCamPos - vWc);
+  vec3 pn = normalize(n + vec3(hash12(vec2(bay, fl) + seed) - 0.5, 0.0, hash12(vec2(fl, bay) + seed * 3.0) - 0.5) * 0.035);
+  vec3 r = reflect(-vdir, pn);
+  vec3 skyR = mix(uFogColor, uZenith, smoothstep(-0.02, 0.55, r.y));
+  skyR = mix(skyR, uGroundAmb * 0.8 + vec3(0.06), smoothstep(0.0, -0.25, r.y));
+  skyR *= 1.0 - uNight * 0.85;
+  float fres = 0.06 + 0.94 * pow(1.0 - max(dot(pn, vdir), 0.0), 5.0);
+  float glassK = inWin * fade * (tall ? 0.85 : 0.35);
+  lit = mix(lit, skyR + (vec3(0.85, 0.9, 1.0) * uFlash), clamp(fres * glassK + glassK * 0.25, 0.0, 0.9));
   vec3 hv = normalize(vdir + uSunDir);
-  lit += uSunColor * pow(max(dot(n, hv), 0.0), 60.0) * 0.6 * inWin * fade * (tall ? 1.0 : 0.4);
+  lit += uSunColor * (pow(max(dot(pn, hv), 0.0), 60.0) * 0.4 + pow(max(dot(r, uSunDir), 0.0), 900.0) * 6.0) * glassK;
   // night: lit windows (stable random per window), brighter shopfronts
   if (uNight > 0.01) {
     float r = hash13(vec3(bay, fl, seed * 113.0));

@@ -19,6 +19,9 @@ import { haversine } from './world/geo.js';
 import { OskIn } from './core/layout.js';
 import { fleetEntry, displayName, FLEET_OPTIONS } from './aircraft/fleet.js';
 import { DamageFX } from './aircraft/fx.js';
+import { Windshield } from './ui/windshield.js';
+import { EnrouteTraffic } from './sim/enroute.js';
+import { CloudSave } from './net/cloud.js';
 
 const D2R = Math.PI / 180;
 const $ = (id) => document.getElementById(id);
@@ -41,6 +44,7 @@ class Game {
       volume: 0.8, music: 0.7, intro: true, mode: 'accessible', units: 'aviation', aircraft: 0, realNames: false,
     }, this._loadSettings());
     FLEET_OPTIONS.realNames = !!this.settings.realNames;
+    this.cloud = new CloudSave(this.settings);
     this.audio = new AudioEngine();  // created early: the intro plays music before the world has loaded
     this.fps = { frames: 0, t: 0, value: 0, hist: [] };
   }
@@ -79,6 +83,9 @@ class Game {
     this.progress('Preparing aircraft', 0.7);
     this.player = new PlayerAircraft(this.core, this.world);
     this.fx = new DamageFX(this.world);
+    this.windshield = new Windshield($('windshield'));
+    this.enroute = new EnrouteTraffic(this);
+    this.world.weather.onThunder = (delay, k) => this.audio.thunder(delay, k);
     this.player.root.visible = false;
     this.rig = new CameraRig(this.camera, this.world);
     this.input = new Input(renderer.domElement);
@@ -120,6 +127,8 @@ class Game {
   // ---------------------------------------------------------------------
   showMenu() {
     this.state = 'menu';
+    if (this.windshield) this.windshield.update(0, false, 0, 0, false);
+    if (this.world) this.world.shared.uFlash.value = 0;
     $('menu').classList.add('show');
     $('hud').classList.add('hidden');
     ['pause', 'debrief', 'help'].forEach((id) => $(id).classList.add('hidden'));
@@ -181,6 +190,7 @@ class Game {
       this.progress('Engine & systems', 0.8);
       this.player.spawn(start);
       this.fx.reset();
+      this.enroute.reset();
       if (start.runway && ap) this.atc.startOnRunway();
       if (spec.save && spec.save.sw) Object.assign(this.player.sw, spec.save.sw);
       this.missionDef = def;
@@ -231,6 +241,15 @@ class Game {
     if (type === 'runway') {
       ap.owner.toWorld(end.tx + ux * 25, end.ty + uy * 25, w);
       return { x: w.x, y: w.y, hdgDeg: end.hdgTrue, onGround: true, engine: true, runway: true };
+    }
+    if (type === 'cruise') {
+      // 40 km out, at the type's cruise level, Mach / speed (TAS for the core, IAS for the A/T)
+      ap.owner.toWorld(end.tx - ux * 40000, end.ty - uy * 40000, w);
+      const ft = f.cruise.ft, altM = ap.elev + ft * 0.3048;
+      const T = 288.15 - 0.0065 * Math.min(altM, 11000), a = Math.sqrt(1.4 * 287.05 * T);
+      const sigma = Math.pow(T / 288.15, 4.256) * (altM > 11000 ? Math.exp(-(altM - 11000) / 6341.6) : 1);
+      const tasKt = f.cruise.mach ? f.cruise.mach * a / 0.514444 : f.cruise.kt / Math.sqrt(sigma);
+      return { x: w.x, y: w.y, hdgDeg: end.hdgTrue, onGround: false, altM, iasKt: tasKt, atKt: Math.round(tasKt * Math.sqrt(sigma)), flaps: 0 };
     }
     if (type === 'airHigh') {
       ap.owner.toWorld(end.tx - ux * 6000, end.ty - uy * 6000, w);
@@ -298,6 +317,7 @@ class Game {
     if (a) {
       p.rebase(a);
       this.fx.rebase(a);
+      this.enroute.rebase(a);
       if (this.rig.free) { this.rig.free.pos.x = a.sx * this.rig.free.pos.x + a.tx; this.rig.free.pos.z -= a.ty; }
       this.rig.first = true;
       this.updateRouteGuide();
@@ -315,7 +335,9 @@ class Game {
     const dist = toCam.length();
     const closing = dist > 1 ? new THREE.Vector3(p.o.ve, p.o.vu, -p.o.vn).dot(toCam.normalize()) : 0;
     p.ui.gpws = this.audio.update(dt, p.o, sw, this.rig.view, { dist, closing }, this.traffic.agents, p.fleet) || '';
+    this.enroute.update(dt);
     this.fx.update(dt, p, this.camera, this.renderer);
+    this.windshield.update(dt, this.rig.view === 'cockpit' && !this.paused, this.world.weather.rainAt(p.o.z), p.o.ias / 0.514444, p.isJet);
     this.hud.update(dt);
     if (p.o.crashed && !this.crashShown) {
       this.crashShown = true;
@@ -334,7 +356,7 @@ class Game {
     this._tcasT = (this._tcasT || 0) - dt;
     if (this._tcasT <= 0 && p.isJet) {
       this._tcasT = 0.5;
-      ui.traffic = this.traffic.agents.filter((a) => a.z !== undefined).map((a) => {
+      ui.traffic = this.traffic.agents.filter((a) => a.z !== undefined).concat(this.enroute.list()).map((a) => {
         const dx = a.x - p.o.x, dy = a.y - p.o.y;
         return { brg: ((Math.atan2(dx, dy) / D2R - ui.magVar) + 360) % 360, distNm: Math.hypot(dx, dy) / 1852, dAltFt: (a.z - p.o.z) / 0.3048 };
       }).filter((t) => t.distNm < 40);
@@ -740,6 +762,7 @@ class Game {
     const snap = this.player.snapshot();
     const data = { v: 1, spec: { ...this.spec, save: undefined }, snap, mission: this.missionDef ? this.missionDef.id : null, wp: this.mission ? this.mission.wpIndex : 0, time: this.date().toISOString(), weather: this.world.weather.state, at: Date.now() };
     try { localStorage.setItem('opensky.save', JSON.stringify(data)); this.toast('Save point stored', 'good'); } catch { this.toast('Could not save (storage unavailable)', 'bad'); }
+    if (this.cloud && this.cloud.signedIn) this.cloud.save(data).then(() => this.toast('Saved to your Google Drive (app data)', 'good')).catch((e) => this.toast('Cloud save failed: ' + e.message, 'bad'));
   }
   autosave(dt) {
     this.saveTimer = (this.saveTimer || 0) + dt;

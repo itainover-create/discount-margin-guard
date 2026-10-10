@@ -243,6 +243,9 @@ export class Menu {
         <div class="row">Show real aircraft type names <input type="checkbox" id="set-real" ${s.realNames ? 'checked' : ''}></div>
         <div class="note">Off by default: the fleet uses original names with the real type as a class reference. Turn on only if you hold the rights to use manufacturers' type names.</div>
       </fieldset>
+      <fieldset><legend>ACCOUNT &amp; CLOUD SAVE</legend>
+        <div id="acct"></div>
+      </fieldset>
       <fieldset><legend>AUDIO &amp; LANGUAGE</legend>
         <div class="row">Master volume <input type="range" id="set-vol" min="0" max="1" step="0.05" value="${s.volume}"></div>
         <div class="row">Music volume <input type="range" id="set-music" min="0" max="1" step="0.05" value="${s.music ?? 0.7}"></div>
@@ -267,6 +270,32 @@ export class Menu {
     $('set-intro').onchange = (e) => { s.intro = e.target.checked; save(); };
     $('replay-intro').onclick = () => g.playIntro(false);
     $('bench').onclick = () => this.benchmark();
+    this.renderAccount();
+  }
+
+  // Google account: sign in, cloud save / load, sign out (token in memory only)
+  renderAccount() {
+    const g = this.g, c = g.cloud, s = g.settings;
+    const el = $('acct');
+    if (!el) return;
+    const status = (t, cls = '') => `<div class="note ${cls}" id="acct-msg">${esc(t)}</div>`;
+    if (c.signedIn) {
+      el.innerHTML = `<div class="acct-user">${c.profile && c.profile.picture ? `<img src="${esc(c.profile.picture)}" alt="" referrerpolicy="no-referrer">` : ''}<div><b>${esc(c.profile ? c.profile.name : '')}</b><br><small>${esc(c.profile ? c.profile.email : '')}</small></div></div>
+        <div class="row"><button class="big-btn" id="acct-save">Save to cloud</button><button class="big-btn" id="acct-load">Load from cloud</button></div>
+        <button class="big-btn" id="acct-out">Sign out</button>
+        ${status(c.lastSaved ? `Last cloud save ${new Date(c.lastSaved).toLocaleTimeString()}` : 'Save points are also uploaded to your Google Drive app data while signed in.')}`;
+      $('acct-save').onclick = async () => { const d = g.loadSave(); if (!d) { $('acct-msg').textContent = 'No save point yet — save during a flight (O).'; return; } try { await c.save(d); this.renderAccount(); } catch (e) { $('acct-msg').textContent = e.message; } };
+      $('acct-load').onclick = async () => { try { const d = await c.load(); if (!d) { $('acct-msg').textContent = 'No cloud save found.'; return; } localStorage.setItem('opensky.save', JSON.stringify(d)); this.renderAll(); $('acct-msg').textContent = 'Cloud save loaded — use Continue on the Home tab.'; } catch (e) { $('acct-msg').textContent = e.message; } };
+      $('acct-out').onclick = async () => { await c.signOut(); this.renderAccount(); };
+    } else {
+      el.innerHTML = `<button class="gsi-btn" id="acct-in"><span class="gsi-g">G</span>Sign in with Google</button>
+        <div class="row">OAuth client ID <input type="text" id="acct-cid" placeholder="xxxx.apps.googleusercontent.com" value="${esc(s.googleClientId || '')}" spellcheck="false"></div>
+        ${status(c.clientId ? 'Signs in with Google Identity Services; your save point is kept in your Drive app-data folder (private to this game). The token is kept in memory only and is revoked on sign-out.' : 'Needs a Google OAuth web client ID for this site (Google Cloud Console → Credentials, authorized origin = this page). See docs/ACCOUNTS.md.')}`;
+      $('acct-cid').onchange = (e) => { s.googleClientId = e.target.value.trim(); g.saveSettings(); this.renderAccount(); };
+      $('acct-cid').onfocus = () => { g.input.textFocus = true; };
+      $('acct-cid').onblur = () => { g.input.textFocus = false; };
+      $('acct-in').onclick = async () => { try { $('acct-msg').textContent = 'Opening Google sign-in…'; await c.signIn(); this.renderAccount(); } catch (e) { $('acct-msg').textContent = e.message; } };
+    }
   }
 
   async benchmark() {

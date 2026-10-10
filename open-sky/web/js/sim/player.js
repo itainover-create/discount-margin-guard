@@ -192,11 +192,12 @@ export class PlayerAircraft {
     this.sw.gear = core.in[I.IN_GEAR_LEVER] > 0.5;
     if (!start.onGround) {
       this.sw.strobe = true; this.sw.landing = start.altM - this.world.heightAt(start.x, start.y) < 600; this.sw.throttle = this.isJet ? 0.55 : 0.68; this.sw.parkBrake = false;
-      if (this.isJet) { this.sw.at = true; this.ui.atSpdKt = Math.round(start.iasKt || f.vref); this.sw.spoilerArm = !!start.gearDown; }
+      if (this.isJet) { this.sw.at = true; this.ui.atSpdKt = Math.round(start.atKt || start.iasKt || f.vref); this.sw.spoilerArm = !!start.gearDown; this.sw.throttle = start.atKt ? 0.8 : 0.55; }
+      this.ui.apAltFt = Math.round(start.altM / 0.3048 / 100) * 100;
     }
     if (start.onGround && start.engine) { this.sw.parkBrake = true; this.sw.throttle = 0; }  // lined up or parked: brake set
     this.sw.flaps = flaps;
-    if (!this.ui.atSpdKt || start.onGround) this.ui.atSpdKt = Math.round(start.onGround ? f.vr + 15 : (start.iasKt || f.vref));
+    if (!this.ui.atSpdKt || start.onGround) this.ui.atSpdKt = Math.round(start.onGround ? f.vr + 15 : (start.atKt || start.iasKt || f.vref));
     this.wingLostShown = 0;
     this.ui.hdgBug = Math.round(start.hdgDeg - (this.world.magVar || 0)) * D2R;
     this.ui.baroHpa = this.world.weather.state.qnh;

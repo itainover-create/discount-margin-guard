@@ -124,6 +124,28 @@ export class AudioEngine {
     this.lastFlaps = 0;
   }
 
+  // Thunder: a crack (close strikes) and a long low rumble, after the sound's travel time.
+  thunder(delay, intensity) {
+    if (!this.ctx) return;
+    const ctx = this.ctx, t = ctx.currentTime + delay;
+    const src = ctx.createBufferSource();
+    src.buffer = this.noiseBuf;
+    src.loop = true;
+    const lp = ctx.createBiquadFilter(); lp.type = 'lowpass';
+    lp.frequency.setValueAtTime(intensity > 0.6 ? 2400 : 600, t);
+    lp.frequency.exponentialRampToValueAtTime(90, t + 1.2);
+    const g = ctx.createGain();
+    const v = 0.55 * intensity * this.volume.env;
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(Math.max(0.001, v), t + 0.06 + (1 - intensity) * 0.4);
+    // rolling: a few swells while it decays
+    for (let i = 1; i < 5; i++) g.gain.exponentialRampToValueAtTime(Math.max(0.001, v * (0.85 - i * 0.16) * (0.7 + Math.random() * 0.6)), t + 0.5 + i * 0.8);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 6);
+    src.connect(lp); lp.connect(g); g.connect(this.master);
+    src.start(t, Math.random());
+    src.stop(t + 6.2);
+  }
+
   // short synthesized tones: fire bell, gear horn, master caution, overspeed clacker
   tone(kind) {
     if (!this.ctx) return;

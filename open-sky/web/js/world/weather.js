@@ -10,6 +10,7 @@ export const PRESETS = {
   overcast: { label: 'Overcast', labelHe: 'מעונן', windDir: 60, windKt: 14, gustKt: 0, turb: 1.0, visM: 12000, clouds: [{ cover: 8, baseFt: 1800, topFt: 4500 }], precip: 0, tempC: 9, qnh: 1006 },
   rain: { label: 'Rain, low ceiling', labelHe: 'גשם ותקרה נמוכה', windDir: 40, windKt: 16, gustKt: 24, turb: 1.4, visM: 5000, clouds: [{ cover: 6, baseFt: 1200, topFt: 3500 }, { cover: 8, baseFt: 3800, topFt: 9000 }], precip: 1, tempC: 8, qnh: 999 },
   fog: { label: 'Fog / low visibility', labelHe: 'ערפל / ראות נמוכה', windDir: 0, windKt: 2, gustKt: 0, turb: 0, visM: 1200, clouds: [{ cover: 8, baseFt: 300, topFt: 1100 }], precip: 0, tempC: 6, qnh: 1021 },
+  storm: { label: 'Thunderstorms, heavy rain', labelHe: 'סופות רעמים וגשם כבד', windDir: 250, windKt: 18, gustKt: 34, turb: 2.4, visM: 3500, clouds: [{ cover: 7, baseFt: 2200, topFt: 9000 }, { cover: 6, baseFt: 9500, topFt: 32000 }], precip: 2, tempC: 24, qnh: 1003, lightning: true },
   crosswind: { label: 'Strong gusty crosswind', labelHe: 'רוח צד חזקה ומשבית', windDir: 220, windKt: 22, gustKt: 32, turb: 1.8, visM: 25000, clouds: [{ cover: 3, baseFt: 4000, topFt: 6000 }], precip: 0, tempC: 14, qnh: 1009 },
 };
 
@@ -23,6 +24,19 @@ export class Weather {
     this.group.add(this.clouds.group);
     this.rain = new Rain(world);
     this.group.add(this.rain.mesh);
+    this.lightning = new Lightning(world);
+    this.group.add(this.lightning.group);
+    this.onThunder = null;  // (delaySec, intensity) => void, set by the game (audio)
+  }
+
+  // rain reaching an aircraft at this altitude (below the tops of the precipitating cloud)
+  rainAt(altM) {
+    const s = this.state;
+    if (!s.precip) return 0;
+    const elev = this.world.fieldElevation || 0;
+    let top = 0;
+    for (const c of s.clouds) if (c.cover >= 5) top = Math.max(top, c.topFt);
+    return altM < elev + top * 0.3048 ? s.precip : 0;
   }
 
   set(p) {
@@ -92,6 +106,7 @@ export class Weather {
   update(dt, camWorld, camThree, sky) {
     this.clouds.update(this, camWorld, camThree, sky, dt);
     this.rain.update(dt, this.state.precip, camThree);
+    this.lightning.update(dt, this.state, camThree, this.onThunder);
     this.world.shared.uWetness.value = THREE.MathUtils.lerp(this.world.shared.uWetness.value, this.state.precip > 0 ? 1 : 0, Math.min(1, dt * 0.05));
     this.dirty = false;
   }
@@ -287,5 +302,87 @@ class Rain {
       p[i * 6 + 4] = (i < n ? y : -1000) - len;
     }
     this.mesh.geometry.attributes.position.needsUpdate = true;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Lightning: branching bolts between the cloud base and the ground at a few
+// km, a flash that lights the world and sky, thunder delayed by distance.
+// ---------------------------------------------------------------------------
+class Lightning {
+  constructor(world) {
+    this.world = world;
+    this.group = new THREE.Group();
+    this.group.name = 'lightning';
+    this.mat = new THREE.MeshBasicMaterial({ color: 0xdfe8ff, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, fog: false, side: THREE.DoubleSide });
+    this.mesh = null;
+    this.t = 6;
+    this.seq = null;
+  }
+
+  update(dt, state, camThree, onThunder) {
+    const S = this.world.shared;
+    if (!state.lightning || !camThree) { S.uFlash.value = 0; this.mat.opacity = 0; return; }
+    this.t -= dt;
+    if (this.t <= 0) { this.strike(state, camThree, onThunder); this.t = 3 + Math.random() * 12; }
+    if (this.seq) {
+      this.seq.t += dt;
+      const k = Math.floor(this.seq.t / 0.07);
+      const v = k < this.seq.pattern.length ? this.seq.pattern[k] : 0;
+      S.uFlash.value = v * this.seq.power;
+      this.mat.opacity = v > 0.05 ? Math.min(1, v * 1.2) : 0;
+      if (k >= this.seq.pattern.length) { this.seq = null; S.uFlash.value = 0; this.mat.opacity = 0; }
+    }
+  }
+
+  strike(state, cam, onThunder) {
+    const elev = this.world.fieldElevation || 0;
+    let base = 9999;
+    for (const c of state.clouds) if (c.cover >= 5) base = Math.min(base, c.baseFt);
+    const top = elev + Math.min(base, 4000) * 0.3048;
+    const dist = 2500 + Math.random() * 14000, a = Math.random() * Math.PI * 2;
+    const x = cam.x + Math.cos(a) * dist, z = cam.z + Math.sin(a) * dist;
+    const ground = Math.max(0, this.world.heightAt(x, -z));
+    const pts = [];
+    const n = 26;
+    let px = x, pz = z;
+    for (let i = 0; i <= n; i++) {
+      const t = i / n;
+      px += (Math.random() - 0.5) * 140; pz += (Math.random() - 0.5) * 140;
+      pts.push(new THREE.Vector3(px, top + (ground - top) * t, pz));
+    }
+    const branches = [];
+    for (let b = 0; b < 3; b++) {
+      const from = 3 + Math.floor(Math.random() * 14);
+      const bp = [pts[from].clone()];
+      let q = pts[from].clone();
+      const dx = (Math.random() - 0.5) * 2, dz = (Math.random() - 0.5) * 2;
+      for (let i = 0; i < 7; i++) { q = q.clone().add(new THREE.Vector3(dx * 90 + (Math.random() - 0.5) * 60, -(top - ground) / n * (0.7 + Math.random()), dz * 90 + (Math.random() - 0.5) * 60)); bp.push(q); }
+      branches.push(bp);
+    }
+    // camera-facing ribbons
+    const pos = [];
+    const ribbon = (list, w) => {
+      for (let i = 0; i < list.length - 1; i++) {
+        const p0 = list[i], p1 = list[i + 1];
+        const seg = p1.clone().sub(p0), toCam = cam.clone().sub(p0);
+        const side = seg.clone().cross(toCam).normalize().multiplyScalar(w);
+        const a0 = p0.clone().add(side), a1 = p0.clone().sub(side), b0 = p1.clone().add(side), b1 = p1.clone().sub(side);
+        pos.push(a0.x, a0.y, a0.z, a1.x, a1.y, a1.z, b0.x, b0.y, b0.z, a1.x, a1.y, a1.z, b1.x, b1.y, b1.z, b0.x, b0.y, b0.z);
+      }
+    };
+    const w = Math.max(6, dist * 0.0022);
+    ribbon(pts, w);
+    for (const b of branches) ribbon(b, w * 0.5);
+    if (this.mesh) { this.group.remove(this.mesh); this.mesh.geometry.dispose(); }
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    this.mesh = new THREE.Mesh(g, this.mat);
+    this.mesh.frustumCulled = false;
+    this.mesh.renderOrder = 9;
+    this.group.add(this.mesh);
+    const power = Math.min(1, 5000 / dist) * (this.world.shared.uNight.value > 0.5 ? 1.0 : 0.55);
+    this.seq = { t: 0, power, pattern: [1, 0.25, 0.9, 0.1, 0.0, 0.7, 0.35, 0.15] };
+    if (onThunder) onThunder(dist / 343, Math.min(1, 4000 / dist));
   }
 }
