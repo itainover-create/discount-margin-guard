@@ -7,6 +7,7 @@ import { LightBatch } from '../world/lights.js';
 
 export const PHASE = ['none', 'parked', 'pushback', 'taxi-out', 'holding', 'line-up', 'takeoff', 'climb', 'approach', 'landing', 'rollout', 'taxi-in', 'go-around', 'arrived'];
 const GROUND_PHASES = new Set([1, 2, 3, 4, 5, 10, 11, 13]);
+const AI_SPAN = [35, 26, 60, 11];  // wingspan by AI type (core kTypes)
 
 export class TrafficView {
   constructor(game) {
@@ -23,6 +24,25 @@ export class TrafficView {
     this.airport = airport;
     for (const m of this.models.values()) this.world.scene.remove(m.obj);
     this.models.clear();
+  }
+
+  // Player vs AI aircraft: fuselage and wing of the AI as two boxes in its
+  // own axes, the player as a disc of its half-span.
+  _collide(x, y, zc, hdg, type) {
+    const p = this.game.player, o = p.o;
+    if (o.crashed) return;
+    const span = AI_SPAN[type] || 35, len = type === 3 ? 8.5 : span * 1.05;
+    const dx = o.x - x, dy = o.y - y;
+    if (dx * dx + dy * dy > (len + 12) ** 2 || Math.abs(o.z - zc) > span * 0.22 + 2) return;
+    const along = dx * Math.sin(hdg) + dy * Math.cos(hdg), lat = dx * Math.cos(hdg) - dy * Math.sin(hdg);
+    const r = 5.2;  // Skylark half-span
+    const fus = type === 3 ? 0.7 : span * 0.06;
+    const hitFuselage = Math.abs(along) < len / 2 && Math.abs(lat) < fus + r;
+    const hitWing = Math.abs(along + span * 0.04) < r + span * 0.08 && Math.abs(lat) < span / 2 + r * 0.6;
+    if (hitFuselage || hitWing) {
+      p.core.crash(5);
+      p.crashText = 'collision with traffic';
+    }
   }
 
   update(dt, camPos) {
@@ -64,6 +84,7 @@ export class TrafficView {
       this._lights(i, o, lightsBits, type);
       const dist = Math.hypot(camPos.x - o.position.x, camPos.y - o.position.y, camPos.z - o.position.z);
       this.agents.push({ slot: i, phase, callsign, type, speed: st[s + 7], runway: st[s + 13] | 0, x: w.x, y: w.y, z, dist, waiting: st[s + 15] > 0.5 });
+      this._collide(w.x, w.y, o.position.y, hdg, type);
     }
     this.lights.flush();
   }

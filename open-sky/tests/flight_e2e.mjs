@@ -24,6 +24,19 @@ async function shot(name, frames = 6) {
     for (let i = 0; i < n; i++) { g.world.update(0.016, g.camera, g.rig.worldPos(), g.date()); g.rig.update(0.016, g.player, g.blankInput()); g.player.ui.frame = -1 - i; g.player.pose(0.05); g.hud.update(0.2); g.render(); await new Promise((r) => setTimeout(r, 0)); }
   }, frames);
   await page.screenshot({ path: `${out}/${name}.png`, timeout: 180000 });
+  const nan = await page.evaluate(() => {
+    const bad = [];
+    window.__game.world.scene.traverse((o) => {
+      const bs = o.geometry && o.geometry.boundingSphere;
+      if (bs && isNaN(bs.radius)) {
+        const chain = []; for (let p = o; p; p = p.parent) chain.push(p.name || p.type);
+        const pa = o.geometry.attributes.position; let i = 0; while (i < pa.array.length && isFinite(pa.array[i])) i++;
+        bad.push({ chain: chain.join(' < '), count: pa.count, firstNaN: i, mat: o.material && o.material.type });
+      }
+    });
+    return bad;
+  });
+  if (nan.length) log('NaN geometry objects:', JSON.stringify(nan));
   log('screenshot', name);
 }
 
@@ -50,11 +63,16 @@ window.__tp = {
     const err=this.wrap(want-o.psi);
     const last=st.i>=lim;
     let vt = Math.abs(err)>0.5? 2.5 : 6.5; if(last) vt=Math.min(vt, Math.max(0, (dist-6)*0.2));
+    // see and avoid: hold behind traffic in front (AI aircraft on the taxiway)
+    st.trafficAhead=false;
+    for(const a of g.traffic.agents){ const dx=a.x-o.x, dy=a.y-o.y, d=Math.hypot(dx,dy); if(d>110) continue;
+      const f=dx*Math.sin(o.psi)+dy*Math.cos(o.psi), l=Math.abs(dx*Math.cos(o.psi)-dy*Math.sin(o.psi));
+      if(f>0 && l<40){ st.trafficAhead=true; vt=Math.min(vt, Math.max(0,(d-75)*0.15)); } }
     input.yaw=this.clamp(err*2.2 - o.r*0.8,-1,1);
     const ev=vt-o.gs;
     g.player.sw.throttle=this.clamp(0.12+ev*0.12,0,0.45);
     if(ev<-1.0 || (last && dist<10)){ input.brakeL=input.brakeR=this.clamp(-ev*0.4,0.2,1); g.player.sw.throttle=0; }
-    st.done = lim===r.path.length-1 && last && dist<14 && o.gs<0.6;
+    st.done = lim===r.path.length-1 && last && o.gs<0.6 && (dist<14 || (st.trafficAhead && dist<180));
   },
   // fly attitude: pitch/roll commands to targets (rad)
   att(input, o, pitchT, bankT){
@@ -152,7 +170,7 @@ try {
         maxPitch = Math.max(maxPitch, o.theta);
       };
       let steps = 0;
-      while (steps < 3000 && (g.player.o.z - g.atc.airport.elev) < 305) { g.debugStep(0.02, 50, ctl); steps += 50; if (g.player.o.crashed) break; }
+      while (steps < 12000 && (g.player.o.z - g.atc.airport.elev) < 305) { g.debugStep(0.02, 50, ctl); steps += 50; if (g.player.o.crashed) break; }
       const o = g.player.o;
       return { cleared: g.atc.clearances.takeoff || g.atc.state, liftoff: lift, altFt: Math.round((o.z - g.atc.airport.elev) / 0.3048), crashed: o.crashed, events: o.events, atcState: g.atc.state, violations: g.atc.violations.map((v) => v.text), maxPitchDeg: Math.round(maxPitch * 57.3) };
     });
@@ -165,15 +183,15 @@ try {
 
   // --------------------------------------------------------------- landing
   if (want.has('landing')) {
-    for (const [icao, wx, mode] of [['KJFK', 'fair', 'accessible'], ['LLBG', 'crosswind', 'simulation']]) {
-      await page.evaluate(([i, w, m]) => window.__game.startFlight({ icao: i, start: 'air', mode: m, hour: 13, weather: w }), [icao, wx, mode]);
+    for (const [icao, wx, mode, mission] of [['KJFK', 'fair', 'accessible', null], ['LLBG', 'crosswind', 'simulation', 'crosswind']]) {
+      await page.evaluate(([i, w, m, mi]) => window.__game.startFlight({ icao: i, start: 'air', mode: m, hour: 13, weather: w, missionId: mi || undefined }), [icao, wx, mode, mission]);
       await page.waitForFunction(() => window.__game.state === 'flight', null, { timeout: 180000 });
       const res = await page.evaluate(() => {
         const g = window.__game, tp = window.__tp, ap = g.atc.airport, end = g.atc.activeEnd;
         g.atc.request('final');
         g.debugStep(0.05, 40);
         const D2R = Math.PI / 180;
-        let flare = false, td = null, minAgl = 1e9;
+        let flare = false, td = null, minAgl = 1e9; const st = {};
         let iBank = 0;
         const ctl = (inp, gg) => {
           const o = gg.player.o, sw = gg.player.sw;
@@ -186,12 +204,12 @@ try {
           // localizer: desired track from lateral error, bank to track (handles crosswind crab)
           const rwyHdg = end.hdgTrue * D2R;
           const trk = Math.atan2(o.ve, o.vn);
-          const wantTrk = rwyHdg + tp.clamp(rc.lateral * 0.012, -0.5, 0.5);
+          const wantTrk = rwyHdg - tp.clamp(rc.lateral * 0.012, -0.5, 0.5);  // lateral > 0: right of the centreline
           const bankT = tp.clamp(tp.wrap(wantTrk - trk) * 2.2, -0.35, 0.35);
           // glide path 3 deg to 300 m beyond threshold
           const gpAlt = Math.max(0, (300 - rc.along)) * Math.tan(3 * D2R);
           const kt = o.ias / 0.514444;
-          if (!flare && agl < 6 && !o.onGround) flare = true;
+          if (!flare && agl < 9 && !o.onGround) { flare = true; st.fp = o.theta; }
           if (o.onGround) {
             sw.throttle = 0; inp.brakeL = inp.brakeR = kt < 50 ? 0.8 : 0; inp.pitch = 0.2;
             inp.yaw = tp.clamp(tp.wrap(rwyHdg - o.psi) * 3 - o.r, -1, 1);
@@ -199,21 +217,36 @@ try {
             return;
           }
           if (flare) {
-            sw.throttle = 0;
-            tp.att(inp, o, 4.5 * D2R, tp.clamp(-o.beta * 0.5, -0.1, 0.1));
+            // round-out: sink rate proportional to wheel height, pitch follows the sink-rate error
+            sw.throttle = agl > 4 ? 0.1 : 0;
+            const vsT = -Math.max(0.3, (agl - 1.0) * 0.45);
+            st.fp = tp.clamp(st.fp + (vsT - o.vu) * 0.006, -0.05, 0.2);
+            const vlat = o.ve * Math.cos(rwyHdg) - o.vn * Math.sin(rwyHdg);
+            tp.att(inp, o, st.fp, tp.clamp((tp.clamp(-rc.lateral * 0.12, -2, 2) - vlat) * 0.09, -0.3, 0.3));
             // decrab: align nose with runway using rudder in the flare
             inp.yaw = tp.clamp(tp.wrap(rwyHdg - o.psi) * 3 - o.r * 0.8, -1, 1);
             return;
           }
+          // below 60 m: wing-low sideslip (rudder aligns the nose, bank holds the centreline)
+          if (agl < 60) {
+            const h = rwyHdg, vlat = o.ve * Math.cos(h) - o.vn * Math.sin(h);
+            const vlatT = tp.clamp(-rc.lateral * 0.12, -3, 3);
+            st.bank = tp.clamp((vlatT - vlat) * 0.09, -0.3, 0.3);
+          }
           const vsT = -o.gs * Math.tan(3 * D2R) + (gpAlt - agl) * 0.15;
           const pitchT = Math.asin(tp.clamp(vsT / Math.max(o.tas, 20), -0.3, 0.3)) + o.alpha;
-          tp.att(inp, o, pitchT, bankT);
+          tp.att(inp, o, pitchT, agl < 60 ? st.bank : bankT);
+          if (agl < 60) inp.yaw = tp.clamp(tp.wrap(rwyHdg - o.psi) * 4 - o.r * 1.0, -1, 1);
           sw.throttle = tp.clamp(0.25 + (65 - kt) * 0.04, 0, 0.9);
         };
-        let steps = 0;
-        while (steps < 22000 && !(g.player.o.onGround && g.player.o.gs < 5)) { g.debugStep(0.02, 50, ctl); steps += 50; if (g.player.o.crashed) break; }
+        let steps = 0; const trace = [];
+        while (steps < 40000 && !(g.player.o.onGround && g.player.o.gs < 5)) {
+          g.debugStep(0.02, 50, ctl); steps += 50; if (g.player.o.crashed) break;
+          if (steps % 500 === 0) { const o = g.player.o, loc = ap.owner.toLocal(o.x, o.y, {}), rc = ap.runwayCoords(end, loc.x, loc.y);
+            trace.push(`t${Math.round(steps * 0.02)} along${Math.round(rc.along)} lat${Math.round(rc.lateral)} agl${Math.round(o.z - end.z)} ias${Math.round(o.ias / 0.5144)} hdg${Math.round(o.psi * 57.3)} trk${Math.round(Math.atan2(o.ve, o.vn) * 57.3)} bank${Math.round(o.phi * 57.3)} fl${g.player.sw.flaps}`); }
+        }
         const L = g.scorer.landings[0] || null;
-        return { cleared: g.atc.clearances.land || g.atc.state, td, landingScore: L ? L.score : null, landing: L, crashed: g.player.o.crashed, crashReason: g.player.o.crashReason, wind: g.world.weather.state.windKt + 'kt/' + g.world.weather.state.gustKt };
+        return { cleared: g.atc.clearances.land || g.atc.state, td, landingScore: L ? L.score : null, landing: L, crashed: g.player.o.crashed, crashReason: g.player.o.crashReason, wind: g.world.weather.state.windKt + 'kt/' + g.world.weather.state.gustKt, rwy: end.ident + ' ' + Math.round(end.hdgTrue), trace: td ? undefined : trace };
       });
       record(`5 nm final to landing at ${icao} (${wx}, ${mode} mode, scripted pilot)`, !res.crashed && !!res.td && res.landing && res.landing.onRunway, res);
       await page.evaluate(() => window.__game.rig.setView('chase', window.__game.player));

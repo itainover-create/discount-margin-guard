@@ -362,7 +362,7 @@ export function buildRoads(tile, ctx) {
           const f = acc / seg;
           const side = (lights.length & 1) ? 1 : -1;
           const nx = -(by - ay) / seg * side * (w * 0.5 + 1), ny = (bx - ax) / seg * side * (w * 0.5 + 1);
-          lights.push(ax + (bx - ax) * f + nx - ox, hs[i - 1] * (1 - f) + hs[i] * f + 8.5, -(ay + (by - ay) * f + ny - oy), l.cls <= 2 ? 1 : 0);
+          lights.push([ax + (bx - ax) * f + nx - ox, hs[i - 1] * (1 - f) + hs[i] * f + 8.5, -(ay + (by - ay) * f + ny - oy), l.cls <= 2 ? 1 : 0]);
           acc += spacing;
         }
         acc -= seg;

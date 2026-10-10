@@ -72,6 +72,7 @@ class TrafficSystem {
   void setActive(int rw, int dir) { if (rw >= 0 && rw < nRunways) { activeRw = rw; runways[rw].activeDir = dir; } }
 
   void setPlayer(double x, double y, double hdg, double speed, int onRunway, double agl);
+  double playerOnApproach(int rw, int dir) const;
   void setDensity(int maxAgents, int seed) { targetAgents = maxAgents; if (seed) rng.seed(seed); }
   void update(double dt);
   int spawnDeparture(int gate, int type);

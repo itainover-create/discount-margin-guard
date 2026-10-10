@@ -292,7 +292,26 @@ int TrafficSystem::spawnDeparture(int gate, int type) {
   return s;
 }
 
+// Distance to the threshold of the player when airborne on the extended
+// centreline of this runway end, else -1.
+double TrafficSystem::playerOnApproach(int rw, int dir) const {
+  if (rw < 0 || rw >= nRunways || playerAgl < 15.0) return -1.0;
+  double x0, y0, z0;
+  runwayPoint(rw, dir, 0.0, x0, y0, z0);
+  double h = runways[rw].hdgAB + (dir ? PI : 0);
+  double dx = playerX - x0, dy = playerY - y0;
+  double along = dx * sin(h) + dy * cos(h), lat = dx * cos(h) - dy * sin(h);
+  if (along > 0 || along < -22000.0 || fabs(lat) > 2500.0) return -1.0;
+  return -along;
+}
+
 int TrafficSystem::spawnArrival(int rw, int dir, double dist, int type) {
+  // Never put a faster arrival on top of (or just behind) the player's approach.
+  double pd = playerOnApproach(rw, dir);
+  if (pd >= 0 && dist < pd * 2.2 + 1500.0) {
+    dist = pd * 2.2 + 1500.0;
+    if (dist > 20000.0) return -1;
+  }
   int s = freeSlot(agents);
   if (s < 0 || rw < 0 || rw >= nRunways) return -1;
   Agent& a = agents[s];
@@ -424,12 +443,20 @@ void TrafficSystem::update(double dt) {
   spawnTimer -= dt;
   if (active < targetAgents && spawnTimer <= 0 && activeRw >= 0) {
     int type = rng.uniform() < 0.15 ? 2 : (rng.uniform() < 0.35 ? 1 : 0);
-    if (time < 5.0) {
-      // initial population: mostly parked aircraft
+    int approaching = 0;
+    for (int k = 0; k < MAX_AGENTS; k++) approaching += agents[k].active && agents[k].phase == PH_APPROACH;
+    if (time < 5.0 && active < (targetAgents * 3 + 4) / 5) {
+      // initial population: parked aircraft fill ~60% of the slots, the
+      // rest stay free for arrivals
       int g = pickGate();
       if (g >= 0) spawnDeparture(g, type);
       spawnTimer = 0.05;
-    } else if (rng.uniform() < 0.5) {
+    } else if (time < 5.0) {
+      // one arrival already established on final at the start
+      const TRunway& r = runways[activeRw];
+      if (approaching == 0) spawnArrival(activeRw, r.activeDir, 7000.0 + rng.uniform() * 3000.0, type);
+      spawnTimer = 5.0;
+    } else if (approaching > 0 && rng.uniform() < 0.5) {
       int g = pickGate();
       if (g >= 0) spawnDeparture(g, type);
       spawnTimer = 30.0 + rng.uniform() * 40.0;
@@ -591,6 +618,15 @@ void TrafficSystem::update(double dt) {
         a.pitch = approach(a.pitch, (a.along > 0 ? 5.5 : 2.5) * DEG, 1.0, dt);
         a.hdg = wrap2Pi(r.hdgAB + (a.dir ? PI : 0));
         if (a.along > -9000) a.gear = 1;
+        // slower traffic ahead on the same approach (the player): go around
+        // rather than overrun it
+        double pd = playerOnApproach(a.runway, a.dir);
+        if (pd >= 0 && -a.along > pd && -a.along - pd < 2500.0 && fabs(playerAgl - (a.z - elev)) < 200.0) {
+          cancelArrival(myId, a.runway);
+          a.phase = PH_GO_AROUND;
+          a.timer = 0;
+          break;
+        }
         double eta = maxf(0.0, -a.along) / maxf(a.speed, 1.0);
         reserveArrival(myId, a.runway, eta);
         // timer >= 1 marks "cleared to land"

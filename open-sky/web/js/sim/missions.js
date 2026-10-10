@@ -29,9 +29,9 @@ export const MISSIONS = [
   },
   {
     id: 'crosswind', title: 'Gusty crosswind landing', titleHe: 'נחיתה ברוח צד משבית',
-    kind: 'Landing skill', icao: 'LLBG', start: 'air', weather: 'crosswind', hour: 14, pax: 0,
-    desc: 'Ben Gurion, 22 kt crosswind gusting 32. Crab on final, transition to a wing-low slip and touch down on the centreline.',
-    descHe: 'נתב"ג, רוח צד של 22 קשר עם משבים עד 32. גישה בזווית תיקון (Crab), מעבר להטיית כנף בתוך הרוח ונחיתה על קו האמצע.',
+    kind: 'Landing skill', icao: 'LLBG', start: 'air', weather: 'crosswind', hour: 14, pax: 0, runway: '26',
+    desc: 'Ben Gurion runway 26, wind 220° at 22 kt gusting 32: about 14 kt of crosswind from the left, gusting 20, at the limit demonstrated for this class of trainer. Crab on final, transition to a wing-low slip and touch down on the centreline beyond the displaced threshold.',
+    descHe: 'נתב"ג מסלול 26, רוח 220° במהירות 22 קשר עם משבים עד 32: רכיב רוח צד של כ-14 קשר משמאל עם משבים עד 20, בגבול המודגם למטוסי אימון מסוג זה. גישה בזווית תיקון (Crab), מעבר להטיית כנף בתוך הרוח ונחיתה על קו האמצע אחרי הסף המוזז.',
     land: 'LLBG',
   },
   {
@@ -130,7 +130,7 @@ export class Scorer {
     const g = this.game, o = g.player.o, sw = g.player.sw;
     this.t += dt;
     if (o.crashed && !this.crash) {
-      const why = ['', 'gear collapse (hard landing)', 'terrain impact', 'wing strike', 'water', 'obstacle / building', 'structural overstress'][o.crashReason | 0] || 'crash';
+      const why = g.player.crashText || ['', 'gear collapse (hard landing)', 'terrain impact', 'wing strike', 'water', 'obstacle / building', 'structural overstress'][o.crashReason | 0] || 'crash';
       this.crash = why;
       this.note(`CRASH: ${why}`, 'התרסקות', 'bad');
     }

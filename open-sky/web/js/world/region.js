@@ -160,7 +160,7 @@ export class Region {
     let budget = s.buildPerFrame;
     const t0 = performance.now();
     for (const t of queue) {
-      if (budget <= 0 || performance.now() - t0 > 14) break;
+      if (budget <= 0 || performance.now() - t0 > 6) break;
       this._applyLod(t);
       budget--;
     }
@@ -198,6 +198,9 @@ export class Region {
     };
   }
 
+  // Brings a tile to its wanted LOD. Does at most one heavy build stage
+  // (buildings, roads, trees) per call so a dense city tile is spread over
+  // several frames; returns false while stages remain.
   _applyLod(t) {
     const ctx = this._ctx(t);
     const place = (o) => { o.position.set(ctx.ox, 0, -ctx.oy); o.updateMatrix(); o.matrixAutoUpdate = false; this.group.add(o); return o; };
@@ -207,9 +210,9 @@ export class Region {
       t.count = t.data.buildings.length;
       if (t.bld.near) t.objs.near = place(new THREE.Mesh(t.bld.near, this.bldMat));
       if (t.bld.far) t.objs.far = place(new THREE.Mesh(t.bld.far, this.bldMat));
+      this._visibility(t);
+      if (t.want >= 2) return false;
     }
-    if (t.objs.near) t.objs.near.visible = t.want >= 2;
-    if (t.objs.far) t.objs.far.visible = t.want === 1;
     // roads, lights, trees, towers only up close
     if (t.want >= 2 && !t.objs.roads && !t.roadsBuilt) {
       t.roadsBuilt = true;
@@ -223,16 +226,25 @@ export class Region {
         t.objs.towers = place(tw.mesh);
         t.towerLights = this.lights.add(tw.lights.map((l) => [l[0] + ctx.ox, l[1], l[2] - ctx.oy, 1.2, l[3], Math.random(), l[3] === 2 ? [1, 1, 0.9] : [1, 0.1, 0.05]]));
       }
+      this._visibility(t);
+      if (t.want >= 3) return false;
     }
     if (t.want >= 3 && !t.objs.trees && !t.treesBuilt) {
       t.treesBuilt = true;
       const tr = buildTrees(t.data, ctx, this.settings.trees, this.manifest.style);
       if (tr) t.objs.trees = place(tr);
     }
+    this._visibility(t);
+    t.lod = t.want;
+    return true;
+  }
+
+  _visibility(t) {
+    if (t.objs.near) t.objs.near.visible = t.want >= 2;
+    if (t.objs.far) t.objs.far.visible = t.want === 1;
     if (t.objs.trees) t.objs.trees.visible = t.want >= 3;
     for (const k of ['roads', 'piers', 'towers']) if (t.objs[k]) t.objs[k].visible = t.want >= 2;
     if (t.lightIds) this.lights.setVisible(t.lightIds, t.want >= 2);
-    t.lod = t.want;
   }
 
   _dispose(t) {

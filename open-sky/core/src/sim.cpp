@@ -101,6 +101,7 @@ void Sim::reset(double e, double n, double z, double hdg, double tasIn, bool onG
   events = 0;
   stalled = stallWarn = overspeed = false;
   accum = 0;
+  nzFilt = 1.0;
   w = {0, 0, 0};
   elev = ail = rud = steer = 0;
   alphaDot = 0;
@@ -134,6 +135,7 @@ void Sim::reset(double e, double n, double z, double hdg, double tasIn, bool onG
     double alphaTrim = clamp((CLreq - a.CL0) / a.CLa, -0.05, 0.2);
     theta = alphaTrim;
     vel = {tasIn * cos(hdg) * cos(theta - alphaTrim), tasIn * sin(hdg), 0};
+    vel += wind.mean(maxf(10.0, z - ground.h));  // airspeed is relative to the air mass
     flapDeg = 0;
     double cmNoElev = a.Cm0 + a.Cma * alphaTrim;
     trim = clamp(-cmNoElev / a.CmTrimMax, -1, 1);
@@ -890,6 +892,7 @@ void Sim::step(double dt) {
 
   // Limits & events
   double nz = -accelBody.z / G0;
+  nzFilt += (nz - nzFilt) * clamp(dt / 0.08, 0, 1);
   double tol = assist(AS_CRASH_TOLERANT) ? 1.6 : 1.0;
   overspeed = ias > def->limits.vneKias * KT;
   if (overspeed) events |= EV_VNE;
@@ -919,7 +922,7 @@ void Sim::step(double dt) {
       td.count++;
       td.lastTdTime = simTime;
       td.vs = -vel.z;
-      td.nz = nz;
+      td.nz = nzFilt;
       td.nzWindow = 0.3;
       td.x = pos.y;
       td.y = pos.x;
@@ -935,7 +938,7 @@ void Sim::step(double dt) {
   }
   if (td.nzWindow > 0) {
     td.nzWindow -= dt;
-    if (nz > td.nz) td.nz = nz;
+    if (nzFilt > td.nz) td.nz = nzFilt;
   }
 }
 
@@ -953,7 +956,7 @@ void Sim::writeOutputs() {
   o[OUT_ALT_MSL] = -pos.z;
   o[OUT_AGL] = maxf(0.0, groundAgl() + 0.07);
   o[OUT_VS] = -vel.z;
-  o[OUT_NX] = accelBody.x / G0; o[OUT_NY] = accelBody.y / G0; o[OUT_NZ] = -accelBody.z / G0;
+  o[OUT_NX] = accelBody.x / G0; o[OUT_NY] = accelBody.y / G0; o[OUT_NZ] = nzFilt;
   o[OUT_IND_IAS] = ins.ias; o[OUT_IND_ALT] = ins.alt; o[OUT_IND_VS] = ins.vs;
   o[OUT_AI_PITCH] = ins.aiPitch; o[OUT_AI_ROLL] = ins.aiRoll;
   o[OUT_HI_HDG] = ins.hi; o[OUT_COMPASS] = ins.compass;

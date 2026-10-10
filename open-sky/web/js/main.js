@@ -151,8 +151,9 @@ class Game {
       // aircraft
       this.player.root.visible = true;
       this.player.simMode = (spec.mode || this.settings.mode) === 'simulation';
-      const start = spec.save ? this.startFromSave(spec.save) : this.computeStart(spec.start, ap);
       const def = spec.missionId ? MISSIONS.find((m) => m.id === spec.missionId) : null;
+      if (def && def.runway && ap) this.atc.forceRunway(def.runway);
+      const start = spec.save ? this.startFromSave(spec.save) : this.computeStart(spec.start, ap);
       if (def && def.pax) start.payload = [80, 75 * def.pax, 10];
       this.progress('Engine & systems', 0.8);
       this.player.spawn(start);

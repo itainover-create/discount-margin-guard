@@ -130,6 +130,7 @@ class Sim {
   Vec3 accelBody{0, 0, 0};
   Vec3 windNed{0, 0, 0};
   double simTime = 0, accum = 0;
+  double nzFilt = 1.0;  // load factor seen by a damped g-meter (0.08 s), for display and scoring
   bool onGround = false, crashed = false, paused = false, simMode = false;
   int crashReason = 0;
   int events = 0;

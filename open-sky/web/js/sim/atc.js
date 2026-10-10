@@ -97,6 +97,17 @@ export class ATC {
     return end;
   }
 
+  // Missions may assign the runway in use (e.g. the crosswind exercise).
+  forceRunway(ident) {
+    const end = this.airport && this.airport.endByIdent(ident);
+    if (!end) return null;
+    this.activeRw = end.rw;
+    this.activeDir = end.dir;
+    this.activeEnd = end;
+    this.game.core.tfcSetActive(end.rw, end.dir);
+    return end;
+  }
+
   get radioOk() {
     const g = this.game;
     return !g.player.simMode || (g.player.o.avionicsPowered > 0.5);

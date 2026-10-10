@@ -98,10 +98,12 @@ export class PlayerAircraft {
   // start: {x, y (world frame), hdgDeg (true), onGround, altM, iasKt, engine}
   spawn(start) {
     const core = this.core;
+    this.crashText = null;
     core.init(0);
     this.setMode(this.simMode);
     if (start.fuel) core.setFuel(start.fuel[0], start.fuel[1]);
     if (start.payload) core.setPayload(...start.payload);
+    this.world.weather.applyToCore(core, 1234);  // before reset: an air start flies at airspeed in this wind
     const hdg = start.hdgDeg * D2R;
     if (start.onGround) {
       const gr = this.world.groundAt(start.x, start.y);
