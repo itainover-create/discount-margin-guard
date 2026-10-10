@@ -64,6 +64,24 @@ export class ATC {
     this.atisLetter = LETTERS[(hr + airport.icao.charCodeAt(1)) % 26];
     this.state = ATC_STATE.NONE;
     for (const k of Object.keys(this.clearances)) this.clearances[k] = false;
+    this.crossRw = -1;
+    this.route = null;
+    this.pending = null;
+    this.queue = [];
+    this.pattern = false;
+    this.emergency = false;
+    this.wasAirborne = false;
+    this._incursion = this._toViol = false;
+  }
+
+  // The flight starts lined up on the runway (menu choice "on the runway"):
+  // the tower has cleared the aircraft to line up and wait.
+  startOnRunway() {
+    const cs = this.callsign, rwy = this.activeEnd.ident;
+    this.clearances.startup = this.clearances.taxi = this.clearances.lineup = true;
+    this.state = ATC_STATE.LINEUP;
+    this.game.core.tfcRequest(PLAYER, this.activeRw, REQ.LINEUP, 0);
+    this.atc(this.names.twr, `${cs}, runway ${rwy}, line up and wait.`, `לעלות למסלול ${rwy} ולהמתין עליו (Line up and wait). יש לדווח מוכנות להמראה.`, false);
   }
 
   selectRunway() {
@@ -112,8 +130,8 @@ export class ATC {
     if (s.onGround) {
       if (!this.clearances.startup && !this.game.player.o.engineRunning) o.push({ id: 'startup', label: `Ground: request start-up`, he: 'בקשת אישור התנעה' });
       if (!this.clearances.taxi && this.state !== ATC_STATE.LANDED && this.state !== ATC_STATE.TAXI_IN && s.onRw < 0) o.push({ id: 'taxi', label: `Ground: request taxi for departure`, he: 'בקשת הסעה למסלול ההמראה' });
-      if (this.clearances.taxi && !this.clearances.takeoff && !this.clearances.lineup) o.push({ id: 'ready', label: `Tower: ready for departure, runway ${this.activeEnd.ident}`, he: 'דיווח מוכנות להמראה' });
-      if (this.clearances.taxi && !this.clearances.takeoff && !this.clearances.lineup) o.push({ id: 'readyPattern', label: `Tower: ready, request closed traffic (pattern)`, he: 'מוכן להמראה, בקשה לטוס בהקפות' });
+      if (this.clearances.taxi && !this.clearances.takeoff) o.push({ id: 'ready', label: `Tower: ready for departure, runway ${this.activeEnd.ident}`, he: 'דיווח מוכנות להמראה' });
+      if (this.clearances.taxi && !this.clearances.takeoff) o.push({ id: 'readyPattern', label: `Tower: ready, request closed traffic (pattern)`, he: 'מוכן להמראה, בקשה לטוס בהקפות' });
       if (this.state === ATC_STATE.LANDED || this.state === ATC_STATE.TAXI_IN) o.push({ id: 'taxiIn', label: `Ground: request taxi to parking`, he: 'בקשת הסעה לחניה' });
       if (s.onRw >= 0 && this.state === ATC_STATE.LANDED) o.push({ id: 'vacated', label: 'Tower: runway vacated', he: 'דיווח פינוי מסלול' });
     } else {
@@ -172,9 +190,11 @@ export class ATC {
             this.atc(this.names.gnd, `${cs}, unable to find a taxi route from your position, taxi to runway ${rwy} at your discretion, hold short.`, `לא נמצא מסלול הסעה ממיקומך — יש להסיע בזהירות למסלול ${rwy} ולעצור לפניו.`);
           } else {
             const via = route.names.length ? `via ${route.names.join(', ')}` : 'via the apron';
-            this.atc(this.names.gnd, `${cs}, runway ${rwy}, taxi ${via}, hold short of runway ${rwy}.`,
-              `אישור הסעה למסלול ${rwy} דרך מסלולי ההסעה ${route.names.join(', ') || 'הרחבה'}. חובה לעצור לפני קו העצירה של המסלול ולא להיכנס אליו ללא אישור.`);
-            this.pilot(`Runway ${rwy}, taxi ${via}, hold short ${rwy}, ${csS}.`, 'חזרה על ההוראות (Readback).');
+            const lim = route.crossings.length ? route.crossings[0].name : rwy;
+            this.atc(this.names.gnd, `${cs}, runway ${rwy}, taxi ${via}, hold short of runway ${lim}.`,
+              `אישור הסעה למסלול ${rwy} דרך מסלולי ההסעה ${route.names.join(', ') || 'הרחבה'}. חובה לעצור לפני קו העצירה של מסלול ${lim} ולא להיכנס אליו ללא אישור.` +
+              (route.crossings.length ? ` הדרך חוצה את מסלול ${lim} — חצייה רק לאחר אישור נפרד.` : ''));
+            this.pilot(`Runway ${rwy}, taxi ${via}, hold short ${lim}, ${csS}.`, 'חזרה על ההוראות (Readback).');
           }
           this.clearances.taxi = true;
           this.clearances.startup = true;
@@ -185,8 +205,9 @@ export class ATC {
       case 'ready':
       case 'readyPattern': {
         this.pattern = id === 'readyPattern';
-        this.pilot(`${this.names.twr}, ${cs}, holding short runway ${rwy}, ready for departure${this.pattern ? ', request closed traffic' : ''}.`, 'דיווח מוכנות להמראה בנקודת ההמתנה.');
-        this.state = ATC_STATE.HOLDING;
+        const where = this.state === ATC_STATE.LINEUP ? `on runway ${rwy}` : `holding short runway ${rwy}`;
+        this.pilot(`${this.names.twr}, ${cs}, ${where}, ready for departure${this.pattern ? ', request closed traffic' : ''}.`, 'דיווח מוכנות להמראה.');
+        if (this.state !== ATC_STATE.LINEUP) this.state = ATC_STATE.HOLDING;
         this.later(2, () => this.tryTakeoff(true));
         break;
       }
@@ -219,7 +240,8 @@ export class ATC {
         const route = this.planToParking();
         this.later(1.8, () => {
           const via = route && route.names.length ? `via ${route.names.join(', ')}` : 'as convenient';
-          this.atc(this.names.gnd, `${cs}, taxi to the ramp ${via}.`, `הסעה לרחבת החניה ${route && route.names.length ? 'דרך ' + route.names.join(', ') : ''}.`);
+          const hs = route && route.crossings.length ? `, hold short of runway ${route.crossings[0].name}` : '';
+          this.atc(this.names.gnd, `${cs}, taxi to the ramp ${via}${hs}.`, `הסעה לרחבת החניה ${route && route.names.length ? 'דרך ' + route.names.join(', ') : ''}${hs ? `. יש לעצור לפני מסלול ${route.crossings[0].name} ולחכות לאישור חצייה` : ''}.`);
           this.state = ATC_STATE.TAXI_IN;
         });
         break;
@@ -253,7 +275,7 @@ export class ATC {
     if (from < 0 || hold < 0) { this.route = null; return null; }
     const path = core.tfcFindPath(from, hold, -1);
     if (path.length < 2) { this.route = null; return null; }
-    this.route = { path, names: ap.routeNames(path), holdNode: hold };
+    this.route = { path, names: ap.routeNames(path), holdNode: hold, crossings: this.findCrossings(path) };
     this.game.showRoute(this.route);
     return this.route;
   }
@@ -266,9 +288,70 @@ export class ATC {
     if (from < 0 || !stand) return null;
     const path = core.tfcFindPath(from, stand.node, -1);
     if (path.length < 2) return null;
-    this.route = { path, names: ap.routeNames(path), stand };
+    this.route = { path, names: ap.routeNames(path), stand, crossings: this.findCrossings(path) };
     this.game.showRoute(this.route);
     return this.route;
+  }
+
+  // Runway crossings along a taxi route: each run of path nodes on a runway
+  // (a run that starts at the first node is the runway just vacated).
+  findCrossings(path) {
+    const ap = this.airport, nodes = ap.data.graph.nodes, out = [];
+    let cur = -1;
+    for (let k = 0; k < path.length; k++) {
+      const n = nodes[path[k]];
+      const rw = ap.runwayAt(n[0], n[1], 3);
+      if (rw >= 0 && rw !== cur && k > 0) {
+        const r = ap.rw[rw];
+        const name = rw === this.activeRw ? this.activeEnd.ident : r.ends[0].ident;
+        out.push({ rw, enter: k, hold: k - 1, name, cleared: false, entered: false, done: false, told: false });
+      }
+      cur = rw;
+    }
+    return out;
+  }
+
+  nextCrossing() { return this.route && this.route.crossings ? this.route.crossings.find((c) => !c.done) : null; }
+
+  // Path index the player is cleared to: the hold-short point of the next
+  // uncleared runway crossing, otherwise the end of the route.
+  taxiLimit() {
+    if (!this.route) return -1;
+    const cr = this.nextCrossing();
+    return cr && !cr.cleared ? cr.hold : this.route.path.length - 1;
+  }
+
+  updateCrossing(dt, s) {
+    const cr = this.nextCrossing();
+    if (!cr || !s.onGround || (this.state !== ATC_STATE.TAXI && this.state !== ATC_STATE.TAXI_IN)) return;
+    const core = this.game.core, cs = this.callsign, nodes = this.airport.data.graph.nodes;
+    if (!cr.cleared) {
+      const hn = nodes[this.route.path[cr.hold]];
+      if (Math.hypot(hn[0] - s.loc.x, hn[1] - s.loc.y) > 250) return;
+      this._crossTimer = (this._crossTimer || 0) - dt;
+      if (this._crossTimer > 0) return;
+      this._crossTimer = 2;
+      if (core.tfcRequest(PLAYER, cr.rw, REQ.CROSS, 0)) {
+        cr.cleared = true;
+        this.crossRw = cr.rw;
+        const nxt = this.route.crossings.find((c) => !c.done && c !== cr);
+        const lim = nxt ? nxt.name : (this.route.holdNode !== undefined ? this.activeEnd.ident : null);
+        const cont = lim ? `, continue taxi, hold short of runway ${lim}` : ', continue to the ramp';
+        this.atc(this.names.gnd, `${cs}, cross runway ${cr.name}${cont}.`,
+          `אושר לחצות את מסלול ${cr.name}. יש לחצות ללא עיכוב${lim ? ` ולהמשיך בהסעה עד לפני מסלול ${lim}` : ' ולהמשיך לרחבה'}.`);
+        this.pilot(`Cross runway ${cr.name}${lim ? `, hold short ${lim}` : ''}, ${this.callsignShort}.`, 'חזרה על אישור החצייה.');
+      } else if (!cr.told) {
+        cr.told = true;
+        this.atc(this.names.gnd, `${cs}, hold short of runway ${cr.name}, traffic on the runway.`, `יש לעצור לפני מסלול ${cr.name} — יש תנועה על המסלול. אישור חצייה יינתן כשיתפנה.`);
+      }
+      return;
+    }
+    if (s.onRw === cr.rw) cr.entered = true;
+    else if (cr.entered) {
+      cr.done = true;
+      core.tfcRelease(PLAYER, cr.rw);
+      this.crossRw = -1;
+    }
   }
 
   tryTakeoff(first) {
@@ -373,8 +456,9 @@ export class ATC {
         this.violationsLog('go-around-instructed', 'ATC instructed a go-around', 0);
       }
     }
+    this.updateCrossing(dt, s);
     // violations: runway incursion / takeoff / landing without clearance
-    if (s.onRw >= 0 && s.onGround && !this.clearances.lineup && !this.clearances.takeoff && !this.clearances.land && this.state !== ATC_STATE.LANDED && !this._incursion) {
+    if (s.onRw >= 0 && s.onRw !== this.crossRw && s.onGround && !this.clearances.lineup && !this.clearances.takeoff && !this.clearances.land && this.state !== ATC_STATE.LANDED && !this._incursion) {
       this._incursion = true;
       this.violationsLog('incursion', 'Runway incursion: entered the runway without clearance', 25);
       this.atc(this.names.twr, `${this.callsign}, you entered runway ${this.airport.rw[s.onRw].name} without clearance, hold position and contact the tower.`, 'נכנסת למסלול בלי אישור! עצור ופנה למגדל. (חדירה למסלול)');

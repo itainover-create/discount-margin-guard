@@ -111,6 +111,19 @@ export class Globe {
       this.labels.push({ el, v });
       return m;
     });
+    // places in development: flyable at the global tier, marked as such
+    for (const r of this.world.catalog.planned || []) {
+      const v = latLonToVec(r.anchor.lat, r.anchor.lon, 1.012);
+      const m = new THREE.Mesh(new THREE.SphereGeometry(0.009, 10, 6), new THREE.MeshBasicMaterial({ color: 0x8a96a8 }));
+      m.position.copy(v);
+      this.earth.add(m);
+      const el = document.createElement('div');
+      el.className = 'globe-label';
+      el.textContent = `${r.name} (${r.status === 'in development' ? 'in dev.' : 'planned'})`;
+      el.style.cssText = 'position:absolute;pointer-events:none;font:400 11px "Exo 2",sans-serif;color:#b9c4d6;text-shadow:0 1px 4px #000;white-space:nowrap;transform:translate(8px,-50%)';
+      this.canvas.parentElement.appendChild(el);
+      this.labels.push({ el, v });
+    }
     this.selMarker = new THREE.Mesh(new THREE.RingGeometry(0.018, 0.026, 32), new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide }));
     this.selMarker.visible = false;
     this.earth.add(this.selMarker);

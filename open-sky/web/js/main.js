@@ -156,6 +156,7 @@ class Game {
       if (def && def.pax) start.payload = [80, 75 * def.pax, 10];
       this.progress('Engine & systems', 0.8);
       this.player.spawn(start);
+      if (start.runway && ap) this.atc.startOnRunway();
       if (spec.save && spec.save.sw) Object.assign(this.player.sw, spec.save.sw);
       this.missionDef = def;
       this.mission = new MissionRuntime(this, def);

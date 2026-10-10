@@ -112,7 +112,7 @@ export class PlayerAircraft {
     }
     this.sw = this.defaultSwitches(!!start.engine || !start.onGround);
     if (!start.onGround) { this.sw.strobe = true; this.sw.landing = start.altM - this.world.heightAt(start.x, start.y) < 600; this.sw.throttle = 0.68; this.sw.parkBrake = false; }
-    if (start.onGround && start.engine) { this.sw.parkBrake = start.runway ? false : true; this.sw.throttle = 0; }
+    if (start.onGround && start.engine) { this.sw.parkBrake = true; this.sw.throttle = 0; }  // lined up or parked: brake set
     if (start.flaps) this.sw.flaps = start.flaps;
     this.ui.hdgBug = Math.round(start.hdgDeg - (this.world.magVar || 0)) * D2R;
     this.ui.baroHpa = this.world.weather.state.qnh;
@@ -121,7 +121,7 @@ export class PlayerAircraft {
     core.in[I.IN_BARO] = this.ui.baroHpa * 100;
     core.alignHI();
     this.pushInputs({ pitch: 0, roll: 0, yaw: 0, brakeL: 0, brakeR: 0 });
-    core.advance(0);
+    core.advance(1 / 60);  // a few core steps so outputs (bus, avionics, gear loads) reflect the switches
     this.readOutputs();
     this.lastPos = { x: this.o.x, y: this.o.y };
   }

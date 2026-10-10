@@ -39,19 +39,22 @@ window.__tp = {
     const nodes=ap.data.graph.nodes;
     const loc=ap.owner.toLocal(o.x,o.y,{});
     if(st.i===undefined) st.i=0;
+    // clearance limit: hold short of an uncleared runway crossing
+    const lim=g.atc.taxiLimit();
+    if(lim<r.path.length-1) st.holdsShort=(st.holdsShort||0)+1;
     // advance along the path: target = first node > 22 m ahead
-    while(st.i<r.path.length-1){ const n=nodes[r.path[st.i]]; if(Math.hypot(n[0]-loc.x,n[1]-loc.y)<22) st.i++; else break; }
-    const n=nodes[r.path[st.i]];
+    while(st.i<lim){ const n=nodes[r.path[st.i]]; if(Math.hypot(n[0]-loc.x,n[1]-loc.y)<22) st.i++; else break; }
+    const n=nodes[r.path[Math.min(st.i,lim)]];
     const dist=Math.hypot(n[0]-loc.x,n[1]-loc.y);
     const want=Math.atan2(n[0]-loc.x,n[1]-loc.y);
     const err=this.wrap(want-o.psi);
-    const last=st.i>=r.path.length-1;
+    const last=st.i>=lim;
     let vt = Math.abs(err)>0.5? 2.5 : 6.5; if(last) vt=Math.min(vt, Math.max(0, (dist-6)*0.2));
     input.yaw=this.clamp(err*2.2 - o.r*0.8,-1,1);
     const ev=vt-o.gs;
     g.player.sw.throttle=this.clamp(0.12+ev*0.12,0,0.45);
     if(ev<-1.0 || (last && dist<10)){ input.brakeL=input.brakeR=this.clamp(-ev*0.4,0.2,1); g.player.sw.throttle=0; }
-    st.done = last && dist<14 && o.gs<0.6;
+    st.done = lim===r.path.length-1 && last && dist<14 && o.gs<0.6;
   },
   // fly attitude: pitch/roll commands to targets (rad)
   att(input, o, pitchT, bankT){
@@ -67,6 +70,15 @@ try {
   if (err) throw new Error(err);
   await page.evaluate(HELPERS);
   await page.evaluate(() => { window.__game.debugHold = true; });
+  // report the origin of any NaN geometry
+  await page.evaluate(async () => {
+    const THREE = await import('three');
+    const orig = THREE.BufferGeometry.prototype.computeBoundingSphere;
+    THREE.BufferGeometry.prototype.computeBoundingSphere = function () {
+      orig.call(this);
+      if (this.boundingSphere && isNaN(this.boundingSphere.radius)) console.error('NaN geometry: ' + (this.name || '?') + ' ' + new Error().stack.split('\n').slice(2, 8).join(' | '));
+    };
+  });
   log('booted');
 
   // ---------------------------------------------------------------- ground
@@ -102,7 +114,7 @@ try {
         maxKt = Math.max(maxKt, g.player.o.gs / 0.514444);
         if (g.player.o.crashed) break;
       }
-      return { done: !!st.done, simSec: Math.round(t), maxKt: Math.round(maxKt), atHold: g.mission.atHold(), violations: g.atc.violations.map((v) => v.text), crashed: g.player.o.crashed };
+      return { done: !!st.done, simSec: Math.round(t), maxKt: Math.round(maxKt), atHold: g.mission.atHold(), crossings: (g.atc.route.crossings || []).map((c) => ({ rw: c.name, cleared: c.cleared, done: c.done })), violations: g.atc.violations.map((v) => v.text), crashed: g.player.o.crashed, atcLog: g.atc.log.filter((m) => /cross|hold short/i.test(m.text)).map((m) => m.station + ': ' + m.text) };
     });
     record('Taxi along the route to the hold-short line (scripted pilot)', taxi.done && !taxi.crashed && taxi.violations.length === 0, taxi);
     await shot('g3-at-hold-short', 4);
@@ -199,7 +211,7 @@ try {
           sw.throttle = tp.clamp(0.25 + (65 - kt) * 0.04, 0, 0.9);
         };
         let steps = 0;
-        while (steps < 9000 && !(g.player.o.onGround && g.player.o.gs < 5)) { g.debugStep(0.02, 50, ctl); steps += 50; if (g.player.o.crashed) break; }
+        while (steps < 22000 && !(g.player.o.onGround && g.player.o.gs < 5)) { g.debugStep(0.02, 50, ctl); steps += 50; if (g.player.o.crashed) break; }
         const L = g.scorer.landings[0] || null;
         return { cleared: g.atc.clearances.land || g.atc.state, td, landingScore: L ? L.score : null, landing: L, crashed: g.player.o.crashed, crashReason: g.player.o.crashReason, wind: g.world.weather.state.windKt + 'kt/' + g.world.weather.state.gustKt };
       });

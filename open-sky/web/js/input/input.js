@@ -88,7 +88,7 @@ export class Input {
   }
 
   save() { try { localStorage.setItem('opensky.input', JSON.stringify(this.settings)); } catch { /* ignore */ } }
-  resetDefaults() { localStorage.removeItem('opensky.input'); location.reload(); }
+  resetDefaults() { try { localStorage.removeItem('opensky.input'); } catch { /* ignore */ } location.reload(); }
 
   _code(e) {
     const mods = (e.shiftKey && e.code !== 'ShiftLeft' && e.code !== 'ShiftRight' ? 'Shift+' : '');

@@ -44,8 +44,8 @@ export const MISSIONS = [
   {
     id: 'efato', title: 'Engine failure after takeoff', titleHe: 'כשל מנוע לאחר המראה',
     kind: 'Failure scenario', icao: 'KLAS', start: 'runway', weather: 'clear', hour: 10, pax: 0,
-    desc: 'Las Vegas. The engine will fail at about 600 ft above the field. Lower the nose, keep 68 KIAS and land as straight ahead as possible — do not try to turn back low.',
-    descHe: 'לאס וגאס. המנוע ייכשל בגובה של כ-600 רגל מעל השדה. יש להוריד את האף, לשמור על 68 קשר ולנחות כמה שיותר ישר קדימה.',
+    desc: 'Las Vegas, lined up on the runway with the parking brake set. Report ready (T), release the brake (B) on the takeoff clearance. The engine will fail at about 600 ft above the field. Lower the nose, keep 68 KIAS and land as straight ahead as possible — do not try to turn back low.',
+    descHe: 'לאס וגאס. עומדים על המסלול עם בלם חניה מופעל. מדווחים מוכנות (T) ומשחררים את הבלם (B) עם אישור ההמראה. המנוע ייכשל בגובה של כ-600 רגל מעל השדה. יש להוריד את האף, לשמור על 68 קשר ולנחות כמה שיותר ישר קדימה.',
     failure: { id: 0, aglFt: 600 }, land: 'any',
   },
   {
@@ -79,7 +79,7 @@ export function tutorialSteps(game) {
     { t: 'Clear prop! Turn the key to START (right-click the key, or hold it) until the engine runs, then release to BOTH.', he: 'הזהירו "הרחק מהמדחף!" וסובבו את המפתח ל-START (קליק ימני על המפתח) עד שהמנוע מתניע, ואז שחררו ל-BOTH.', done: () => o().engineRunning > 0.5 },
     { t: 'After start: alternator (ALT) and avionics (AVN) ON. Check oil pressure rising into the green.', he: 'אחרי ההתנעה: הדליקו את מתג הגנרטור (ALT) ואת מתג האוויוניקה (AVN). ודאו שלחץ השמן עולה לתחום הירוק.', done: () => sw().alternator && sw().avionics && o().oilP > 25 },
     { t: 'Call ATC: press T to open the radio and choose "Ground: request taxi for departure".', he: 'פנו לפיקוח: מקש T פותח את הקשר. בחרו "בקשת הסעה למסלול ההמראה".', done: () => atc().clearances.taxi },
-    { t: 'Release the parking brake (B), add a little power and follow the green taxi line. Steer with Q / E (rudder). Stay below 20 kt. Stop at the yellow hold-short line.', he: 'שחררו את בלם החניה (B), הוסיפו מעט כוח ועקבו אחרי הקו הירוק. היגוי בעזרת Q ו-E. מהירות מתחת ל-20 קשר. עצרו לפני קו העצירה הצהוב.', done: (s) => s.atHold, hint: 'Brakes: Space. Reduce power to idle before you reach the line.' },
+    { t: 'Release the parking brake (B), add a little power and follow the green taxi line. Steer with Q / E (rudder). Stay below 20 kt. If the route crosses another runway, stop at its hold-short line until Ground says "cross runway …". Then continue to the yellow hold-short line of the departure runway.', he: 'שחררו את בלם החניה (B), הוסיפו מעט כוח ועקבו אחרי הקו הירוק. היגוי בעזרת Q ו-E. מהירות מתחת ל-20 קשר. אם הדרך חוצה מסלול אחר, עוצרים לפני קו העצירה שלו עד שהפיקוח אומר "cross runway …", וממשיכים עד קו העצירה הצהוב של מסלול ההמראה.', done: (s) => s.atHold, hint: 'Brakes: Space. Reduce power to idle before you reach a hold-short line. Never cross a runway without a clearance.' },
     { t: 'At the hold line: flaps UP or 10°, trim near TO. Open the radio (T) and report "ready for departure".', he: 'בנקודת ההמתנה: מדפים סגורים או 10°, קיזוז במצב המראה. פתחו את הקשר (T) ודווחו "מוכן להמראה".', done: () => atc().clearances.takeoff || atc().pending === 'takeoff' },
     { t: 'Wait for the takeoff clearance. When cleared: landing light (L) and strobes ON, line up on the centreline.', he: 'המתינו לאישור ההמראה. לאחר האישור: אור נחיתה (L) ומהבהבים דלוקים, היכנסו למסלול ויישרו על קו האמצע.', done: () => atc().clearances.takeoff && game.atcSituation().onRw >= 0 },
     { t: 'Full throttle. Keep straight with rudder. At 55 knots gently pull back (S / ↓) and climb at 70–75 knots.', he: 'מצערת מלאה. שמרו על כיוון בעזרת הגה הכיוון. ב-55 קשר משכו בעדינות ושמרו על 70–75 קשר בטיפוס.', done: () => !o().onGround && fieldFt() > 400 },

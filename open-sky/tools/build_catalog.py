@@ -14,6 +14,18 @@ def size_of(path):
     return tot
 
 
+PLANNED = [
+    ("KLAX", "Los Angeles", "United States", "Coastal megacity, LAX, Hollywood hills", "מטרופולין חופי, LAX וגבעות הוליווד", "in development"),
+    ("EGLL", "London", "United Kingdom", "Historic capital, Thames, Heathrow", "בירה היסטורית, התמזה והית'רו", "planned"),
+    ("RJTT", "Tokyo", "Japan", "Dense megacity on Tokyo Bay, Haneda", "מגה-עיר צפופה על מפרץ טוקיו, הנדה", "planned"),
+    ("OMDB", "Dubai", "United Arab Emirates", "Desert skyline, Palm islands", "קו רקיע מדברי ואיי הדקל", "planned"),
+    ("YSSY", "Sydney", "Australia", "Harbour city, Opera House", "עיר נמל, בית האופרה", "planned"),
+    ("SBGL", "Rio de Janeiro", "Brazil", "Mountains meet the sea", "הרים שנפגשים בים", "planned"),
+    ("FACT", "Cape Town", "South Africa", "Table Mountain and two oceans", "הר השולחן ושני אוקיינוסים", "planned"),
+    ("VHHH", "Hong Kong", "China", "Vertical city, harbour, mountains", "עיר אנכית, נמל והרים", "planned"),
+]
+
+
 def main():
     regions = []
     for rid in sorted(os.listdir(os.path.join(DATA, "regions"))):
@@ -33,9 +45,21 @@ def main():
                       "roads": s.get("roads", 0), "rail": s.get("rail", 0), "trees": s.get("trees", 0),
                       "sizeMB": round(size_of(os.path.dirname(mp)) / 1e6, 1)},
         })
+    # Places in development: flyable today at the global tier (real runways,
+    # streamed terrain); detailed city data is the next pipeline run.
+    import gzip
+    db = json.load(gzip.open(os.path.join(DATA, "airports.json.gz")))
+    fi = {f: i for i, f in enumerate(db["fields"])}
+    rows = {r[fi["ident"]]: r for r in db["rows"]}
+    planned = []
+    for icao, name, country, character, characterHe, stage in PLANNED:
+        r = rows[icao]
+        planned.append({"name": name, "country": country, "character": character, "characterHe": characterHe,
+                        "status": stage, "anchor": {"icao": icao, "lat": r[fi["lat"]], "lon": r[fi["lon"]]}})
     cat = {
         "version": 1,
         "regions": regions,
+        "planned": planned,
         "tiers": {
             "A": "Detailed: real buildings with measured heights, roads, coastline, land use, detailed airport (taxiways, gates, lights, signs), landmarks.",
             "B": "Regional: real buildings (heights partly estimated), roads, coastline and land use; airport layout from map data.",

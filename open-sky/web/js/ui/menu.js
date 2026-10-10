@@ -78,6 +78,11 @@ export class Menu {
   renderFeatured() {
     const g = this.g;
     $('featured').innerHTML = g.world.catalog.regions.map((r) => `<div class="feat" data-icao="${r.anchor.icao}"><b>${esc(r.name)}</b><small>${esc(r.character)}${g.settings.hebrew ? ` · <span dir="rtl">${esc(r.characterHe)}</span>` : ''}</small><br><span class="tier ${r.tier}">${r.tier === 'A' ? 'Detailed' : 'Regional'}</span> <small>${r.anchor.icao}</small></div>`).join('');
+    const planned = g.world.catalog.planned || [];
+    if (planned.length) {
+      $('featured').innerHTML += `<div class="feat-head">In development · flyable now at the global tier${g.settings.hebrew ? ' · <span dir="rtl">בפיתוח — טיסים כבר עכשיו בשכבה הגלובלית</span>' : ''}</div>` +
+        planned.map((r) => `<div class="feat planned" data-icao="${r.anchor.icao}"><b>${esc(r.name)}</b><small>${esc(r.character)}${g.settings.hebrew ? ` · <span dir="rtl">${esc(r.characterHe)}</span>` : ''}</small><br><span class="tier G">Global now</span> <span class="tier dev">${r.status === 'in development' ? 'Detailed: in development' : 'Detailed: planned'}</span> <small>${r.anchor.icao}</small></div>`).join('');
+    }
     $('featured').querySelectorAll('.feat').forEach((el) => el.onclick = () => this.select(g.world.airportIndex.get(el.dataset.icao)));
   }
 
@@ -279,7 +284,7 @@ export class Menu {
       <p>An ORION GAMES project. <b>Developed by ALON NOVITARGER.</b> <i>Where vision becomes reality.</i></p>
       <p>Version 1.0 (prototype). The flight model, aircraft systems, autopilot, runway control and AI traffic are written in C++ and run in the browser as WebAssembly; rendering, world streaming and the interface use WebGL 2 (three.js).</p>
       <h2>What is real and what is reconstructed</h2>
-      <table><tr><th>Place</th><th>Airports</th><th>Real data used</th></tr>${regions}</table>
+      <table><tr><th>Place</th><th>Airports</th><th>Real data used</th></tr>${regions}${(g.world.catalog.planned || []).map((r) => `<tr><td><b>${esc(r.name)}</b><br><span class="tier dev">${r.status}</span></td><td>${r.anchor.icao}</td><td>Flyable now at the global tier (real runways, streamed terrain). Detailed city data: ${r.status === 'in development' ? 'next region in the data pipeline' : 'on the roadmap'}.</td></tr>`).join('')}</table>
       <p class="note">Everywhere else (${this.rows.length.toLocaleString()} airports): runways at their real coordinates, headings, lengths and widths; terrain from online elevation tiles when reachable (cached locally) or a coarse built-in global layer; generic taxiway, apron, terminal and tower; no city buildings. Building heights without data are estimated from footprint and type. Statue of Liberty and suspension-bridge towers/cables are hand-built approximations from public dimensions.</p>
       <h2>Data sources and licences</h2>
       <ul>

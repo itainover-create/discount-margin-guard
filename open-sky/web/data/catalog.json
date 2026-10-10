@@ -229,7 +229,7 @@
     "roads": 263628,
     "rail": 6320,
     "trees": 71989,
-    "sizeMB": 64.8
+    "sizeMB": 64.9
    }
   },
   {
@@ -326,6 +326,104 @@
     "rail": 524,
     "trees": 4899,
     "sizeMB": 13.1
+   }
+  }
+ ],
+ "planned": [
+  {
+   "name": "Los Angeles",
+   "country": "United States",
+   "character": "Coastal megacity, LAX, Hollywood hills",
+   "characterHe": "\u05de\u05d8\u05e8\u05d5\u05e4\u05d5\u05dc\u05d9\u05df \u05d7\u05d5\u05e4\u05d9, LAX \u05d5\u05d2\u05d1\u05e2\u05d5\u05ea \u05d4\u05d5\u05dc\u05d9\u05d5\u05d5\u05d3",
+   "status": "in development",
+   "anchor": {
+    "icao": "KLAX",
+    "lat": 33.9425,
+    "lon": -118.408
+   }
+  },
+  {
+   "name": "London",
+   "country": "United Kingdom",
+   "character": "Historic capital, Thames, Heathrow",
+   "characterHe": "\u05d1\u05d9\u05e8\u05d4 \u05d4\u05d9\u05e1\u05d8\u05d5\u05e8\u05d9\u05ea, \u05d4\u05ea\u05de\u05d6\u05d4 \u05d5\u05d4\u05d9\u05ea'\u05e8\u05d5",
+   "status": "planned",
+   "anchor": {
+    "icao": "EGLL",
+    "lat": 51.47075,
+    "lon": -0.45991
+   }
+  },
+  {
+   "name": "Tokyo",
+   "country": "Japan",
+   "character": "Dense megacity on Tokyo Bay, Haneda",
+   "characterHe": "\u05de\u05d2\u05d4-\u05e2\u05d9\u05e8 \u05e6\u05e4\u05d5\u05e4\u05d4 \u05e2\u05dc \u05de\u05e4\u05e8\u05e5 \u05d8\u05d5\u05e7\u05d9\u05d5, \u05d4\u05e0\u05d3\u05d4",
+   "status": "planned",
+   "anchor": {
+    "icao": "RJTT",
+    "lat": 35.54968,
+    "lon": 139.78696
+   }
+  },
+  {
+   "name": "Dubai",
+   "country": "United Arab Emirates",
+   "character": "Desert skyline, Palm islands",
+   "characterHe": "\u05e7\u05d5 \u05e8\u05e7\u05d9\u05e2 \u05de\u05d3\u05d1\u05e8\u05d9 \u05d5\u05d0\u05d9\u05d9 \u05d4\u05d3\u05e7\u05dc",
+   "status": "planned",
+   "anchor": {
+    "icao": "OMDB",
+    "lat": 25.24979,
+    "lon": 55.37099
+   }
+  },
+  {
+   "name": "Sydney",
+   "country": "Australia",
+   "character": "Harbour city, Opera House",
+   "characterHe": "\u05e2\u05d9\u05e8 \u05e0\u05de\u05dc, \u05d1\u05d9\u05ea \u05d4\u05d0\u05d5\u05e4\u05e8\u05d4",
+   "status": "planned",
+   "anchor": {
+    "icao": "YSSY",
+    "lat": -33.9461,
+    "lon": 151.177
+   }
+  },
+  {
+   "name": "Rio de Janeiro",
+   "country": "Brazil",
+   "character": "Mountains meet the sea",
+   "characterHe": "\u05d4\u05e8\u05d9\u05dd \u05e9\u05e0\u05e4\u05d2\u05e9\u05d9\u05dd \u05d1\u05d9\u05dd",
+   "status": "planned",
+   "anchor": {
+    "icao": "SBGL",
+    "lat": -22.81,
+    "lon": -43.25056
+   }
+  },
+  {
+   "name": "Cape Town",
+   "country": "South Africa",
+   "character": "Table Mountain and two oceans",
+   "characterHe": "\u05d4\u05e8 \u05d4\u05e9\u05d5\u05dc\u05d7\u05df \u05d5\u05e9\u05e0\u05d9 \u05d0\u05d5\u05e7\u05d9\u05d9\u05e0\u05d5\u05e1\u05d9\u05dd",
+   "status": "planned",
+   "anchor": {
+    "icao": "FACT",
+    "lat": -33.97403,
+    "lon": 18.60433
+   }
+  },
+  {
+   "name": "Hong Kong",
+   "country": "China",
+   "character": "Vertical city, harbour, mountains",
+   "characterHe": "\u05e2\u05d9\u05e8 \u05d0\u05e0\u05db\u05d9\u05ea, \u05e0\u05de\u05dc \u05d5\u05d4\u05e8\u05d9\u05dd",
+   "status": "planned",
+   "anchor": {
+    "icao": "VHHH",
+    "lat": 22.31184,
+    "lon": 113.91486
    }
   }
  ],

@@ -44,8 +44,9 @@ export async function decodeImage(src) {
 export class TileCache {
   constructor(name) {
     this.name = name;
-    this.ready = (typeof caches !== 'undefined' ? caches.open(name) : Promise.reject(new Error('no caches')))
-      .catch(() => null);
+    let open;
+    try { open = caches.open(name); } catch { open = Promise.reject(new Error('no caches')); }  // sandboxed pages throw on access
+    this.ready = open.catch(() => null);
     this.hits = 0;
     this.misses = 0;
   }
