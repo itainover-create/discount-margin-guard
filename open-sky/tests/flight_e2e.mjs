@@ -5,7 +5,7 @@
 import { chromium } from '/opt/node-tools/node_modules/playwright/index.mjs';
 import { writeFileSync, mkdirSync } from 'node:fs';
 
-const [, , base = 'http://localhost:8123/', out = './shots', which = 'ground,takeoff,landing,traffic,cameras,perf'] = process.argv;
+const [, , base = 'http://localhost:8123/', out = './shots', which = 'ground,takeoff,landing,traffic,fleet,cameras,perf'] = process.argv;
 const want = new Set(which.split(','));
 mkdirSync(out, { recursive: true });
 const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
@@ -260,6 +260,169 @@ try {
       await page.screenshot({ path: `${out}/l-${icao}-debrief.png` });
       await page.evaluate(() => { document.getElementById('debrief').classList.add('hidden'); });
     }
+  }
+
+  // --------------------------------------------------------------- fleet (v2)
+  if (want.has('fleet')) {
+    // every aircraft spawns on the runway, renders and stays put
+    const spawnRes = [];
+    for (let id = 0; id <= 13; id++) {
+      await page.evaluate((i) => window.__game.startFlight({ icao: 'KJFK', start: 'runway', mode: 'accessible', hour: 12, weather: 'fair', aircraft: i }), id);
+      await page.waitForFunction(() => window.__game.state === 'flight', null, { timeout: 180000 });
+      const r = await page.evaluate(() => { const g = window.__game; g.debugStep(1 / 30, 90); g.render(); const o = g.player.o; return { id: g.player.aircraftId, onGround: o.onGround, crashed: o.crashed, gs: +o.gs.toFixed(2), eng: o.engMask, dmg: +(o.dmgFus + o.dmgWingL + o.dmgWingR).toFixed(3) }; });
+      spawnRes.push(r);
+      if (id === 7 || id === 9) { await page.evaluate(() => window.__game.rig.setView('chase', window.__game.player)); await shot(`f-spawn-${id}`, 3); }
+    }
+    record('Fleet: all 14 aircraft spawn on the runway, engines running, stable, undamaged', spawnRes.every((r) => r.onGround && !r.crashed && r.gs < 0.5 && r.eng > 0 && r.dmg === 0), spawnRes);
+
+    // jet takeoff (737-800 class) with a scripted pilot
+    await page.evaluate(() => window.__game.startFlight({ icao: 'KJFK', start: 'runway', mode: 'simulation', hour: 12, weather: 'fair', aircraft: 1 }));
+    await page.waitForFunction(() => window.__game.state === 'flight', null, { timeout: 180000 });
+    const to = await page.evaluate(() => {
+      const g = window.__game, p = g.player, f = p.fleet, tp = window.__tp;
+      p.sw.parkBrake = false;
+      let rot = false, lo = null; const hdg0 = p.o.psi;
+      const ctl = (inp) => {
+        const o = p.o, kt = o.ias / 0.514444;
+        inp.throttleAbs = 1;
+        inp.yaw = tp.clamp(tp.wrap(hdg0 - o.psi) * 3 - o.r * 0.6, -1, 1);
+        inp.roll = tp.clamp(-o.phi * 1.5 - o.p * 0.3 + (o.onGround ? 0 : tp.wrap(hdg0 - o.psi) * 1.2), -1, 1);
+        if (kt > f.vr) rot = true;
+        const th = rot ? (o.onGround ? 8 : 14) * Math.PI / 180 : 0;
+        inp.pitch = rot ? tp.clamp(3 * (th - o.theta) - 1.2 * o.q + 0.25, -1, 1) : 0;
+        if (!o.onGround && !lo) lo = { kt: Math.round(kt), t: Math.round(o.simTime) };
+        if (!o.onGround && o.agl > 15) p.sw.gear = false;
+        if (!o.onGround && o.agl > 300) p.sw.flaps = 0;
+      };
+      let t = 0;
+      while (t < 120 && p.o.agl / 0.3048 < 1500 && !p.o.crashed) { g.debugStep(1 / 30, 15, ctl); t += 0.5; }
+      const o = p.o;
+      return { liftoff: lo, altFt: Math.round(o.agl / 0.3048), gear: +o.gearPos.toFixed(2), flaps: Math.round(o.flapsDeg), crashed: o.crashed, tailStrike: g.scorer.timeline.some((e) => /Tail strike/.test(e.text)), n1: Math.round(o.n1_0) };
+    });
+    record('Fleet: 737-800-class takeoff to 1500 ft (simulation mode, scripted pilot)', !to.crashed && to.liftoff && to.liftoff.kt > 140 && to.liftoff.kt < 185 && to.altFt >= 1500 && to.gear < 0.05 && !to.tailStrike, to);
+    await page.evaluate(() => window.__game.rig.setView('cockpit', window.__game.player));
+    await shot('f-738-climb-cockpit', 4);
+
+    // jet approach and landing (A320 class): AP heading + V/S on the glide path, A/T at Vref+5, manual flare
+    await page.evaluate(() => window.__game.startFlight({ icao: 'KJFK', start: 'air', mode: 'accessible', hour: 13, weather: 'fair', aircraft: 2 }));
+    await page.waitForFunction(() => window.__game.state === 'flight', null, { timeout: 180000 });
+    const ld = await page.evaluate(() => {
+      const g = window.__game, p = g.player, f = p.fleet, tp = window.__tp, ap = g.atc.airport, end = g.atc.activeEnd;
+      const D2R = Math.PI / 180;
+      g.atc.request('final'); g.debugStep(0.05, 20);
+      const sw = p.sw; sw.at = true; p.ui.atSpdKt = f.vref + 5; sw.spoilerArm = true; sw.landing = true;
+      sw.apLat = 1; sw.apVert = 0; sw.apMaster = true;
+      let flare = false, td = null, st = {};
+      const rwyHdg = end.hdgTrue * D2R;
+      const ctl = (inp) => {
+        const o = p.o;
+        const loc = ap.owner.toLocal(o.x, o.y, {});
+        const rc = ap.runwayCoords(end, loc.x, loc.y);
+        const agl = o.z - end.z;
+        if (o.onGround) {
+          st.sbMax = Math.max(st.sbMax || 0, o.speedbrake);
+          sw.apMaster = false; sw.at = false; sw.throttle = 0.6; sw.reverse = o.gs > 30; if (o.gs < 30) sw.throttle = 0;
+          inp.brakeL = inp.brakeR = 0.8; inp.pitch = 0;
+          inp.yaw = tp.clamp(tp.wrap(rwyHdg - o.psi) * 3 - o.r, -1, 1);
+          if (!td) td = { vsFpm: Math.round(o.tdVs / 0.00508), along: Math.round(rc.along), lateral: +rc.lateral.toFixed(1), kt: Math.round(o.ias / 0.514444) };
+          return;
+        }
+        // lateral: track toward the centreline, heading bug = track + drift (wind crab)
+        const wantTrk = rwyHdg - tp.clamp(rc.lateral * 0.003, -0.2, 0.2);
+        const drift = tp.wrap(Math.atan2(o.ve, o.vn) - o.psi);
+        const bug = wantTrk - drift;
+        p.ui.hdgBugDeg = ((bug / D2R - (g.world.magVar || 0)) + 720) % 360; p.ui.hdgBug = p.ui.hdgBugDeg * D2R;
+        // vertical: V/S onto a 3-degree path aimed 300 m past the threshold
+        const gpAlt = Math.max(0, 300 - rc.along) * Math.tan(3 * D2R);
+        p.ui.apVsFpm = Math.round((-o.gs * Math.tan(3 * D2R) + (gpAlt - agl) * 0.12) / 0.00508);
+        if (agl < 18 && !flare) { flare = true; sw.apMaster = false; st.th = o.theta; }
+        if (flare) {
+          sw.at = false; sw.throttle = 0;
+          const vsT = -Math.max(0.5, (agl - 2) * 0.22);
+          st.th = tp.clamp(st.th + (vsT - o.vu) * 0.01, -0.02, 0.15);
+          inp.pitch = tp.clamp(3 * (st.th - o.theta) - 1.0 * o.q, -1, 1);
+          inp.roll = tp.clamp(-o.phi * 1.5, -1, 1);
+          inp.yaw = tp.clamp(tp.wrap(rwyHdg - o.psi) * 3 - o.r, -1, 1);
+        }
+      };
+      let steps = 0;
+      while (steps < 30000 && !(p.o.onGround && p.o.gs < 3)) { g.debugStep(0.02, 50, ctl); steps += 50; if (p.o.crashed) break; }
+      const L = g.scorer.landings[0] || null;
+      return { td, landing: L ? { score: L.score, onRunway: L.onRunway, g: +L.g.toFixed(2) } : null, crashed: p.o.crashed, sbMax: +(st.sbMax || 0).toFixed(2), rolloutM: td ? Math.round(ap.runwayCoords(end, ap.owner.toLocal(p.o.x, p.o.y, {}).x, ap.owner.toLocal(p.o.x, p.o.y, {}).y).along - td.along) : null };
+    });
+    record('Fleet: A320-class approach and landing (AP V/S + A/T, flare, reversers, brakes)', ld.sbMax > 0.9 && !ld.crashed && ld.td && ld.landing && ld.landing.onRunway && ld.td.vsFpm > -720, ld);
+    await page.evaluate(() => window.__game.rig.setView('chase', window.__game.player));
+    await shot('f-320-after-landing', 4);
+
+    // engine fire mission: fire at 800 ft, fire handle, keep flying
+    await page.evaluate(() => window.__game.startFlight({ icao: 'KJFK', start: 'runway', mode: 'accessible', hour: 13, weather: 'scattered', missionId: 'jetfire' }));
+    await page.waitForFunction(() => window.__game.state === 'flight', null, { timeout: 180000 });
+    const fire = await page.evaluate(() => {
+      const g = window.__game, p = g.player, f = p.fleet, tp = window.__tp;
+      p.sw.parkBrake = false;
+      let rot = false; const hdg0 = p.o.psi; let fireSeen = false, handled = false;
+      const ctl = (inp) => {
+        const o = p.o, kt = o.ias / 0.514444;
+        inp.throttleAbs = 1;
+        if (kt > f.vr) rot = true;
+        const th = rot ? (o.onGround ? 8 : 10) * Math.PI / 180 : 0;
+        inp.pitch = rot ? tp.clamp(3 * (th - o.theta) - 1.2 * o.q + 0.2, -1, 1) : 0;
+        inp.roll = tp.clamp(-o.phi * 1.5 - o.p * 0.3, -1, 1);
+        inp.yaw = tp.clamp(tp.wrap(hdg0 - o.psi) * 3 - o.r * 0.6, -1, 1);
+        if (!o.onGround && o.agl > 15) p.sw.gear = false;
+        if (o.fireMask) fireSeen = true;
+        if (fireSeen && !handled) { inp.events.push('fireHandle'); handled = true; }
+      };
+      let t = 0, tHandled = null;
+      while (t < 140 && !p.o.crashed) {
+        g.debugStep(1 / 30, 15, ctl); t += 0.5;
+        if (handled && tHandled === null) tHandled = t;
+        if (tHandled !== null && t > tHandled + 15) break;
+      }
+      const o = p.o;
+      return { fireSeen, handled, fireNow: o.fireMask, eng1: (o.engMask & 1), eng2: (o.engMask >> 1) & 1, altFt: Math.round(o.agl / 0.3048), crashed: o.crashed, timeline: g.scorer.timeline.slice(-4).map((e) => e.text) };
+    });
+    record('Fleet: engine fire on departure — fire handle extinguishes, flight continues on one engine', fire.fireSeen && fire.handled && !fire.fireNow && fire.eng2 && !fire.crashed && fire.altFt > 400, fire);
+    await page.evaluate(() => window.__game.rig.setView('chase', window.__game.player));
+    await shot('f-engine-fire', 4);
+
+    // cruise: en-route traffic, TCAS, autothrottle Mach hold, radio wheel
+    await page.evaluate(() => window.__game.startFlight({ icao: 'KJFK', start: 'cruise', mode: 'accessible', hour: 15, weather: 'clear', aircraft: 6 }));
+    await page.waitForFunction(() => window.__game.state === 'flight', null, { timeout: 180000 });
+    const cr = await page.evaluate(() => {
+      const g = window.__game, p = g.player;
+      g.debugStep(1 / 20, 600);
+      const o = p.o;
+      g.hud.toggleAtc(true);
+      const wheel = { shown: !document.getElementById('radio-wheel').classList.contains('hidden'), options: document.querySelectorAll('#radio-wheel .rw-opt').length };
+      g.hud.toggleAtc(false);
+      return { altFt: Math.round(o.alt / 0.3048), mach: +o.mach.toFixed(3), n1: Math.round(o.n1_0), enroute: g.enroute.flights.length, tcas: (p.ui.traffic || []).length, routes: g.enroute.flights.slice(0, 3).map((f) => `${f.callsign} FL${f.fl} ${f.route}`), wheel };
+    });
+    record('Fleet: cruise FL390 Mach 0.84 on A/T, en-route traffic on TCAS, radio wheel', Math.abs(cr.mach - 0.84) < 0.03 && cr.enroute > 0 && cr.tcas > 0 && cr.wheel.shown && cr.wheel.options > 0, cr);
+
+    // account: Google sign-in + Drive appData save / sign-out, against mocked Google endpoints
+    let stored = null;
+    await page.route('https://accounts.google.com/gsi/client', (r) => r.fulfill({ contentType: 'text/javascript', body: 'window.google={accounts:{oauth2:{initTokenClient:(c)=>({requestAccessToken:()=>setTimeout(()=>c.callback({access_token:"tok-e2e",expires_in:3600}),10)}),revoke:(t,cb)=>{window.__revoked=t;cb&&cb();}}}};' }));
+    await page.route('https://www.googleapis.com/**', (r) => {
+      const u = r.request().url();
+      if (u.includes('userinfo')) return r.fulfill({ contentType: 'application/json', body: '{"name":"Test Pilot","email":"pilot@example.com"}' });
+      if (u.includes('spaces=appDataFolder')) return r.fulfill({ contentType: 'application/json', body: JSON.stringify({ files: stored ? [{ id: 'f1' }] : [] }) });
+      if (u.includes('uploadType=multipart')) { stored = r.request().postData(); return r.fulfill({ contentType: 'application/json', body: '{"id":"f1"}' }); }
+      return r.fulfill({ status: 404, body: '' });
+    });
+    const acct = await page.evaluate(async () => {
+      const g = window.__game;
+      g.settings.googleClientId = 'e2e.apps.googleusercontent.com';
+      await g.cloud.signIn();
+      const signed = g.cloud.signedIn && g.cloud.profile.email;
+      await g.cloud.save({ v: 1, test: true });
+      await g.cloud.signOut();
+      return { signed, afterSignOut: { signedIn: g.cloud.signedIn, token: g.cloud.token, revoked: window.__revoked }, tokenPersisted: (JSON.stringify(localStorage) + JSON.stringify(sessionStorage)).includes('tok-e2e') };
+    });
+    acct.uploaded = !!(stored && stored.includes('appDataFolder'));
+    record('Account: Sign in with Google → cloud save to Drive appData → sign-out revokes and wipes the token (mocked Google)', acct.signed && acct.uploaded && !acct.afterSignOut.signedIn && !acct.afterSignOut.token && acct.afterSignOut.revoked === 'tok-e2e' && !acct.tokenPersisted, acct);
+    await page.unroute('https://accounts.google.com/gsi/client');
+    await page.unroute('https://www.googleapis.com/**');
   }
 
   // --------------------------------------------------------------- traffic

@@ -62,6 +62,53 @@ export const MISSIONS = [
     descHe: 'ירידה אל עמק האין בין פסגות של 2,000 מטר ונחיתה באינסברוק. יש לשמור מרחק מהמדרונות.',
     land: 'LOWI',
   },
+  {
+    id: 'heavy', title: 'Colossus heavy arrival', titleHe: 'נחיתת ענק: Colossus 388',
+    kind: 'Airliner', icao: 'KJFK', start: 'air', weather: 'fair', hour: 18.6, pax: 0, aircraft: 7,
+    desc: 'An A380-class double-decker, landing configuration on an 8 nm final into JFK at sunset. Autothrottle holds Vref+5; fly the glide path by hand (or AP V/S), arm the ground spoilers, flare at 30 ft and use reverse thrust (F2) and brakes.',
+    descHe: 'מטוס דו-קומתי בסגנון A380 בגישה סופית של 8 מיילים ל-JFK בשקיעה. המצערת האוטומטית שומרת על Vref+5; טסים את שיפוע הגישה ביד, מחמשים ספוילרים, מיישרים ב-30 רגל ומשתמשים בהפיכת דחף (F2) ובבלמים.',
+    land: 'KJFK',
+  },
+  {
+    id: 'jetfire', title: 'Engine fire on departure', titleHe: 'שריפת מנוע בהמראה',
+    kind: 'Failure scenario', icao: 'KJFK', start: 'runway', weather: 'scattered', hour: 13, pax: 0, aircraft: 1,
+    desc: 'Meridian 738 (737-800 class) lined up at JFK. At about 800 ft the left engine catches fire: fly the aircraft first, then pull the engine 1 fire handle (Shift+F or the red handle above the EICAS), keep the yaw with rudder on one engine and come back for a single-engine landing.',
+    descHe: 'Meridian 738 (בסגנון 737-800) על המסלול ב-JFK. בגובה של כ-800 רגל המנוע השמאלי עולה באש: קודם מטיסים, אחר כך מושכים את ידית האש של מנוע 1 (Shift+F או הידית האדומה), מחזיקים את הסבסוב בהגה הכיוון וחוזרים לנחיתה על מנוע אחד.',
+    failure: { damage: { part: 4, amount: 0.7 }, aglFt: 800, text: 'ENGINE 1 FIRE' }, land: 'any',
+  },
+  {
+    id: 'storm', title: 'Thunderstorm approach', titleHe: 'גישה בסופת רעמים',
+    kind: 'Airliner', icao: 'KJFK', start: 'air', weather: 'storm', hour: 21.2, pax: 0, aircraft: 2,
+    desc: 'Aurora 320 (A320 class) at night, heavy rain, lightning and gusts to 34 kt. The fly-by-wire protections help, but the gusts and the wet runway are yours: stabilised by 1000 ft, wipers on, firm touchdown on the centreline.',
+    descHe: 'Aurora 320 (בסגנון A320) בלילה, גשם כבד, ברקים ומשבים עד 34 קשר. ההגנות של מערכת ה-Fly-by-wire עוזרות, אבל את המשבים והמסלול הרטוב עליכם לנהל: גישה מיוצבת ב-1000 רגל ונגיעה איתנה על קו האמצע.',
+    land: 'KJFK',
+  },
+  {
+    id: 'hudsonjet', title: 'Fighter: Hudson low pass', titleHe: 'מטוס קרב: מעבר נמוך מעל ההדסון',
+    kind: 'Fighter', icao: 'KJFK', start: 'airHigh', weather: 'clear', hour: 16.5, pax: 0, aircraft: 8,
+    desc: 'Talon 15 (F-15C class). Over the Verrazzano, the Statue of Liberty and up the Hudson past Midtown between 1500 and 2500 ft, then a climb to 10,000 ft with afterburner. Keep within 9 g.',
+    descHe: 'Talon 15 (בסגנון F-15C). מעל גשר ורזאנו, פסל החירות ומעלה ההדסון לאורך מנהטן בין 1500 ל-2500 רגל, ואז טיפוס ל-10,000 רגל עם מבער אחורי. לא לחרוג מ-9 g.',
+    waypoints: [
+      { name: 'Verrazzano Bridge', lat: 40.6066, lon: -74.0447, altFt: [1500, 2500], r: 1800 },
+      { name: 'Statue of Liberty', lat: 40.6892, lon: -74.0445, altFt: [1500, 2500], r: 1500 },
+      { name: 'Hudson — Midtown', lat: 40.7600, lon: -74.0090, altFt: [1500, 2500], r: 1500 },
+      { name: 'George Washington Bridge', lat: 40.8517, lon: -73.9527, altFt: [1500, 3000], r: 1800 },
+      { name: 'Climb: 10,000 ft over Long Island Sound', lat: 40.95, lon: -73.65, altFt: [9000, 12000], r: 4000 },
+    ],
+    land: 'any',
+  },
+  {
+    id: 'supercruise', title: 'Supercruise over the Atlantic', titleHe: 'שיוט על-קולי מעל האוקיינוס',
+    kind: 'Fighter', icao: 'KJFK', start: 'cruise', weather: 'clear', hour: 11, pax: 0, aircraft: 9,
+    desc: 'Specter 22 (F-22 class) at FL400. Light the afterburner to pass Mach 1.2, then come out of afterburner and hold above Mach 1.4 on military power alone through three waypoints over the ocean.',
+    descHe: 'Specter 22 (בסגנון F-22) בגובה 40,000 רגל. מבער אחורי עד מעבר ל-1.2 מאך, ואז ללא מבער – לשמור מעל 1.4 מאך בכוח צבאי בלבד דרך שלוש נקודות מעל האוקיינוס.',
+    waypoints: [
+      { name: 'OCEAN 1', lat: 40.35, lon: -72.6, altFt: [38000, 43000], r: 6000 },
+      { name: 'OCEAN 2', lat: 40.2, lon: -71.6, altFt: [38000, 43000], r: 6000 },
+      { name: 'OCEAN 3', lat: 40.05, lon: -70.6, altFt: [38000, 43000], r: 6000 },
+    ],
+    land: 'any',
+  },
 ];
 
 // ---------------------------------------------------------------------------
@@ -141,15 +188,17 @@ export class Scorer {
     // speed discipline by phase
     let target = null;
     const sit = g.atcSituation();
-    if (o.onGround && ias < 40 && o.gs > 0.5) { target = [0, 20]; if (ias > 25 && sit && sit.onRw < 0) this.taxiFast += dt; }
-    else if (!o.onGround && sit && sit.onFinal && agl < 1500) target = [58, 80];
-    else if (!o.onGround && o.vs > 1.5) target = [62, 95];
-    else if (!o.onGround) target = [60, 130];
+    const fl = g.player.fleet, jet = g.player.isJet, fighter = fl.cat === 'Fighter';
+    if (o.onGround && ias < 40 && o.gs > 0.5) { target = [0, jet ? 30 : 20]; if (ias > (jet ? 32 : 25) && sit && sit.onRw < 0) this.taxiFast += dt; }
+    else if (!o.onGround && sit && sit.onFinal && agl < 1500) target = jet ? [fl.vref - 3, fl.vref + 20] : fl.id === 0 ? [58, 80] : [fl.vref - 5, fl.vref + 25];
+    else if (!o.onGround && o.vs > 1.5) target = jet ? [fl.vr, fighter ? 750 : 350] : fl.id === 0 ? [62, 95] : [70, 180];
+    else if (!o.onGround) target = jet ? [fl.vref, fighter ? 900 : 360] : fl.id === 0 ? [60, 130] : [70, 220];
+    if (jet && !fighter && !o.onGround && ias > 262 && o.indAlt * FT < 10000) this.penalty('250kt', 5, 'Above 250 kt below 10,000 ft', 'מעל 250 קשר מתחת ל-10,000 רגל');
     if (target) {
       this.speed.total += dt;
       if (ias >= target[0] && ias <= target[1]) this.speed.good += dt;
     }
-    if (this.taxiFast > 4) { this.penalty('taxiFast', 5, 'Taxi speed above 25 kt', 'מהירות הסעה גבוהה מדי'); }
+    if (this.taxiFast > 4) { this.penalty('taxiFast', 5, `Taxi speed above ${jet ? 30 : 25} kt`, 'מהירות הסעה גבוהה מדי'); }
     // altitude discipline: mission waypoint bands, else pattern / cruise sanity
     const wp = g.mission && g.mission.currentWaypoint ? g.mission.currentWaypoint() : null;
     if (!o.onGround && wp && wp.altFt) {
@@ -325,9 +374,10 @@ export class MissionRuntime {
     const f = this.def && this.def.failure;
     if (f && !this.failed && !o.onGround && g.atc.airport && (o.z - g.atc.airport.elev) * FT > f.aglFt) {
       this.failed = true;
-      g.core.setFailure(f.id, true);
-      g.toast('ENGINE FAILURE', 'bad');
-      g.scorer.note('Engine failure (scenario)', 'כשל מנוע (תרחיש)', 'bad');
+      if (f.damage) g.core.damage(f.damage.part, f.damage.amount);
+      else g.core.setFailure(f.id, true);
+      g.toast(f.text || 'ENGINE FAILURE', 'bad');
+      g.scorer.note(`${f.text || 'Engine failure'} (scenario)`, 'כשל מנוע (תרחיש)', 'bad');
     }
     // tutorial
     if (this.steps) {

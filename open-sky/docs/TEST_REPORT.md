@@ -1,4 +1,72 @@
-# Test report — v1.0 prototype
+# Test report — v2.0 (GLOBAL SKIES: Infinite Horizon)
+
+Two automated suites, both run on this delivery's build:
+
+1. **Native C++ calibration suite** (`cd core && make test`): **227 / 227 pass**
+   (48 trainer / traffic checks from v1 + 179 fleet, systems and damage checks).
+   Full tables in `FLIGHT_MODEL.md`.
+2. **Browser end-to-end suite** (`node tests/flight_e2e.mjs <url> <outdir>`): the real game in
+   headless Chromium; scripted test pilots fly through `Game.debugStep` (physics, ATC, runway
+   authority, AI and en-route traffic, missions, scoring). **18 / 18 pass, 0 console errors.**
+
+## Browser end-to-end results (v2 additions)
+
+| # | Scenario | Result | Key numbers |
+|---|---|---|---|
+| 13 | All 14 aircraft spawn on the JFK runway | PASS | engines running, standing still (< 0.3 m/s), no damage, models and cockpits render |
+| 14 | 737-800-class takeoff, simulation mode, scripted pilot | PASS | lift-off 153 KIAS, gear up, flaps up, 1500 ft, no tail strike |
+| 15 | A320-class approach and landing: AP V/S + A/T, manual flare, reversers, brakes | PASS | touchdown −282 fpm, 1.17 g, 2.2 m from centreline, 415 m past threshold, landing score 90, ground spoilers fully deployed, roll-out 636 m |
+| 16 | Engine fire on departure mission (737-class) | PASS | fire at 800 ft, fire handle → fire out, engine 1 shut down, flight continues on engine 2 to 1500 ft+ |
+| 17 | Cruise FL390, A350-class, A/T Mach hold; en-route traffic; radio wheel | PASS | M 0.84 at N1 83 %; 6 en-route airliners (e.g. ZPH374 FL340 YYT → TUL) and 13 TCAS contacts; radio wheel opens with the available calls |
+| 18 | Sign in with Google → cloud save → sign-out (Google endpoints mocked) | PASS | userinfo + Drive appDataFolder multipart upload with the bearer token; sign-out revokes the token at Google, clears it from memory; token never written to storage |
+
+Scenarios 1–12 (trainer start, ATC taxi with runway crossing, takeoff clearance, sim-mode
+takeoff, two landings incl. gusty crosswind, 15 min of AI traffic with 0 runway conflicts, six
+camera views, three performance samples) all still pass — see the appendix.
+
+## Defects found by the v2 tests and fixed
+* **FBW pitch response** too slow (half stick gave 1.35 g instead of 1.75 g): the law was
+  rewritten with gains normalised to elevator effectiveness and nz feedback (C*).
+* **Alpha protection** let a zoom climb reach 18° α: the limit is now relative to the flight
+  path, nose-up auto-trim is inhibited inside the protection, and an Airbus-style pitch
+  attitude limit was added.
+* **Accessible-mode stall protection** for the trainer: v1 passed only because the airframe
+  broke up at 5 g. With the damage model the aircraft survives, so the protection now also
+  limits load factor and pitch attitude.
+* **Altimeter** used the troposphere formula above 11 km (384 ft error at FL450).
+* **Autothrottle** slammed to idle on the first step after an air start (previous IAS 0).
+* **Latched warnings**: core events were never cleared, so a warning (e.g. the gear horn)
+  stayed on; events are now per frame.
+* **Ground spoilers** retracted when the reversers were spooled up.
+* **Particles** were invisible (logarithmic depth buffer not in the particle shader).
+* Fighter planform / stabilator overlap, B-2 colour, flap-lift curves of slatted wings,
+  fighter body/vortex lift, A380/B-2 thrust data — all calibration-driven fixes.
+
+## What works / what is missing (v2.0)
+
+**Works**
+* 14 aircraft with their own flight models, engines, systems and control laws; glass flight
+  decks (PFD, ND with TCAS, EICAS, status/damage page, MCP, overhead, pedestal) and fighter
+  HUD/MFDs where every control is a real core input.
+* Consequential damage (parts, fires, hydraulics, fuel leaks, electrical blackout, gear
+  collapse, belly slides, structural failure from over-g / flutter / building strikes) with
+  visual effects and debris.
+* Thunderstorms with lightning and distance-delayed thunder, rain on the windshield with
+  wipers, sky reflections on glass towers, contrails, en-route traffic, radio wheel.
+* Google sign-in with cloud save to the Drive app-data folder (needs the owner's OAuth client
+  ID; verified against mocked endpoints).
+
+**Missing / limits**
+* No ray tracing or photogrammetric 3D cities in the browser build (WebGL 2); Google
+  Photorealistic 3D Tiles would need the owner's API key.
+* Los Angeles is not yet built (pipeline ready; next region).
+* Cockpits are functional, not complete replicas: no FMS/VNAV, APU, pressurisation, ILS radio.
+* Real Google sign-in not exercised end-to-end here (no client ID; the artifact sandbox's CSP
+  blocks the Google script).
+
+---
+
+## Appendix — v1.0 report (trainer)
 
 Two automated suites, both run on this delivery's build:
 

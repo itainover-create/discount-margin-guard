@@ -458,7 +458,7 @@ void Sim::computeControls(double dt) {
   }
   // Speed brake and ground spoilers (armed: deploy on the ground at idle)
   double sbCmd = clamp(in[IN_SPEEDBRAKE], 0, 1);
-  if (in[IN_SPOILER_ARM] > 0.5 && onGround && gs > 15.0 && in[IN_THROTTLE] < 0.15) sbCmd = 1.0;
+  if (in[IN_SPOILER_ARM] > 0.5 && onGround && gs > 15.0 && (in[IN_THROTTLE] < 0.15 || in[IN_REVERSE] > 0.5)) sbCmd = 1.0;  // stay out with reverse thrust
   if (def->spoiler.cdBrake <= 0) sbCmd = 0;
   sb = slew(sb, sbCmd, 1.5 * hydRate, dt);
   // Thrust reversers: on the ground only

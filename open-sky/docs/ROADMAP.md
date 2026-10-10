@@ -1,4 +1,4 @@
-# OPEN SKY — Execution plan & roadmap
+# GLOBAL SKIES: Infinite Horizon — execution plan & roadmap
 
 Each stage ends with a runnable build, control instructions, test results and an exact
 list of what works and what is missing. Expansion only happens after the previous stage
@@ -24,7 +24,14 @@ area → landing → debrief.
 * Voice ATC with recorded or neural voices (licensed), pilot readback via speech recognition (optional).
 * More vehicle types on aprons (tugs, fuel trucks, buses) following airport service roads.
 
-## Stage 3 — new aircraft (after stage-1 checks stay green)
+## Stage 2.0 — delivered (this release)
+| Area | Delivered |
+|---|---|
+| Fleet | 14 aircraft: trainer, 737-, A320-, 787-9-, 777-300ER-, 747-400-, A350-, A380-class airliners, F-15C-, F-22-, F-35A-class fighters, B-2-class flying wing, G650-class business jet, Extra 330-class aerobatic; original names + class references |
+| Core | Turbofans (spool, lapse, TSFC, afterburner, reversers, start sequence), fly-by-wire normal law with protections, gear/spoilers/autothrottle/generators, wave drag; consequential damage model; 227 native checks |
+| Client | Hangar, procedural models, glass flight decks / fighter HUD, jet audio + GPWS, damage effects, storms + lightning, windshield rain, glass reflections, radio wheel, en-route traffic + TCAS, 5 new missions, Google sign-in + Drive cloud save; 18 e2e scenarios |
+
+## Stage 3 — next aircraft work (after stage-2 checks stay green)
 * **Narrow-body twinjet (737-class, generic name until licensed):** turbofan engine model
   (spool-up lag, N1/N2, EGT, fuel flow vs thrust), swept-wing aerodynamics with Mach effects,
   retractable gear, slats/flaps, spoilers/speed brakes, autothrottle, 3-axis autopilot with
