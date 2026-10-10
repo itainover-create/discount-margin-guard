@@ -94,8 +94,107 @@ export class AudioEngine {
     this.jetWhine = ctx.createOscillator(); this.jetWhine.type = 'sine'; this.jetWhine.frequency.value = 2900;
     this.jetWhineGain = ctx.createGain(); this.jetWhineGain.gain.value = 0;
     this.jetWhine.connect(this.jetWhineGain); this.jetWhineGain.connect(this.master); this.jetWhine.start();
+    // ---- player turbofans: fan whine (blade pass + buzz-saw) and core roar
+    const J = (this.jetEng = {});
+    J.fan1 = ctx.createOscillator(); J.fan1.type = 'triangle';
+    J.fan2 = ctx.createOscillator(); J.fan2.type = 'sawtooth';
+    J.fanBp = ctx.createBiquadFilter(); J.fanBp.type = 'bandpass'; J.fanBp.Q.value = 2.5;
+    J.fanGain = ctx.createGain(); J.fanGain.gain.value = 0;
+    J.fan1.connect(J.fanBp); J.fan2.connect(J.fanBp); J.fanBp.connect(J.fanGain); J.fanGain.connect(this.cabin);
+    J.fan1.start(); J.fan2.start();
+    J.roar = noise();
+    J.roarLp = ctx.createBiquadFilter(); J.roarLp.type = 'lowpass'; J.roarLp.Q.value = 0.7;
+    J.roarGain = ctx.createGain(); J.roarGain.gain.value = 0;
+    J.roar.connect(J.roarLp); J.roarLp.connect(J.roarGain); J.roarGain.connect(this.cabin);
+    J.ab = noise();
+    J.abLp = ctx.createBiquadFilter(); J.abLp.type = 'lowpass'; J.abLp.frequency.value = 260;
+    J.abGain = ctx.createGain(); J.abGain.gain.value = 0;
+    J.crackle = ctx.createOscillator(); J.crackle.type = 'square'; J.crackle.frequency.value = 23;
+    J.crackleDepth = ctx.createGain(); J.crackleDepth.gain.value = 0;
+    J.crackle.connect(J.crackleDepth); J.crackleDepth.connect(J.abGain.gain); J.crackle.start();
+    J.ab.connect(J.abLp); J.abLp.connect(J.abGain); J.abGain.connect(this.cabin);
+    // stick shaker (low rumble) and warning tones
+    this.shaker = ctx.createOscillator(); this.shaker.type = 'square'; this.shaker.frequency.value = 28;
+    this.shakerGain = ctx.createGain(); this.shakerGain.gain.value = 0;
+    const shLp = ctx.createBiquadFilter(); shLp.type = 'lowpass'; shLp.frequency.value = 120;
+    this.shaker.connect(shLp); shLp.connect(this.shakerGain); this.shakerGain.connect(this.master); this.shaker.start();
+    this.warnT = 0;
+    this.gpws = { last: '', lastT: 0, rad: 9999 };
     this.lastTd = 0;
     this.lastFlaps = 0;
+  }
+
+  // short synthesized tones: fire bell, gear horn, master caution, overspeed clacker
+  tone(kind) {
+    if (!this.ctx) return;
+    const ctx = this.ctx, t = ctx.currentTime;
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.connect(g); g.connect(this.master);
+    if (kind === 'bell') { o.type = 'sine'; o.frequency.value = 760; g.gain.setValueAtTime(0.16, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.45); }
+    else if (kind === 'horn') { o.type = 'square'; o.frequency.value = 600; g.gain.setValueAtTime(0.05, t); g.gain.setValueAtTime(0.05, t + 0.38); g.gain.exponentialRampToValueAtTime(0.001, t + 0.42); }
+    else if (kind === 'caution') { o.type = 'sine'; o.frequency.value = 980; g.gain.setValueAtTime(0.09, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.25); }
+    else if (kind === 'clacker') { o.type = 'square'; o.frequency.value = 2200; g.gain.setValueAtTime(0.05, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.03); }
+    o.start(t); o.stop(t + 0.5);
+  }
+
+  // Player turbofans, warnings and GPWS callouts. Returns the GPWS message shown on the PFD/HUD.
+  updateJet(dt, o, sw, view, cam, f) {
+    const J = this.jetEng, inside = view === 'cockpit';
+    const dist = inside ? 0 : Math.max(5, cam.dist || 30);
+    const att = inside ? 1 : Math.min(1, (f.g ? f.g.b : 20) * 1.4 / dist);
+    const doppler = inside ? 1 : 343 / Math.max(150, 343 - (cam.closing || 0));
+    const n = f.engines;
+    let n1 = 0, run = 0;
+    for (let i = 0; i < n; i++) { n1 += o['n1_' + i] || 0; if ((o.engMask >> i) & 1) run++; }
+    n1 /= Math.max(1, n);
+    const x = Math.max(0, Math.min(1, (n1 - 18) / 82));
+    const mil = f.cat === 'Fighter' || f.cat === 'Bomber';
+    const bpf = (mil ? 1600 : 1100) + n1 * (mil ? 26 : 19);   // fan blade-passing frequency
+    this.set(J.fan1.frequency, bpf * doppler);
+    this.set(J.fan2.frequency, bpf * 0.5 * doppler * (1 + 0.004 * Math.sin(this.ctx.currentTime * 3)));
+    this.set(J.fanBp.frequency, bpf * doppler);
+    const heavy = f.sound === 'fanHeavy' ? 1.25 : 1;
+    this.set(J.fanGain.gain, (n1 > 2 ? (0.015 + 0.05 * x) * Math.min(1, n1 / 20) : 0) * att * (inside ? 0.5 : 1.2) * (o.mach > 1 && inside ? 0.2 : 1) * this.volume.engine);
+    this.set(J.roarLp.frequency, 300 + x * (inside ? 900 : 2600) * heavy);
+    const roar = (run / Math.max(1, n)) * (0.03 + 0.24 * x * x) * heavy * (o.reverser ? 1.6 : 1);
+    this.set(J.roarGain.gain, roar * att * (inside ? 0.55 : 1.1) * this.volume.engine);
+    const ab = o.afterburner ? 1 : 0;
+    this.set(J.abGain.gain, ab * 0.35 * att * (inside ? 0.6 : 1.4) * this.volume.engine, 0.15);
+    this.set(J.crackleDepth.gain, ab * 0.18 * att, 0.15);
+    // mute the piston sounds
+    const e = this.eng;
+    this.set(e.gain.gain, 0); this.set(e.ngain.gain, 0); this.set(e.lfoGain.gain, 0);
+    this.set(this.starterGain.gain, o.starter ? 0.05 : 0, 0.2);
+    this.set(this.starter.frequency, 180 + (o.n2Avg || 0) * 14);
+    // stick shaker instead of the stall horn
+    this.set(this.hornGain.gain, 0);
+    this.set(this.shakerGain.gain, o.stallWarn && sw.battery ? 0.22 : 0, 0.03);
+    // warnings (repeating)
+    this.warnT -= dt;
+    const fire = (o.fireMask | 0) !== 0;
+    const ra = (o.agl || 0) / 0.3048;
+    const gearWarn = ((o.events | 0) & 65536) !== 0;
+    if (this.warnT <= 0) {
+      this.warnT = 0.5;
+      if (fire && sw.battery) this.tone('bell');
+      else if (gearWarn && sw.battery) this.tone('horn');
+      else if (o.overspeed) { for (let i = 0; i < 6; i++) setTimeout(() => this.tone('clacker'), i * 70); }
+    }
+    // GPWS: radio altitude callouts and alerts
+    const G = this.gpws;
+    let msg = '';
+    const sink = -(o.vs || 0) / 0.00508;
+    if (!o.onGround && sw.battery && o.avionicsPowered) {
+      if (ra < 2400 && sink > 2500 + ra * 2 && ra > 50) msg = ra < 1000 && sink > 3500 ? 'PULL UP' : 'SINK RATE';
+      else if (gearWarn) msg = 'TOO LOW GEAR';
+      for (const c of [2500, 1000, 500, 100, 50, 40, 30, 20, 10]) {
+        if (G.rad > c && ra <= c && sink > 50 && o.gearPos > 0.5) { this.speak(c >= 1000 ? `${c === 2500 ? 'twenty five hundred' : 'one thousand'}` : c === 500 ? 'five hundred' : c === 100 ? 'one hundred' : String(c), 'en-US', false); break; }
+      }
+      if (msg && (msg !== G.last || this.ctx.currentTime - G.lastT > 2.5)) { this.speak(msg.toLowerCase(), 'en-US', false); G.lastT = this.ctx.currentTime; }
+    }
+    G.last = msg;
+    G.rad = ra;
+    return msg;
   }
 
   set(param, v, t = 0.06) { if (this.ctx) param.setTargetAtTime(v, this.ctx.currentTime, t); }
@@ -116,22 +215,23 @@ export class AudioEngine {
     src.stop(t + 2);
   }
 
-  speak(text, lang = 'en-US') {
+  speak(text, lang = 'en-US', interrupt = true) {
     if (!this.volume.voice || typeof speechSynthesis === 'undefined') return;
     try {
       const u = new SpeechSynthesisUtterance(text);
       u.lang = lang;
-      u.rate = 1.12;
-      u.pitch = 0.95;
+      u.rate = interrupt ? 1.12 : 1.3;
+      u.pitch = interrupt ? 0.95 : 0.8;
       u.volume = this.volume.radio;
-      speechSynthesis.cancel();
+      if (interrupt) speechSynthesis.cancel();
       speechSynthesis.speak(u);
     } catch { /* unavailable */ }
   }
 
   // o: aircraft outputs; view: camera view name; cam: {dist, closing (m/s)}
-  update(dt, o, sw, view, cam, traffic) {
-    if (!this.ctx || !this.enabled) return;
+  update(dt, o, sw, view, cam, traffic, fleet) {
+    if (!this.ctx || !this.enabled) return '';
+    const jetAc = fleet && fleet.style !== 'trainer' && fleet.style !== 'aerobatic';
     const inside = view === 'cockpit';
     const dist = inside ? 0 : Math.max(5, cam.dist || 15);
     const att = inside ? 1 : Math.min(1, 18 / dist);
@@ -154,6 +254,7 @@ export class AudioEngine {
     this.set(e.pbp.frequency, Math.max(40, fire * 2.0 + 120));
     this.set(e.lfo.frequency, Math.max(1, fire));
     this.set(e.lfoGain.gain, Math.min(1, rpm / 2700) * 0.18 * att * (inside ? 0.6 : 1.6));
+    if (!jetAc && this.jetEng) { const J = this.jetEng; this.set(J.fanGain.gain, 0); this.set(J.roarGain.gain, 0); this.set(J.abGain.gain, 0); this.set(this.shakerGain.gain, 0); }
     // starter
     this.set(this.starter.frequency, 90 + rpm * 0.8);
     this.set(this.starterGain.gain, o.starter ? 0.10 : 0, 0.05);
@@ -174,6 +275,8 @@ export class AudioEngine {
     this.lastTd = o.tdCount || 0;
     // stall horn (reed): warbling tone
     this.set(this.hornGain.gain, o.stallWarn && sw.battery ? 0.06 : 0, 0.03);
+    let gpws = '';
+    if (jetAc) gpws = this.updateJet(dt, o, sw, view, cam, fleet);
     // flap motor
     const moving = Math.abs((o.flapsDeg || 0) - this.lastFlaps) > 0.01;
     this.lastFlaps = o.flapsDeg || 0;
@@ -194,6 +297,7 @@ export class AudioEngine {
     this.set(this.jetGain.gain, jet, 0.2);
     this.set(this.jetLp.frequency, 400 + 3000 / (1 + jetClose / 400), 0.2);
     this.set(this.jetWhineGain.gain, jet * 0.04 / (1 + jetClose / 200), 0.2);
+    return gpws;
   }
 
   setPaused(p) {

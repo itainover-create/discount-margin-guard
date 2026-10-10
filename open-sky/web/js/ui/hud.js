@@ -4,6 +4,7 @@ import { badge, gameTitle, GAME, RIGHTS } from './brand.js';
 import { ACTIONS, keyLabel } from '../input/input.js';
 import { VIEW_NAMES } from '../camera/cameras.js';
 import { PHASE } from '../sim/traffic.js';
+import { alertsFor } from '../aircraft/displays.js';
 
 const $ = (id) => document.getElementById(id);
 const D2R = Math.PI / 180;
@@ -12,7 +13,39 @@ const KT = 1 / 0.514444, FT = 1 / 0.3048;
 function esc(s) { return String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
 
 // Checklists: each item auto-checks from the simulation state.
+function jetChecklists(g) {
+  const p = g.player, sw = p.sw, o = p.o, f = p.fleet;
+  const all = (1 << f.engines) - 1;
+  const running = () => (o.engMask & all) === all;
+  return [
+    ['Before start', 'לפני התנעה', [
+      ['Parking brake — SET', () => sw.parkBrake], ['Battery — ON', () => sw.battery], ['Avionics / displays — ON', () => sw.avionics],
+      ['Beacon — ON', () => sw.beacon], ['Fuel control — CUTOFF', () => sw.mixture < 0.5 || running()], ['Thrust levers — IDLE', () => sw.throttle < 0.05],
+    ]],
+    ['Engine start', 'התנעת מנועים', [
+      ['Ignition — START (overhead)', () => sw.mags === 4 || running()], ['N2 above 22 % → fuel control RUN', () => sw.mixture > 0.5],
+      [`All ${f.engines} engines stabilised at idle`, running], ['Generators — ON', () => sw.alternator],
+    ]],
+    ['Before takeoff', 'לפני המראה', [
+      [`Flaps — ${f.flaps[f.toDetent]} (takeoff)`, () => sw.flaps === f.toDetent], ['Speed brake — DOWN', () => (sw.speedbrake || 0) < 0.05],
+      ['Strobes & landing lights — ON', () => sw.strobe && sw.landing], ['Transponder / radios — set', () => sw.avionics],
+      ['Takeoff clearance — RECEIVED', () => g.atc.clearances.takeoff],
+      [`Rotate at ${f.vr} kt, gear UP after positive climb`, () => !o.onGround && !sw.gear],
+    ]],
+    ['Before landing', 'לפני נחיתה', [
+      ['Gear — DOWN, 3 green', () => o.gearPos > 0.99], [`Flaps — ${f.flaps[f.flaps.length - 1]}`, () => sw.flaps === f.flaps.length - 1],
+      ['Ground spoilers — ARMED', () => sw.spoilerArm || f.cat === 'Fighter'], [`Speed — Vref ${f.vref} + 5 kt`, () => Math.abs(o.ias / 0.514444 - f.vref - 5) < 8],
+      ['Landing clearance — RECEIVED', () => g.atc.clearances.land],
+    ]],
+    ['After landing / shutdown', 'אחרי נחיתה וכיבוי', [
+      ['Reversers — STOWED', () => !sw.reverse], ['Speed brake — DOWN, spoilers disarmed', () => !sw.spoilerArm], ['Flaps — UP', () => sw.flaps === 0],
+      ['Parking brake — SET', () => sw.parkBrake], ['Fuel control — CUTOFF', () => sw.mixture < 0.5], ['Battery — OFF', () => !sw.battery],
+    ]],
+  ];
+}
+
 function checklists(g) {
+  if (g.player.isJet) return jetChecklists(g);
   const sw = g.player.sw, o = g.player.o;
   return [
     ['Before start', 'לפני התנעה', [
@@ -178,6 +211,7 @@ export class Hud {
   }
 
   drawData(o, sw) {
+    if (this.g.player.isJet) return this.drawJetData(o, sw);
     const ias = o.indIas * KT, alt = o.indAlt * FT, vs = o.indVs * FT * 60;
     const warn = [];
     if (o.stallWarn) warn.push('<span class="bad">STALL</span>');
@@ -197,6 +231,29 @@ export class Hud {
       ['FUEL', `${((o.fuelL + o.fuelR) / 0.72 / 3.785).toFixed(1)} gal`],
     ];
     if (nav) rows.push(['GPS', `${nav.name.slice(0, 14)} ${nav.distNm.toFixed(1)} nm ${String(Math.round(nav.brgMag)).padStart(3, '0')}°`]);
+    $('hud-data').innerHTML = rows.map(([k, v]) => `<span class="k">${k}</span><span class="v">${v}</span>`).join('') + (warn.length ? `<span class="k">!</span><span class="v">${warn.join(' ')}</span>` : '');
+  }
+
+  drawJetData(o, sw) {
+    const p = this.g.player, f = p.fleet;
+    const ias = o.indIas * KT, alt = o.indAlt * FT, vs = o.indVs * FT * 60;
+    const n1 = [o.n1_0, o.n1_1, o.n1_2, o.n1_3].slice(0, f.engines).map((v) => Math.round(v)).join(' · ');
+    const gear = o.gearPos > 0.99 ? '<span class="good">DOWN ▮▮▮</span>' : o.gearPos < 0.01 ? 'UP' : '<span class="warn">TRANSIT</span>';
+    const w = this.g.world.weather.state;
+    const rows = [
+      ['IAS · MACH', `${ias.toFixed(0)} kt · M${o.mach.toFixed(2)}`], ['ALT', `${Math.round(alt / 10) * 10} ft`], ['V/S', `${Math.round(vs / 10) * 10} fpm`],
+      ['HDG · GS', `${String(Math.round(o.hdgMag) % 360).padStart(3, '0')}° · ${(o.gs * KT).toFixed(0)} kt`],
+      ['N1 %', `${n1}${o.afterburner ? ' <span class="warn">AB</span>' : ''}${o.reverser ? ' <span class="warn">REV</span>' : ''}`],
+      ['THRUST LEVER', `${Math.round((sw.at ? o.atThr : sw.throttle) * 100)}%${sw.at ? ` · A/T ${p.ui.atSpdKt} kt` : ''}`],
+      ['GEAR · FLAPS', `${gear} · ${f.flaps[sw.flaps]} (${Math.round(o.flapsDeg)}°)`],
+      ['SPD BRK', o.speedbrake > 0.02 ? `<span class="warn">${Math.round(o.speedbrake * 100)}%</span>` : sw.spoilerArm ? 'ARMED' : 'DOWN'],
+      ['AP', o.apEngaged ? `${['ROL', 'HDG', 'NAV'][o.apLat]} ${['VS', 'ALT'][o.apVert]} · ${Math.round(p.ui.hdgBugDeg)}° ${p.ui.apAltFt} ft` : 'off'],
+      ['WIND', `${String(Math.round(w.windDir)).padStart(3, '0')}° / ${Math.round(w.windKt)}${w.gustKt ? 'G' + w.gustKt : ''} kt`],
+      ['FUEL', `${((o.fuelL + o.fuelR) / 1000).toFixed(1)} t · ${Math.round(o.fuelFlow * 3600)} kg/h`],
+    ];
+    if (this.g.nav) rows.push(['GPS', `${this.g.nav.name.slice(0, 14)} ${this.g.nav.distNm.toFixed(1)} nm ${String(Math.round(this.g.nav.brgMag)).padStart(3, '0')}°`]);
+    const A = alertsFor(o, sw, f).filter(([lvl]) => lvl === 'red' || lvl === 'amber');
+    const warn = A.slice(0, 5).map(([lvl, t]) => `<span class="${lvl === 'red' ? 'bad' : 'warn'}">${esc(t)}</span>`);
     $('hud-data').innerHTML = rows.map(([k, v]) => `<span class="k">${k}</span><span class="v">${v}</span>`).join('') + (warn.length ? `<span class="k">!</span><span class="v">${warn.join(' ')}</span>` : '');
   }
 

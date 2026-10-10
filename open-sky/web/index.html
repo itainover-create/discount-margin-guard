@@ -30,6 +30,7 @@
       <div id="menu-brand" class="menu-brand"></div>
       <div class="menu-tabs">
         <button data-tab="home" class="active">Home</button>
+        <button data-tab="hangar">Hangar</button>
         <button data-tab="free">Free Flight</button>
         <button data-tab="missions">Missions</button>
         <button data-tab="settings">Settings</button>
@@ -46,6 +47,7 @@
         <p class="lead he" dir="rtl">טסים בעולם פתוח המבוסס על נתוני מפה אמיתיים: מתניעים בחניה, מסיעים עם הפיקוח, ממריאים ונוחתים.</p>
         <div class="home-buttons">
           <button class="big-btn primary" id="btn-quick">Quick flight — New York JFK</button>
+          <button class="big-btn" data-goto="hangar" id="btn-hangar">Hangar — choose your aircraft</button>
           <button class="big-btn" data-goto="missions">Missions &amp; Tutorial</button>
           <button class="big-btn" data-goto="free">Choose a place on the globe</button>
           <button class="big-btn" id="btn-continue" disabled>Continue from save point</button>
@@ -64,6 +66,7 @@
           <div id="place-info"></div>
           <div class="setup">
             <label>Start <select id="start-pos"><option value="stand">Parking (cold &amp; dark)</option><option value="runway">On the runway</option><option value="air">In the air (5 nm final)</option><option value="airHigh">In the air (3000 ft overhead)</option></select></label>
+            <label>Aircraft <select id="aircraft-sel"></select></label>
             <label>Mode <select id="mode"><option value="accessible">Accessible (assists, quick start)</option><option value="simulation">Simulation (full procedures)</option></select></label>
             <label>Time <select id="time"><option value="now">Now (real local time)</option><option value="7">Morning 07:00</option><option value="12" selected>Noon 12:00</option><option value="17.5">Evening 17:30</option><option value="19.8">Sunset</option><option value="22">Night 22:00</option></select></label>
             <label>Weather <select id="weather"></select></label>
@@ -75,6 +78,12 @@
       </div>
     </div>
 
+    <div class="tab" id="tab-hangar">
+      <div class="hangar-layout">
+        <div class="hangar-stage"><canvas id="hangar-canvas"></canvas><div id="hangar-title"></div></div>
+        <aside class="hangar-side"><div id="hangar-specs"></div><div id="hangar-list"></div></aside>
+      </div>
+    </div>
     <div class="tab" id="tab-missions"><div id="mission-list"></div></div>
     <div class="tab" id="tab-settings"><div id="settings-form"></div></div>
     <div class="tab" id="tab-controls"><div id="controls-form"></div></div>

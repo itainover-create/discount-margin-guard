@@ -57,7 +57,7 @@ export class CameraRig {
         this.look.fov = THREE.MathUtils.clamp(this.look.fov + input.wheel * 0.03, 25, 95);
         // head moves slightly with load factor (vertical) and buffeting
         const bob = THREE.MathUtils.clamp((o.nz - 1) * -0.012, -0.03, 0.03);
-        tmpV.copy(EYE).add(new THREE.Vector3(0, bob, 0));
+        tmpV.copy(aircraft.eyeLocal || EYE).add(new THREE.Vector3(0, bob, 0));
         // lean the head when looking far to the sides to see past pillars
         tmpV.x += Math.sin(this.look.yaw) * 0.08;
         cam.position.copy(tmpV.applyMatrix4(root.matrixWorld));
@@ -74,13 +74,15 @@ export class CameraRig {
       case 'chase': {
         this.chase.yaw -= input.lookDX * 0.005;
         this.chase.pitch = THREE.MathUtils.clamp(this.chase.pitch + input.lookDY * 0.004, -0.35, 1.3);
-        this.chase.dist = THREE.MathUtils.clamp(this.chase.dist * (1 + input.wheel * 0.001), 7, 400);
-        if (input.resetLook) { this.chase.yaw = 0; this.chase.pitch = 0.12; this.chase.dist = 15; }
+        const sz = aircraft.size || 11;
+        if (this.chaseFor !== aircraft.aircraftId) { this.chaseFor = aircraft.aircraftId; this.chase.dist = sz * 1.4; this.chase.pitch = aircraft.fleet && aircraft.fleet.style === 'flyingwing' ? 0.3 : 0.14; }
+        this.chase.dist = THREE.MathUtils.clamp(this.chase.dist * (1 + input.wheel * 0.001), sz * 0.6, 600);
+        if (input.resetLook) { this.chase.yaw = 0; this.chase.pitch = 0.12; this.chase.dist = sz * 1.4; }
         // follow the heading (not roll); orbit offsets on top
         const hdg = o.psi;
         const yaw = -hdg + Math.PI + this.chase.yaw;
         const d = this.chase.dist;
-        const target = root.position.clone().add(new THREE.Vector3(0, 1.2, 0));
+        const target = root.position.clone().add(new THREE.Vector3(0, 1.2 * sz / 11, 0));
         const off = new THREE.Vector3(Math.sin(yaw) * Math.cos(this.chase.pitch) * d, Math.sin(this.chase.pitch) * d, Math.cos(yaw) * Math.cos(this.chase.pitch) * d);
         const want = target.clone().add(off);
         if (this.first) { this.smoothPos.copy(want); this.first = false; }
@@ -95,9 +97,10 @@ export class CameraRig {
         break;
       }
       case 'wing': {
-        const p = new THREE.Vector3(-5.2, 1.05, 0.6).applyMatrix4(root.matrixWorld);
+        const wc = aircraft.wingCam || { pos: new THREE.Vector3(-5.2, 1.05, 0.6), target: new THREE.Vector3(-1.2, 0.6, -6) };
+        const p = wc.pos.clone().applyMatrix4(root.matrixWorld);
         cam.position.copy(p);
-        const t = new THREE.Vector3(-1.2, 0.6, -6).applyMatrix4(root.matrixWorld);
+        const t = wc.target.clone().applyMatrix4(root.matrixWorld);
         cam.up.set(0, 1, 0).applyQuaternion(root.quaternion);
         cam.lookAt(t);
         cam.up.set(0, 1, 0);
@@ -111,7 +114,7 @@ export class CameraRig {
         else cam.position.set(o.x + 300, Math.max(o.z, this.world.heightAt(o.x + 300, o.y)) + 30, -o.y);
         cam.lookAt(root.position);
         const dist = cam.position.distanceTo(root.position);
-        this.towerFov = THREE.MathUtils.clamp(THREE.MathUtils.radToDeg(2 * Math.atan(30 / Math.max(dist, 1))), 2.5, 60) * Math.pow(2, input.wheel * 0.002 || 0);
+        this.towerFov = THREE.MathUtils.clamp(THREE.MathUtils.radToDeg(2 * Math.atan(30 * (aircraft.size || 11) / 11 / Math.max(dist, 1))), 2.5, 60) * Math.pow(2, input.wheel * 0.002 || 0);
         fov = this.towerFov;
         near = 1;
         break;

@@ -7,6 +7,8 @@ import { PRESETS } from '../world/weather.js';
 import { ACTIONS, AXES, keyLabel } from '../input/input.js';
 import { haversine } from '../world/geo.js';
 import { QUALITY } from '../config.js';
+import { FLEET, fleetEntry, displayName, FLEET_OPTIONS } from '../aircraft/fleet.js';
+import { Hangar } from './hangar.js';
 
 const $ = (id) => document.getElementById(id);
 function esc(s) { return String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
@@ -23,7 +25,8 @@ export class Menu {
     document.querySelectorAll('.menu-tabs button').forEach((b) => b.addEventListener('click', () => this.tab(b.dataset.tab)));
     document.querySelectorAll('[data-goto]').forEach((b) => b.addEventListener('click', () => this.tab(b.dataset.goto)));
     $('lang-toggle').onclick = () => { g.settings.hebrew = !g.settings.hebrew; g.saveSettings(); this.renderAll(); };
-    $('btn-quick').onclick = () => g.startFlight({ icao: 'KJFK', start: 'stand', mode: g.settings.mode, hour: 12, weather: 'fair' });
+    $('btn-quick').onclick = () => g.startFlight({ icao: 'KJFK', start: 'stand', mode: g.settings.mode, hour: 12, weather: 'fair', aircraft: g.settings.aircraft });
+    $('aircraft-sel').onchange = (e) => this.pickAircraft(+e.target.value);
     $('btn-continue').onclick = () => {
       const s = g.loadSave();
       if (!s) return;
@@ -54,6 +57,7 @@ export class Menu {
     this.renderSettings();
     this.renderControls();
     this.renderAbout();
+    this.renderHangar();
     const s = this.g.loadSave();
     $('btn-continue').disabled = !s;
     if (s) $('btn-continue').textContent = `Continue: ${s.spec.missionId || s.spec.icao || 'flight'} (${new Date(s.at).toLocaleString()})`;
@@ -61,13 +65,64 @@ export class Menu {
   }
 
   show() { this.renderAll(); this.resize(); }
-  resize() { this.globe && this.globe.resize(); }
-  frame(dt) { this.globe && this.globe.frame(dt); }
+  resize() { this.globe && this.globe.resize(); this.hangar && this.hangar.resize(); }
+  frame(dt) {
+    this.globe && this.globe.frame(dt);
+    if (this.hangar && $('tab-hangar').classList.contains('show')) this.hangar.frame(dt);
+  }
+
+  // ---------------------------------------------------------------------
+  // Hangar: aircraft cards, 3D turntable and the numbers the core flies
+  pickAircraft(id) {
+    const g = this.g;
+    g.settings.aircraft = id;
+    g.saveSettings();
+    this.renderHangar();
+  }
+
+  renderHangar() {
+    const g = this.g, cur = fleetEntry(g.settings.aircraft || 0);
+    const he = g.settings.hebrew;
+    $('aircraft-sel').innerHTML = FLEET.map((f) => `<option value="${f.id}" ${f.id === cur.id ? 'selected' : ''}>${esc(displayName(f))} — ${esc(f.classRef)}</option>`).join('');
+    $('btn-quick').textContent = `Quick flight — New York JFK · ${displayName(cur)}`;
+    const groups = ['Airliner', 'Business jet', 'Fighter', 'Bomber', 'Aerobatic', 'Trainer'];
+    $('hangar-list').innerHTML = groups.map((grp) => {
+      const list = FLEET.filter((f) => f.cat === grp);
+      if (!list.length) return '';
+      return `<div class="hl-group">${esc(grp)}${grp === 'Airliner' || grp === 'Business jet' ? 's' : grp === 'Fighter' || grp === 'Bomber' ? 's' : ''}</div>` +
+        list.map((f) => `<button class="hl-card ${f.id === cur.id ? 'sel' : ''}" data-id="${f.id}"><b>${esc(displayName(f))}</b><small>${esc(FLEET_OPTIONS.realNames ? f.name : f.classRef)}</small></button>`).join('');
+    }).join('');
+    $('hangar-list').querySelectorAll('.hl-card').forEach((b) => b.onclick = () => this.pickAircraft(+b.dataset.id));
+    const n = (v) => Number(v).toLocaleString('en-US');
+    const cruise = cur.cruise.mach ? `M${cur.cruise.mach} at FL${cur.cruise.ft / 100}` : `${cur.cruise.kt} kt at ${n(cur.cruise.ft)} ft`;
+    const law = { sidestick: 'Fly-by-wire, sidestick, envelope protections', yoke: cur.id === 1 || cur.id === 5 ? 'Conventional controls, yaw damper' : 'Fly-by-wire, control column', fighter: 'Fly-by-wire (g / AoA limiter)', trainer: 'Direct cables', aerobatic: 'Direct cables' }[cur.cockpit];
+    $('hangar-specs').innerHTML = `<h2>${esc(displayName(cur))}</h2>
+      <div class="hs-class">${esc(cur.classRef)} · ${esc(cur.cat)}</div>
+      <p>${esc(cur.role)}</p>
+      <table class="hs-table">
+        <tr><td>Engines</td><td>${cur.engines} × ${cur.style === 'trainer' || cur.style === 'aerobatic' ? 'piston / propeller' : cur.afterburner ? 'afterburning turbofan' : 'turbofan'}</td></tr>
+        <tr><td>Max takeoff weight</td><td>${n(cur.mtow)} kg</td></tr>
+        <tr><td>Cruise</td><td>${cruise}</td></tr>
+        <tr><td>Range / ceiling</td><td>${n(cur.rangeNm)} nm · ${n(cur.ceilingFt)} ft</td></tr>
+        <tr><td>Rotate / approach</td><td>${cur.vr} / ${cur.vref} kt</td></tr>
+        <tr><td>Flaps</td><td>${esc(cur.flaps.join(' · '))}</td></tr>
+        <tr><td>Flight controls</td><td>${esc(law)}</td></tr>
+        <tr><td>Cockpit</td><td>${cur.cockpit === 'fighter' ? 'HUD + 3 MFDs' : cur.style === 'trainer' || cur.style === 'aerobatic' ? 'Analog six-pack' : 'Glass: PFD, ND, EICAS, status'}</td></tr>
+      </table>
+      ${he ? `<p dir="rtl" class="he">כל מטוס בצי טס במודל טיסה משלו בליבת ה-C++: מסה, גאומטריה, מנועים, כן נסע ומערכות.</p>` : ''}
+      <button class="big-btn primary" id="hangar-fly">Fly the ${esc(displayName(cur))} from JFK</button>
+      <div class="note">Original design names; the real type each is modelled on is given as a class reference. Performance is calibrated against public figures (see About &amp; Data).</div>`;
+    $('hangar-fly').onclick = () => g.startFlight({ icao: 'KJFK', start: cur.style === 'trainer' ? 'stand' : 'runway', mode: g.settings.mode, hour: 12, weather: 'fair', aircraft: cur.id });
+    $('hangar-title').textContent = displayName(cur);
+    if (!this.hangar) { this.hangar = new Hangar($('hangar-canvas')); }
+    this.hangar.show(cur);
+    this.hangar.resize();
+  }
 
   tab(name) {
     document.querySelectorAll('.menu-tabs button').forEach((b) => b.classList.toggle('active', b.dataset.tab === name));
     document.querySelectorAll('.tab').forEach((t) => t.classList.toggle('show', t.id === 'tab-' + name));
-    if (name === 'free') setTimeout(() => this.resize(), 30);
+    if (name === 'free' || name === 'hangar') setTimeout(() => this.resize(), 30);
   }
 
   // ---------------------------------------------------------------------
@@ -148,7 +203,7 @@ export class Menu {
     g.settings.mode = $('mode').value;
     g.saveSettings();
     const t = $('time').value;
-    g.startFlight({ icao: r[0], start: $('start-pos').value, mode: g.settings.mode, hour: t === 'now' ? 'now' : parseFloat(t), weather: $('weather').value, dest: this.destRow ? this.destRow[0] : null });
+    g.startFlight({ icao: r[0], start: $('start-pos').value, mode: g.settings.mode, hour: t === 'now' ? 'now' : parseFloat(t), weather: $('weather').value, dest: this.destRow ? this.destRow[0] : null, aircraft: g.settings.aircraft });
   }
 
   // ---------------------------------------------------------------------
@@ -185,6 +240,8 @@ export class Menu {
         <div class="row">Default mode <select id="set-mode"><option value="accessible" ${s.mode === 'accessible' ? 'selected' : ''}>Accessible</option><option value="simulation" ${s.mode === 'simulation' ? 'selected' : ''}>Simulation</option></select></div>
         <div class="note">Accessible: auto-rudder, stall protection, attitude hold when the stick is centred, auto mixture, perfect gyros, easy engine start, more crash tolerance, taxi steering assist. Simulation: none of these; priming, mixture, vacuum gyros and heading-indicator drift are modelled.</div>
         <div class="row">Taxi route line in simulation mode <input type="checkbox" id="set-route" ${s.routeInSim ? 'checked' : ''}></div>
+        <div class="row">Show real aircraft type names <input type="checkbox" id="set-real" ${s.realNames ? 'checked' : ''}></div>
+        <div class="note">Off by default: the fleet uses original names with the real type as a class reference. Turn on only if you hold the rights to use manufacturers' type names.</div>
       </fieldset>
       <fieldset><legend>AUDIO &amp; LANGUAGE</legend>
         <div class="row">Master volume <input type="range" id="set-vol" min="0" max="1" step="0.05" value="${s.volume}"></div>
@@ -202,6 +259,7 @@ export class Menu {
     $('set-cars').oninput = (e) => { s.carDensity = +e.target.value; $('cars-v').textContent = e.target.value; save(); g.vehicles.setDensity(s.carDensity); };
     $('set-mode').onchange = (e) => { s.mode = e.target.value; $('mode').value = s.mode; save(); };
     $('set-route').onchange = (e) => { s.routeInSim = e.target.checked; save(); };
+    $('set-real').onchange = (e) => { s.realNames = e.target.checked; FLEET_OPTIONS.realNames = s.realNames; save(); this.renderAll(); };
     $('set-vol').oninput = (e) => { s.volume = +e.target.value; g.audio.volume.master = s.volume; if (g.audio.master) g.audio.master.gain.value = s.volume; save(); };
     $('set-voice').onchange = (e) => { s.atcVoice = e.target.checked; save(); };
     $('set-he').onchange = (e) => { s.hebrew = e.target.checked; save(); this.renderAll(); };

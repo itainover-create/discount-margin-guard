@@ -182,14 +182,18 @@ void Sim::reset(double e, double n, double z, double hdg, double tasIn, bool onG
   } else {
     pos = {n, e, -z};
     AirData air = atm.at(z);
+    // air start in the configuration the host selected (flap lever), trimmed
+    int lever = (int)clamp(in[IN_FLAPS_LEVER], 0, def->flaps.detents - 1);
+    flapDeg = def->flaps.angleDeg[lever];
+    double ff = def->flaps.maxDeg > 0 ? flapDeg / def->flaps.maxDeg : 0.0;
+    double CL0e = a.CL0 + a.CLflapFull * pow(ff, def->flaps.liftExp > 0 ? def->flaps.liftExp : 0.85);
     double qb = 0.5 * air.rho * tasIn * tasIn;
     double CLreq = mass * G0 / maxf(qb * a.S, 1.0);
-    double alphaTrim = clamp((CLreq - a.CL0) / a.CLa, -0.05, 0.2);
+    double alphaTrim = clamp((CLreq - CL0e) / a.CLa, -0.05, 0.2);
     theta = alphaTrim;
     vel = {tasIn * cos(hdg) * cos(theta - alphaTrim), tasIn * sin(hdg), 0};
     vel += wind.mean(maxf(10.0, z - ground.h));  // airspeed is relative to the air mass
-    flapDeg = 0;
-    double cmNoElev = a.Cm0 + a.Cma * alphaTrim;
+    double cmNoElev = a.Cm0 + a.Cma * alphaTrim + a.CmFlapFull * ff;
     trim = clamp(-cmNoElev / a.CmTrimMax, -1, 1);
     onGround = false;
     td.airTime = 10;
@@ -232,7 +236,7 @@ void Sim::reset(double e, double n, double z, double hdg, double tasIn, bool onG
   in[IN_REVERSE] = 0;
   in[IN_SPEEDBRAKE] = 0;
   in[IN_FIRE_HANDLES] = 0;
-  in[IN_FLAPS_LEVER] = 0;
+  if (onGnd) in[IN_FLAPS_LEVER] = 0;
   in[IN_AP_MASTER] = 0;
   mixture = in[IN_MIXTURE];
   ins.hi = magHeading();

@@ -17,6 +17,8 @@ import { Intro } from './ui/intro.js';
 import { loadEmblem, lockup, gameTitle, badge } from './ui/brand.js';
 import { haversine } from './world/geo.js';
 import { OskIn } from './core/layout.js';
+import { fleetEntry, displayName, FLEET_OPTIONS } from './aircraft/fleet.js';
+import { DamageFX } from './aircraft/fx.js';
 
 const D2R = Math.PI / 180;
 const $ = (id) => document.getElementById(id);
@@ -36,8 +38,9 @@ class Game {
     this.paused = false;
     this.settings = Object.assign({
       quality: 'high', trafficDensity: null, carDensity: null, atcVoice: true, hebrew: false, hud: true, online: true,
-      volume: 0.8, music: 0.7, intro: true, mode: 'accessible', units: 'aviation',
+      volume: 0.8, music: 0.7, intro: true, mode: 'accessible', units: 'aviation', aircraft: 0, realNames: false,
     }, this._loadSettings());
+    FLEET_OPTIONS.realNames = !!this.settings.realNames;
     this.audio = new AudioEngine();  // created early: the intro plays music before the world has loaded
     this.fps = { frames: 0, t: 0, value: 0, hist: [] };
   }
@@ -75,6 +78,7 @@ class Game {
     await this.world.init((m) => this.progress(m, 0.4));
     this.progress('Preparing aircraft', 0.7);
     this.player = new PlayerAircraft(this.core, this.world);
+    this.fx = new DamageFX(this.world);
     this.player.root.visible = false;
     this.rig = new CameraRig(this.camera, this.world);
     this.input = new Input(renderer.domElement);
@@ -169,10 +173,14 @@ class Game {
       this.player.simMode = (spec.mode || this.settings.mode) === 'simulation';
       const def = spec.missionId ? MISSIONS.find((m) => m.id === spec.missionId) : null;
       if (def && def.runway && ap) this.atc.forceRunway(def.runway);
-      const start = spec.save ? this.startFromSave(spec.save) : this.computeStart(spec.start, ap);
-      if (def && def.pax) start.payload = [80, 75 * def.pax, 10];
+      const acId = spec.save && spec.save.aircraft !== undefined ? spec.save.aircraft : (def && def.aircraft !== undefined ? def.aircraft : (spec.aircraft ?? this.settings.aircraft ?? 0));
+      const fl = fleetEntry(acId);
+      const start = spec.save ? this.startFromSave(spec.save) : this.computeStart(spec.start, ap, fl);
+      start.aircraft = fl.id;
+      if (def && def.pax && fl.id === 0) start.payload = [80, 75 * def.pax, 10];
       this.progress('Engine & systems', 0.8);
       this.player.spawn(start);
+      this.fx.reset();
       if (start.runway && ap) this.atc.startOnRunway();
       if (spec.save && spec.save.sw) Object.assign(this.player.sw, spec.save.sw);
       this.missionDef = def;
@@ -203,8 +211,10 @@ class Game {
     return list.find((a) => a.icao === icao) || list[0];
   }
 
-  computeStart(type, ap) {
-    if (!ap) return { x: 0, y: 0, hdgDeg: 0, onGround: false, altM: 600, iasKt: 100 };
+  computeStart(type, ap, f = fleetEntry(0)) {
+    const jet = f.style !== 'trainer' && f.style !== 'aerobatic';
+    const fighter = f.cat === 'Fighter';
+    if (!ap) return { x: 0, y: 0, hdgDeg: 0, onGround: false, altM: jet ? 3000 : 600, iasKt: jet ? (fighter ? 350 : 250) : 100 };
     const w = {};
     if (type === 'stand' || !type) {
       let st = (ap.data.stands || [])[0] || (ap.data.gates || [])[0];
@@ -224,17 +234,18 @@ class Game {
     }
     if (type === 'airHigh') {
       ap.owner.toWorld(end.tx - ux * 6000, end.ty - uy * 6000, w);
-      return { x: w.x, y: w.y, hdgDeg: end.hdgTrue, onGround: false, altM: ap.elev + 900, iasKt: 100 };
+      return { x: w.x, y: w.y, hdgDeg: end.hdgTrue, onGround: false, altM: ap.elev + (jet ? 1200 : 900), iasKt: jet ? (fighter ? 300 : 220) : 100, flaps: 0 };
     }
-    // 5 nm final on a 3 degree path
-    const d = 9000;
+    // 5 nm final on a 3 degree path (jets: 8 nm, landing configuration)
+    const d = jet ? 15000 : 9000;
     ap.owner.toWorld(end.tx - ux * d, end.ty - uy * d, w);
-    return { x: w.x, y: w.y, hdgDeg: end.hdgTrue, onGround: false, altM: end.z + d * Math.tan(3 * D2R) + 15, iasKt: 80, flaps: 1 };
+    if (jet) return { x: w.x, y: w.y, hdgDeg: end.hdgTrue, onGround: false, altM: end.z + d * Math.tan(3 * D2R) + 15, iasKt: f.vref + 5, flaps: f.flaps.length - 1, gearDown: true };
+    return { x: w.x, y: w.y, hdgDeg: end.hdgTrue, onGround: false, altM: end.z + d * Math.tan(3 * D2R) + 15, iasKt: f.id === 13 ? 90 : 80, flaps: f.id === 0 ? 1 : 0 };
   }
 
   startFromSave(s) {
     const p = this.world.frame.toXY(s.lat, s.lon);
-    return { x: p.x, y: p.y, hdgDeg: s.hdg, onGround: s.onGround, altM: s.alt, iasKt: s.ias, engine: true, fuel: s.fuel };
+    return { x: p.x, y: p.y, hdgDeg: s.hdg, onGround: s.onGround, altM: s.alt, iasKt: s.ias, engine: true, fuel: s.fuel, aircraft: s.aircraft, gearDown: s.gearDown, flaps: s.sw ? s.sw.flaps : 0 };
   }
 
   setTime(hour) {
@@ -280,11 +291,13 @@ class Game {
     const ctl = { pitch: input.pitch, roll: input.roll, yaw: input.yaw, brakeL: input.brakeL, brakeR: input.brakeR, trimRate: input.trimRate };
     if (this.rig.view === 'free') { ctl.pitch = 0; ctl.roll = 0; ctl.yaw = 0; }
     this.navUpdate();
+    this.displayData(dt);
     p.update(dt, ctl);
     // floating origin
     const a = this.world.maybeRebase(p.o.x, p.o.y);
     if (a) {
       p.rebase(a);
+      this.fx.rebase(a);
       if (this.rig.free) { this.rig.free.pos.x = a.sx * this.rig.free.pos.x + a.tx; this.rig.free.pos.z -= a.ty; }
       this.rig.first = true;
       this.updateRouteGuide();
@@ -301,7 +314,8 @@ class Game {
     const toCam = camThree.clone().sub(p.root.position);
     const dist = toCam.length();
     const closing = dist > 1 ? new THREE.Vector3(p.o.ve, p.o.vu, -p.o.vn).dot(toCam.normalize()) : 0;
-    this.audio.update(dt, p.o, sw, this.rig.view, { dist, closing }, this.traffic.agents);
+    p.ui.gpws = this.audio.update(dt, p.o, sw, this.rig.view, { dist, closing }, this.traffic.agents, p.fleet) || '';
+    this.fx.update(dt, p, this.camera, this.renderer);
     this.hud.update(dt);
     if (p.o.crashed && !this.crashShown) {
       this.crashShown = true;
@@ -309,6 +323,22 @@ class Game {
       setTimeout(() => { if (this.state === 'flight') this.endFlight(); }, 4500);
     }
     this.autosave(dt);
+  }
+
+  // Data the glass cockpit shows besides the core outputs (route, TCAS traffic)
+  displayData(dt) {
+    const p = this.player, ui = p.ui;
+    ui.atOn = p.sw.at;
+    ui.nav = this.nav;
+    ui.magVar = this.world.magVar || 0;
+    this._tcasT = (this._tcasT || 0) - dt;
+    if (this._tcasT <= 0 && p.isJet) {
+      this._tcasT = 0.5;
+      ui.traffic = this.traffic.agents.filter((a) => a.z !== undefined).map((a) => {
+        const dx = a.x - p.o.x, dy = a.y - p.o.y;
+        return { brg: ((Math.atan2(dx, dy) / D2R - ui.magVar) + 360) % 360, distNm: Math.hypot(dx, dy) / 1852, dAltFt: (a.z - p.o.z) / 0.3048 };
+      }).filter((t) => t.distNm < 40);
+    }
   }
 
   blankInput() {
@@ -356,8 +386,27 @@ class Game {
         case 'viewNext': this.rig.next(p, 1); this.mission && this.mission.viewsSeen.add(this.rig.view); this.toast(VIEW_NAMES[this.rig.view]); break;
         case 'viewPrev': this.rig.next(p, -1); this.toast(VIEW_NAMES[this.rig.view]); break;
         case 'parkBrake': sw.parkBrake = !sw.parkBrake; this.audio.oneShot('click'); this.toast(sw.parkBrake ? 'Parking brake SET' : 'Parking brake RELEASED'); break;
-        case 'flapsDown': sw.flaps = Math.min(3, sw.flaps + 1); this.toast(`Flaps ${[0, 10, 20, 30][sw.flaps]}°`); break;
-        case 'flapsUp': sw.flaps = Math.max(0, sw.flaps - 1); this.toast(`Flaps ${[0, 10, 20, 30][sw.flaps]}°`); break;
+        case 'flapsDown': sw.flaps = Math.min(p.fleet.flaps.length - 1, sw.flaps + 1); this.toast(`Flaps ${p.fleet.flaps[sw.flaps]}`); break;
+        case 'flapsUp': sw.flaps = Math.max(0, sw.flaps - 1); this.toast(`Flaps ${p.fleet.flaps[sw.flaps]}`); break;
+        case 'gear':
+          if (!p.fleet.gearRetract) { this.toast('Fixed landing gear'); break; }
+          sw.gear = !sw.gear; this.audio.oneShot('click'); this.toast(sw.gear ? 'Gear DOWN' : 'Gear UP'); break;
+        case 'speedbrake':
+          if (!p.isJet) break;
+          sw.speedbrake = sw.speedbrake > 0.05 ? 0 : (p.fleet.cat === 'Fighter' ? 1 : 0.6); this.toast(sw.speedbrake ? 'Speed brake EXTENDED' : 'Speed brake RETRACTED'); break;
+        case 'spoilerArm': if (p.isJet) { sw.spoilerArm = !sw.spoilerArm; this.toast(sw.spoilerArm ? 'Ground spoilers ARMED' : 'Ground spoilers DISARMED'); } break;
+        case 'reverse': if (p.isJet && p.fleet.cat === 'Airliner') { sw.reverse = !sw.reverse; this.toast(sw.reverse ? 'Reverse thrust' : 'Reverse stowed'); } break;
+        case 'autothrottle':
+          if (!p.isJet) break;
+          sw.at = !sw.at; if (sw.at && p.o.ias > 30) p.ui.atSpdKt = Math.round(p.o.ias / 0.514444); this.toast(sw.at ? `Autothrottle ON ${p.ui.atSpdKt} kt` : 'Autothrottle OFF'); break;
+        case 'atSpdUp': p.ui.atSpdKt = (p.ui.atSpdKt || 0) + 5; this.toast(`Speed ${p.ui.atSpdKt} kt`); break;
+        case 'atSpdDown': p.ui.atSpdKt = Math.max(100, (p.ui.atSpdKt || 0) - 5); this.toast(`Speed ${p.ui.atSpdKt} kt`); break;
+        case 'fireHandle': {
+          const m = p.o.fireMask | 0;
+          if (m) { sw.fireHandles = (sw.fireHandles | 0) | m; this.toast('Fire handle pulled: fuel off, bottle discharged', 'bad'); }
+          else this.toast('No engine fire');
+          break;
+        }
         case 'autoStart': this.autoStartStop(); break;
         case 'apToggle': sw.apMaster = !sw.apMaster; if (sw.apMaster) { p.ui.apAltFt = Math.round(p.o.indAlt / 0.3048 / 100) * 100; p.ui.hdgBug = p.o.hi; p.ui.hdgBugDeg = p.o.hi / D2R; } this.toast(sw.apMaster ? 'Autopilot ON' : 'Autopilot OFF'); break;
         case 'apHdg': sw.apLat = sw.apLat === 1 ? 0 : 1; this.toast(`AP lateral: ${['ROL', 'HDG', 'NAV'][sw.apLat]}`); break;
@@ -404,6 +453,7 @@ class Game {
     const p = this.player, sw = p.sw;
     if (h) {
       const ud = h.object.userData;
+      this.hoverIndex = ud.index | 0;
       tip.textContent = `${ud.label}${this._ctlValue(ud.action)}`;
       tip.style.left = `${input.mouse.x + 14}px`;
       tip.style.top = `${input.mouse.y + 10}px`;
@@ -418,10 +468,11 @@ class Game {
       tip.classList.add('hidden');
     }
     // dragging levers
-    if (input.mouse.drag && input.mouse.button === 0 && (this.dragging || (h && ['throttle', 'mixture', 'trim'].includes(h.object.userData.action)))) {
+    if (input.mouse.drag && input.mouse.button === 0 && (this.dragging || (h && ['throttle', 'mixture', 'trim', 'speedbrake'].includes(h.object.userData.action)))) {
       if (!this.dragging) this.dragging = h.object.userData.action;
       const dv = -input.lookDY * 0.004;
-      if (this.dragging === 'throttle') sw.throttle = Math.min(1, Math.max(0, sw.throttle + dv));
+      if (this.dragging === 'throttle') { sw.throttle = Math.min(1, Math.max(0, sw.throttle + dv)); if (sw.at && Math.abs(dv) > 0.02) sw.at = false; }
+      if (this.dragging === 'speedbrake') sw.speedbrake = Math.min(1, Math.max(0, (sw.speedbrake || 0) - dv));
       if (this.dragging === 'mixture') sw.mixture = Math.min(1, Math.max(0, sw.mixture + dv));
       if (this.dragging === 'trim') this.core.setTrim(p.o.trim + dv * 0.5);
       input.lookDX = input.lookDY = 0; // don't move the view while dragging a lever
@@ -438,7 +489,7 @@ class Game {
         case 'mags': if (input.click.button === 0) sw.mags = (sw.mags + 1) % 4; break;
         case 'fuelSelector': sw.fuelSelector = (sw.fuelSelector + 1) % 4; break;
         case 'parkBrake': sw.parkBrake = !sw.parkBrake; break;
-        case 'flaps': { const upper = h.point.y > h.object.getWorldPosition(new THREE.Vector3()).y; sw.flaps = Math.max(0, Math.min(3, sw.flaps + (upper ? -1 : 1))); break; }
+        case 'flaps': { const upper = h.point.y > h.object.getWorldPosition(new THREE.Vector3()).y; sw.flaps = Math.max(0, Math.min(p.fleet.flaps.length - 1, sw.flaps + (upper ? -1 : 1))); break; }
         case 'ap': sw.apMaster = !sw.apMaster; if (sw.apMaster) { p.ui.apAltFt = Math.round(p.o.indAlt / 0.3048 / 100) * 100; } break;
         case 'apHdg': sw.apLat = sw.apLat === 1 ? 0 : 1; break;
         case 'apNav': sw.apLat = sw.apLat === 2 ? 0 : 2; break;
@@ -451,6 +502,26 @@ class Game {
         case 'baro': p.ui.baroHpa = Math.round(this.world.weather.state.qnh); break;
         case 'comTune': this.hud.toggleAtc(true); break;
         case 'throttle': case 'mixture': case 'trim': break;
+        case 'gear': if (p.fleet.gearRetract) sw.gear = !sw.gear; break;
+        case 'jflaps': {
+          if (p.fleet.cat === 'Fighter') { sw.flaps = sw.flaps ? 0 : 1; break; }
+          const fwd = h.point.z < h.object.getWorldPosition(new THREE.Vector3()).z;  // nearer the panel = retract
+          sw.flaps = Math.max(0, Math.min(p.fleet.flaps.length - 1, sw.flaps + (fwd ? -1 : 1)));
+          break;
+        }
+        case 'speedbrake':
+          if (p.fleet.cat === 'Fighter') sw.speedbrake = sw.speedbrake > 0.05 ? 0 : 1;
+          else if ((sw.speedbrake || 0) < 0.05) sw.spoilerArm = !sw.spoilerArm;
+          else sw.speedbrake = 0;
+          break;
+        case 'reverse': sw.reverse = !sw.reverse; break;
+        case 'at': sw.at = !sw.at; if (sw.at && p.o.ias > 30 && !p.ui.atSpdKt) p.ui.atSpdKt = Math.round(p.o.ias / 0.514444); break;
+        case 'atSpd': p.ui.atSpdKt = Math.round(p.o.ias / 0.514444); break;
+        case 'apAltKnob': p.ui.apAltFt = Math.round(p.o.indAlt / 0.3048 / 100) * 100; break;
+        case 'ndRange': p.ui.ndRange = { 10: 20, 20: 40, 40: 80, 80: 160, 160: 10 }[p.ui.ndRange || 20]; break;
+        case 'fire': sw.fireHandles = (sw.fireHandles | 0) ^ (1 << (h.object.userData.index | 0)); break;
+        case 'fuelCtl': sw.mixture = sw.mixture > 0.5 ? 0 : 1; break;
+        case 'engStart': sw.mags = sw.mags === 0 ? 3 : sw.mags === 3 ? 4 : 0; break;
         default:
           if (a in sw) sw[a] = !sw[a];
       }
@@ -464,7 +535,17 @@ class Game {
     if (a === 'mixture') return ` — ${Math.round(sw.mixture * 100)}%`;
     if (a === 'mags') return ` — ${['OFF', 'R', 'L', 'BOTH', 'START'][sw.mags]}`;
     if (a === 'fuelSelector') return ` — ${['OFF', 'LEFT', 'BOTH', 'RIGHT'][sw.fuelSelector]}`;
-    if (a === 'flaps') return ` — ${[0, 10, 20, 30][sw.flaps]}°`;
+    if (a === 'flaps' || a === 'jflaps') return ` — ${this.player.fleet.flaps[sw.flaps]}`;
+    if (a === 'gear') return ` — ${sw.gear ? 'DOWN' : 'UP'}`;
+    if (a === 'speedbrake') return ` — ${sw.speedbrake > 0.05 ? Math.round(sw.speedbrake * 100) + '%' : sw.spoilerArm ? 'ARMED' : 'DOWN'}`;
+    if (a === 'reverse') return ` — ${sw.reverse ? 'REVERSE' : 'STOWED'}`;
+    if (a === 'at') return ` — ${sw.at ? 'ON' : 'OFF'}`;
+    if (a === 'atSpd') return ` — ${this.player.ui.atSpdKt || 0} kt`;
+    if (a === 'apAltKnob') return ` — ${this.player.ui.apAltFt} ft`;
+    if (a === 'ndRange') return ` — ${this.player.ui.ndRange || 20} nm`;
+    if (a === 'fire') return ` — ${((sw.fireHandles | 0) >> (this.hoverIndex | 0)) & 1 ? 'PULLED' : 'IN'}`;
+    if (a === 'fuelCtl') return ` — ${sw.mixture > 0.5 ? 'RUN' : 'CUTOFF'}`;
+    if (a === 'engStart') return ` — ${{ 0: 'OFF', 3: 'NORM', 4: 'START' }[sw.mags] || sw.mags}`;
     if (a === 'trim') return ` — ${Math.round(o.trim * 100)}`;
     if (a === 'baro') return ` — ${this.player.ui.baroHpa} hPa`;
     if (a === 'hdgBug') return ` — ${String(Math.round(this.player.ui.hdgBugDeg)).padStart(3, '0')}°`;
@@ -479,6 +560,10 @@ class Game {
     else if (a === 'hdgBug') this.bumpHdg(d);
     else if (a === 'baro') p.ui.baroHpa += d;
     else if (a === 'apUp' || a === 'apDn') { if (sw.apVert === 0) p.ui.apVsFpm += d * 100; else p.ui.apAltFt += d * 100; }
+    else if (a === 'atSpd') p.ui.atSpdKt = Math.max(100, (p.ui.atSpdKt || 0) + d);
+    else if (a === 'apAltKnob') p.ui.apAltFt = Math.max(0, p.ui.apAltFt + d * (this.input.down.has('ShiftLeft') ? 1000 : 100));
+    else if (a === 'ndRange') p.ui.ndRange = Math.max(10, Math.min(160, (p.ui.ndRange || 20) * (d > 0 ? 2 : 0.5)));
+    else if (a === 'speedbrake') sw.speedbrake = Math.min(1, Math.max(0, (sw.speedbrake || 0) + d * 0.1));
   }
 
   // ---------------------------------------------------------------------
@@ -489,6 +574,26 @@ class Game {
     const steps = [];
     const wait = (s) => steps.push({ t: s });
     const set = (k, v) => steps.push({ fn: () => { sw[k] = v; this.audio.oneShot('click'); } });
+    if (p.isJet) {
+      const all = (1 << p.fleet.engines) - 1;
+      if ((p.o.engMask & all) !== all) {
+        this.toast('Auto-start: battery, ignition START, fuel control RUN at 22 % N2');
+        set('parkBrake', true); wait(0.4); set('battery', true); wait(0.4); set('avionics', true); set('beacon', true); wait(0.4);
+        set('mixture', 0); set('throttle', 0); set('mags', 3); wait(0.4); set('mags', 4);
+        steps.push({ fn: () => {}, until: () => p.o.n2Avg > 22, max: 40 });
+        set('mixture', 1);
+        steps.push({ fn: () => {}, until: () => (p.o.engMask & all) === all && p.o.n2Avg > 55, max: 60 });
+        set('mags', 3); set('alternator', true); set('nav', true); wait(0.3);
+      } else {
+        this.toast('Auto-shutdown');
+        set('throttle', 0); set('at', false); wait(0.6); set('landing', false); set('taxi', false); set('strobe', false); wait(0.4);
+        set('mixture', 0);
+        steps.push({ fn: () => {}, until: () => p.o.engMask === 0, max: 20 });
+        set('mags', 0); set('alternator', false); set('beacon', false); set('nav', false); set('avionics', false); wait(0.3); set('battery', false); set('parkBrake', true);
+      }
+      this.auto = { steps, i: 0, t: 0 };
+      return;
+    }
     if (!p.o.engineRunning) {
       this.toast('Auto-start: running the start checklist');
       set('parkBrake', true); wait(0.4); set('battery', true); wait(0.4); set('beacon', true); wait(0.3);

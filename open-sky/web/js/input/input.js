@@ -22,6 +22,14 @@ export const ACTIONS = {
   parkBrake: { label: 'Parking brake', he: 'בלם חניה', keys: ['KeyB'], once: true },
   flapsDown: { label: 'Flaps down one notch', he: 'מדפים מטה', keys: ['KeyF'], once: true },
   flapsUp: { label: 'Flaps up one notch', he: 'מדפים מעלה', keys: ['KeyV'], once: true },
+  gear: { label: 'Landing gear up / down', he: 'כן נסע למעלה / למטה', keys: ['KeyG'], once: true },
+  speedbrake: { label: 'Speed brake extend / retract', he: 'בלם אוויר', keys: ['Slash'], once: true },
+  spoilerArm: { label: 'Arm ground spoilers', he: 'חימוש ספוילרים', keys: ['Shift+Slash'], once: true },
+  reverse: { label: 'Thrust reversers (on the ground)', he: 'הפיכת דחף', keys: ['F2'], once: true },
+  autothrottle: { label: 'Autothrottle on / off', he: 'מצערת אוטומטית', keys: ['Shift+KeyR'], once: true },
+  atSpdDown: { label: 'Autothrottle speed −5 kt', he: 'מהירות −5', keys: ['Shift+Comma'], once: true },
+  atSpdUp: { label: 'Autothrottle speed +5 kt', he: 'מהירות +5', keys: ['Shift+Period'], once: true },
+  fireHandle: { label: 'Pull fire handle of a burning engine', he: 'ידית כיבוי אש', keys: ['Shift+KeyF'], once: true },
   autoStart: { label: 'Auto start / shutdown (runs the real procedure)', he: 'התנעה/כיבוי אוטומטיים', keys: ['Shift+KeyE'], once: true },
   apToggle: { label: 'Autopilot on/off', he: 'טייס אוטומטי', keys: ['KeyZ'], once: true },
   apHdg: { label: 'AP heading mode', he: 'מצב כיוון', keys: ['KeyX'], once: true },
@@ -43,10 +51,10 @@ export const ACTIONS = {
   resetLook: { label: 'Reset view', he: 'איפוס מבט', keys: ['KeyR'], once: true },
   hud: { label: 'Toggle HUD', he: 'תצוגת נתונים', keys: ['KeyH'], once: true },
   map: { label: 'Toggle map', he: 'מפה', keys: ['KeyM'], once: true },
-  checklist: { label: 'Toggle checklist', he: 'רשימת תיוג', keys: ['KeyG'], once: true },
+  checklist: { label: 'Toggle checklist', he: 'רשימת תיוג', keys: ['Shift+KeyG'], once: true },
   save: { label: 'Save point', he: 'נקודת שמירה', keys: ['KeyO'], once: true },
   pause: { label: 'Pause', he: 'השהיה', keys: ['KeyP'], once: true },
-  help: { label: 'Controls help', he: 'עזרה', keys: ['Slash', 'F1'], once: true },
+  help: { label: 'Controls help', he: 'עזרה', keys: ['F1'], once: true },
   menu: { label: 'Menu', he: 'תפריט', keys: ['Escape'], once: true },
 };
 
@@ -81,6 +89,11 @@ export class Input {
       gamepad: JSON.parse(JSON.stringify(DEFAULT_GP)),
       joystick: { index: -1, pitch: { axis: -1, invert: false }, roll: { axis: -1, invert: false }, yaw: { axis: -1, invert: false }, throttle: { axis: -1, invert: false }, brakes: { axis: -1, invert: false }, mixture: { axis: -1, invert: false }, buttons: {} },
     }, saved || {});
+    // bindings saved by an older version: add new actions, move keys that changed meaning
+    const K = this.settings.keys;
+    for (const [k, v] of Object.entries(ACTIONS)) if (!K[k]) K[k] = v.keys.slice();
+    if (K.checklist && K.checklist.includes('KeyG')) K.checklist = ['Shift+KeyG'];
+    if (K.help) K.help = K.help.filter((c) => c !== 'Slash');
     this.captureEnabled = true;
     this.textFocus = false;
     this.binding = null;
@@ -102,7 +115,7 @@ export class Input {
       const code = this._code(e);
       if (!e.repeat) this.pressed.push(code);
       this.down.add(e.code);
-      if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'PageUp', 'PageDown', 'Home', 'End', 'Slash', 'F1', 'Backquote', 'Quote', 'Tab'].includes(e.code)) e.preventDefault();
+      if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'PageUp', 'PageDown', 'Home', 'End', 'Slash', 'F1', 'F2', 'Backquote', 'Quote', 'Tab'].includes(e.code)) e.preventDefault();
     });
     window.addEventListener('keyup', (e) => { this.down.delete(e.code); });
     window.addEventListener('blur', () => this.down.clear());

@@ -125,7 +125,7 @@ export const FLEET = [
     mtow: 170600, oew: 71700, fuelKg: 75750, pax: 0, rangeNm: 6000, ceilingFt: 50000, gearRetract: true,
     g: { L: 21.0, noseX: 9.5, b: 52.4, S: 478, sweep: 33, cg: 3.6, mainAft: 1.0, wheelbase: 11.0, track: 12.2, bogie: 4, noseWheels: 2,
       eng: [[-2.0, -5.0, -0.3], [-2.0, -2.8, -0.3], [-2.0, 2.8, -0.3], [-2.0, 5.0, -0.3]], engD: 1.1, eye: [7.5, -0.5, -1.4] },
-    livery: { body: 0x3c4148, belly: 0x353a40, stripe: 0x2f3439, accent: 0x4a5058, tail: 0x3c4148, eng: 0x2a2e33 },
+    livery: { body: 0x5d646e, belly: 0x4f565f, stripe: 0x3f454d, accent: 0x6a717b, tail: 0x5d646e, eng: 0x2a2e33 },
   },
   {
     id: 12, key: 'vega-650', name: 'Vega 650', classRef: 'G650 class', real: 'Gulfstream G650',

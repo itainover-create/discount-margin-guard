@@ -64,6 +64,7 @@ class Core {
   setTrim(t) { this.x.osk_set_trim(t); }
   alignHI() { this.x.osk_align_hi(); }
   crash(reason) { this.x.osk_crash(reason); }
+  damage(part, amount) { this.x.osk_damage(part, amount); }
   clearEvents() { this.x.osk_clear_events(); }
   setPaused(p) { this.x.osk_set_paused(p ? 1 : 0); }
   setSimMode(m) { this.x.osk_set_sim_mode(m ? 1 : 0); }

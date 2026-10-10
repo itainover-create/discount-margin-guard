@@ -185,11 +185,13 @@ export class Scorer {
     const ev = o.events | 0;
     const newEv = ev & ~this.lastEvents;
     this.lastEvents = ev;
-    const E = { 1: ['tailStrike', 10, 'Tail strike', 'פגיעת זנב'], 2: ['propStrike', 20, 'Propeller strike', 'פגיעת מדחף'], 4: ['tip', 15, 'Wingtip strike', 'פגיעת קצה כנף'], 8: ['vfe', 8, 'Flap speed (Vfe) exceeded', 'חריגה ממהירות מדפים'], 16: ['vne', 15, 'Never-exceed speed exceeded', 'חריגה ממהירות מקסימלית'], 32: ['glim', 15, 'Load factor limit exceeded', 'חריגה מעומס מבני'], 64: ['stall', 5, 'Stall', 'הזדקרות'], 2048: ['apdisc', 0, 'Autopilot disconnected', 'ניתוק טייס אוטומטי'], 4096: ['bounce', 5, 'Bounced landing', 'נחיתה מקפצת'] };
+    const E = { 1: ['tailStrike', 10, 'Tail strike', 'פגיעת זנב'], 2: ['propStrike', 20, 'Propeller strike', 'פגיעת מדחף'], 4: ['tip', 15, 'Wingtip strike', 'פגיעת קצה כנף'], 8: ['vfe', 8, 'Flap speed (Vfe) exceeded', 'חריגה ממהירות מדפים'], 16: ['vne', 15, 'Never-exceed speed exceeded', 'חריגה ממהירות מקסימלית'], 32: ['glim', 15, 'Load factor limit exceeded', 'חריגה מעומס מבני'], 64: ['stall', 5, 'Stall', 'הזדקרות'], 2048: ['apdisc', 0, 'Autopilot disconnected', 'ניתוק טייס אוטומטי'], 4096: ['bounce', 5, 'Bounced landing', 'נחיתה מקפצת'],
+      8192: ['damage', 10, 'Structural damage', 'נזק מבני'], 16384: ['fire', 15, 'Engine fire', 'שריפת מנוע'], 32768: ['partLost', 25, 'Part of the airframe separated', 'חלק מהמטוס ניתק'], 65536: ['gearWarn', 5, 'Landing configuration with the gear up', 'תצורת נחיתה ללא גלגלים'] };
+    const once = { damage: 1, fire: 1, partLost: 1, gearWarn: 1 };
     for (const [bit, [k, pts, txt, he]] of Object.entries(E)) {
       if (newEv & +bit) {
         if (+bit === 64 && agl < 25) continue; // flare stall-horn / landing stall is normal
-        if (pts) this.penalty(k + this.t.toFixed(0), pts, txt, he); else this.note(txt, he);
+        if (pts) this.penalty(once[k] ? k : k + this.t.toFixed(0), pts, txt, he); else this.note(txt, he);
       }
     }
     // landings
