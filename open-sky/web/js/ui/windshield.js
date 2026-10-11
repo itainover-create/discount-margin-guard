@@ -20,8 +20,10 @@ export class Windshield {
 
   clear() { this.drops.length = 0; this.g.clearRect(0, 0, this.c.width, this.c.height); }
 
-  // active: cockpit view; rain: 0..2; kt: airspeed; wipers: jet with wipers on
-  update(dt, active, rain, kt, wipers) {
+  // active: cockpit view; rain: 0..2; kt: airspeed; wipers: jet with wipers on;
+  // clip: optional screen-space polygons (CSS px) of the window openings, so
+  // rain stays on the glass and off the instrument panel
+  update(dt, active, rain, kt, wipers, clip = null) {
     if (!active || (!rain && !this.drops.length)) {
       if (this.visible) { this.clear(); this.c.style.display = 'none'; this.visible = false; }
       return;
@@ -60,7 +62,15 @@ export class Windshield {
       if (wp.a > 1) { wp.a = 1; wp.dir = -1; }
       if (wp.a < -1) { wp.a = -1; wp.dir = 1; }
     }
-    const piv = { x: W * 0.5, y: H * 1.05 }, len = H * 0.9, ang = -Math.PI / 2 + wp.a * 0.95;
+    // wiper pivots at the foot of the windscreen (the first clip polygon) when known
+    let piv = { x: W * 0.5, y: H * 1.05 }, len = H * 0.9;
+    if (clip && clip[0] && clip[0].length > 2) {
+      const xs = clip[0].map((q) => q[0]), ys = clip[0].map((q) => q[1]);
+      const y0 = Math.min(...ys), y1 = Math.max(...ys);
+      piv = { x: (Math.min(...xs) + Math.max(...xs)) / 2 * s, y: y1 * s + 8 * s };
+      len = Math.max(40 * s, (y1 - y0) * s * 0.95);
+    }
+    const ang = -Math.PI / 2 + wp.a * 0.95;
     const ax = Math.cos(ang), ay = Math.sin(ang);
     this.drops = this.drops.filter((d) => {
       if (d.y < -10 || d.x < -10 || d.x > W + 10 || d.y > H + 10 || d.age > 25) return false;
@@ -74,22 +84,38 @@ export class Windshield {
     // draw
     const g = this.g;
     g.clearRect(0, 0, W, H);
-    for (const d of this.drops) {
-      if (fast > 0.2) {
-        g.strokeStyle = 'rgba(205,220,235,0.16)';
-        g.lineWidth = d.r * 0.7;
-        g.beginPath(); g.moveTo(d.x, d.y); g.lineTo(d.x - d.vx * 0.06, d.y - d.vy * 0.06); g.stroke();
+    g.save();
+    if (clip && clip.length) {
+      g.beginPath();
+      for (const poly of clip) poly.forEach(([px, py], i) => (i ? g.lineTo(px * s, py * s) : g.moveTo(px * s, py * s)));
+      g.clip();
+    }
+    // streaks first (behind the beads): thin, faint, fading toward the tail
+    if (fast > 0.2) {
+      g.lineCap = 'round';
+      for (const d of this.drops) {
+        g.strokeStyle = 'rgba(120,132,146,0.16)';
+        g.lineWidth = d.r * 0.45;
+        g.beginPath(); g.moveTo(d.x, d.y); g.lineTo(d.x - d.vx * 0.08, d.y - d.vy * 0.08); g.stroke();
       }
-      g.fillStyle = 'rgba(190,205,220,0.20)';
+    }
+    for (const d of this.drops) {
+      // a bead refracts the bright sky above into its lower half and the
+      // darker scene below into its upper half; a small specular glint on top
+      g.fillStyle = 'rgba(60,70,82,0.2)';
       g.beginPath(); g.arc(d.x, d.y, d.r, 0, Math.PI * 2); g.fill();
-      g.fillStyle = 'rgba(255,255,255,0.38)';
-      g.beginPath(); g.arc(d.x - d.r * 0.3, d.y - d.r * 0.35, d.r * 0.32, 0, Math.PI * 2); g.fill();
-      g.strokeStyle = 'rgba(20,30,40,0.18)'; g.lineWidth = 1;
-      g.beginPath(); g.arc(d.x, d.y, d.r, 0.2, Math.PI - 0.2); g.stroke();
+      // thin darker rim: keeps beads readable against a bright, overcast sky
+      g.strokeStyle = 'rgba(30,38,48,0.28)'; g.lineWidth = Math.max(0.8, d.r * 0.16);
+      g.beginPath(); g.arc(d.x, d.y, d.r * 0.92, 0, Math.PI * 2); g.stroke();
+      g.fillStyle = 'rgba(235,242,250,0.30)';
+      g.beginPath(); g.ellipse(d.x, d.y + d.r * 0.35, d.r * 0.7, d.r * 0.45, 0, 0, Math.PI * 2); g.fill();
+      g.fillStyle = 'rgba(255,255,255,0.65)';
+      g.beginPath(); g.arc(d.x - d.r * 0.35, d.y - d.r * 0.4, Math.max(0.6, d.r * 0.18), 0, Math.PI * 2); g.fill();
     }
     if (wp.on) {
       g.strokeStyle = 'rgba(15,17,20,0.85)'; g.lineWidth = 7 * s; g.lineCap = 'round';
       g.beginPath(); g.moveTo(piv.x, piv.y); g.lineTo(piv.x + ax * len, piv.y + ay * len); g.stroke();
     }
+    g.restore();
   }
 }

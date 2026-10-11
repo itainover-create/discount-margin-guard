@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "runId": "pass2d",
+  "captures": [
+    {
+      "mode": "desktop",
+      "state": "storm-cockpit",
+      "report": "artifacts/pass2d/desktop-storm-cockpit.json"
+    }
+  ]
+}

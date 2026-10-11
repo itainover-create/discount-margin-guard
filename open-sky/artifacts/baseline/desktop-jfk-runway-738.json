@@ -1,0 +1,99 @@
+{
+  "url": "http://127.0.0.1:8123/index.html?skipintro",
+  "mode": "desktop",
+  "state": "jfk-runway-738",
+  "requestedState": "jfk-runway-738",
+  "appliedState": "jfk-runway-738",
+  "runId": "baseline",
+  "seed": 42,
+  "screenshotPath": "artifacts/baseline/desktop-jfk-runway-738.png",
+  "gpu": {
+    "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+    "vendor": "Google Inc. (Google)",
+    "softwareRendered": true
+  },
+  "result": {
+    "ok": true,
+    "reason": "nonblank",
+    "rect": {
+      "x": 0,
+      "y": 0,
+      "width": 1280,
+      "height": 720
+    },
+    "drawingBuffer": {
+      "width": 1280,
+      "height": 720
+    },
+    "alphaPixels": 4096,
+    "variance": 246,
+    "colorBuckets": 126,
+    "metrics": {
+      "colorBuckets": 173,
+      "colorEntropyBits": 4.52,
+      "edgeDensity": 0.389,
+      "luminance": {
+        "mean": 108.4,
+        "p5": 18.5,
+        "p95": 205.3,
+        "contrast": 186.9
+      },
+      "dominantColorShare": 0.228,
+      "nonBackgroundShare": 0.772
+    },
+    "renderBudget": {
+      "tier": "desktop",
+      "note": "starting-point budget; adjust per game and document overrides",
+      "rows": [
+        {
+          "metric": "calls",
+          "actual": 424,
+          "limit": 300,
+          "ok": false
+        },
+        {
+          "metric": "triangles",
+          "actual": 1671849,
+          "limit": 750000,
+          "ok": false
+        },
+        {
+          "metric": "geometries",
+          "actual": 213,
+          "limit": 300,
+          "ok": true
+        },
+        {
+          "metric": "textures",
+          "actual": 22,
+          "limit": 60,
+          "ok": true
+        }
+      ],
+      "withinBudget": false
+    },
+    "diagnostics": {
+      "renderer": {
+        "calls": 424,
+        "triangles": 1671849,
+        "points": 34443,
+        "lines": 0,
+        "geometries": 213,
+        "textures": 22,
+        "programs": 20,
+        "pixelRatio": 1,
+        "toneMapping": 0,
+        "exposure": 1,
+        "shadowMap": false,
+        "postPasses": 0
+      },
+      "state": "jfk-runway-738",
+      "fps": 13,
+      "buildings": 38036
+    }
+  },
+  "consoleErrors": [],
+  "pageErrors": [],
+  "consoleErrorCount": 0,
+  "pageErrorCount": 0
+}

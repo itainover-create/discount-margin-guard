@@ -1,0 +1,99 @@
+{
+  "url": "http://127.0.0.1:8123/index.html?skipintro",
+  "mode": "desktop",
+  "state": "night-manhattan",
+  "requestedState": "night-manhattan",
+  "appliedState": "night-manhattan",
+  "runId": "baseline",
+  "seed": 42,
+  "screenshotPath": "artifacts/baseline/desktop-night-manhattan.png",
+  "gpu": {
+    "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+    "vendor": "Google Inc. (Google)",
+    "softwareRendered": true
+  },
+  "result": {
+    "ok": true,
+    "reason": "nonblank",
+    "rect": {
+      "x": 0,
+      "y": 0,
+      "width": 1280,
+      "height": 720
+    },
+    "drawingBuffer": {
+      "width": 1280,
+      "height": 720
+    },
+    "alphaPixels": 4096,
+    "variance": 246,
+    "colorBuckets": 52,
+    "metrics": {
+      "colorBuckets": 95,
+      "colorEntropyBits": 1.62,
+      "edgeDensity": 0.114,
+      "luminance": {
+        "mean": 10.6,
+        "p5": 2.1,
+        "p95": 23.6,
+        "contrast": 21.5
+      },
+      "dominantColorShare": 0.618,
+      "nonBackgroundShare": 0.382
+    },
+    "renderBudget": {
+      "tier": "desktop",
+      "note": "starting-point budget; adjust per game and document overrides",
+      "rows": [
+        {
+          "metric": "calls",
+          "actual": 309,
+          "limit": 300,
+          "ok": false
+        },
+        {
+          "metric": "triangles",
+          "actual": 2755781,
+          "limit": 750000,
+          "ok": false
+        },
+        {
+          "metric": "geometries",
+          "actual": 288,
+          "limit": 300,
+          "ok": true
+        },
+        {
+          "metric": "textures",
+          "actual": 5,
+          "limit": 60,
+          "ok": true
+        }
+      ],
+      "withinBudget": false
+    },
+    "diagnostics": {
+      "renderer": {
+        "calls": 309,
+        "triangles": 2755781,
+        "points": 61473,
+        "lines": 168,
+        "geometries": 288,
+        "textures": 5,
+        "programs": 20,
+        "pixelRatio": 1,
+        "toneMapping": 0,
+        "exposure": 1,
+        "shadowMap": false,
+        "postPasses": 0
+      },
+      "state": "night-manhattan",
+      "fps": 37,
+      "buildings": 326931
+    }
+  },
+  "consoleErrors": [],
+  "pageErrors": [],
+  "consoleErrorCount": 0,
+  "pageErrorCount": 0
+}

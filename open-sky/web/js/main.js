@@ -20,6 +20,7 @@ import { OskIn } from './core/layout.js';
 import { fleetEntry, displayName, FLEET_OPTIONS } from './aircraft/fleet.js';
 import { DamageFX } from './aircraft/fx.js';
 import { Windshield } from './ui/windshield.js';
+import { SkyEnvironment } from './world/envmap.js';
 import { EnrouteTraffic } from './sim/enroute.js';
 import { CloudSave } from './net/cloud.js';
 
@@ -65,6 +66,11 @@ class Game {
     const renderer = new THREE.WebGLRenderer({ antialias: true, logarithmicDepthBuffer: true, powerPreference: 'high-performance' });
     renderer.setSize(innerWidth, innerHeight);
     renderer.outputColorSpace = THREE.SRGBColorSpace;
+    // PBR objects (aircraft, cockpit) use filmic tone mapping; the world's own
+    // shaders tone-map themselves and are unaffected
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.12;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     $('view').appendChild(renderer.domElement);
     this.renderer = renderer;
     this.applyQuality(false);
@@ -81,6 +87,9 @@ class Game {
     this.world = new World(renderer, { dataBase: './data/', online: this.settings.online });
     await this.world.init((m) => this.progress(m, 0.4));
     this.progress('Preparing aircraft', 0.7);
+    this.env = new SkyEnvironment(renderer, this.world.scene);
+    this.world.sky.hemiK = 0.45;   // image-based light from the sky replaces most of the hemisphere fill
+    this.setupSunShadow();
     this.player = new PlayerAircraft(this.core, this.world);
     this.fx = new DamageFX(this.world);
     this.windshield = new Windshield($('windshield'));
@@ -112,6 +121,11 @@ class Game {
     const q = QUALITY[this.settings.quality] || QUALITY.high;
     this.q = q;
     this.renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 2) * q.pixelRatio);
+    this.renderer.shadowMap.enabled = (q.shadows || 0) > 0;
+    if (this.world && this.world.sky) {
+      const L = this.world.sky.sunLight;
+      if (q.shadows && L.shadow.mapSize.x !== q.shadows) { L.shadow.mapSize.set(q.shadows, q.shadows); if (L.shadow.map) { L.shadow.map.dispose(); L.shadow.map = null; } }
+    }
     if (!this.world) return;
     this.world.terrain.setQuality(q.terrain, q.view);
     for (const r of this.world.regions) Object.assign(r.settings, { nearKm: q.near, midKm: q.mid, farKm: q.far, trees: q.trees });
@@ -215,6 +229,36 @@ class Game {
     }
   }
 
+  // Sun shadows for the player's aircraft only (self-shadowing: wings on the
+  // fuselage, the cockpit frame on the panel); the ground keeps its soft blob.
+  setupSunShadow() {
+    const L = this.world.sky.sunLight;
+    L.castShadow = true;
+    L.shadow.mapSize.set(this.q.shadows || 1024, this.q.shadows || 1024);
+    L.shadow.bias = -0.0004;
+    L.shadow.camera.near = 1;
+    this.renderer.shadowMap.enabled = (this.q.shadows || 0) > 0;
+  }
+
+  updateSunShadow() {
+    const L = this.world.sky.sunLight, S = this.world.shared;
+    const on = this.renderer.shadowMap.enabled && S.uNight.value < 0.6 && S.uSunDir.value.y > 0.03;
+    L.castShadow = on;
+    if (!on) return;
+    const p = this.player, cockpit = this.rig.view === 'cockpit';
+    const center = cockpit ? p.eyeWorld(this._shC || (this._shC = new THREE.Vector3())) : p.root.position;
+    const ext = cockpit ? 2.2 : Math.max(3, p.size * 0.62);
+    L.target.position.copy(center);
+    L.position.copy(center).addScaledVector(S.uSunDir.value, ext * 3 + 20);
+    L.target.updateMatrixWorld();
+    const c = L.shadow.camera;
+    if (c.right !== ext) {
+      c.left = -ext; c.right = ext; c.top = ext; c.bottom = -ext; c.far = ext * 6 + 40;
+      c.updateProjectionMatrix();
+      L.shadow.normalBias = ext * 0.004;
+    }
+  }
+
   nearestAirport(icao) {
     const list = this.world.airports;
     if (!list.length) return null;
@@ -289,6 +333,7 @@ class Game {
     this.fps.t += dt;
     if (this.fps.t >= 0.5) { this.fps.value = this.fps.frames / this.fps.t; this.fps.frames = 0; this.fps.t = 0; }
     if (this.state === 'menu') { this.menu.frame(dt); return; }
+    if (this.qaFrozen && this.state === 'flight') { if (!this.qaDrawn) { this.render(); this.qaDrawn = true; } return; }  // QA screenshot freeze: one fresh frame, no sim
     if (this.state !== 'flight' || this.debugHold) return;  // debugHold: automated tests drive update/render themselves
     const input = this.input.poll(dt, this.rig.view === 'free' ? 'free' : 'flight');
     this.handleEvents(input);
@@ -331,13 +376,16 @@ class Game {
     const camWorld = this.rig.worldPos();
     this.vehicles.update(dt, camWorld);
     this.world.update(dt, this.camera, camWorld, this.date());
+    this.env.update(dt, this.world.sky, this.world.shared, this.world.urbanGlow || 0);
+    this.updateSunShadow();
     const toCam = camThree.clone().sub(p.root.position);
     const dist = toCam.length();
     const closing = dist > 1 ? new THREE.Vector3(p.o.ve, p.o.vu, -p.o.vn).dot(toCam.normalize()) : 0;
     p.ui.gpws = this.audio.update(dt, p.o, sw, this.rig.view, { dist, closing }, this.traffic.agents, p.fleet) || '';
     this.enroute.update(dt);
     this.fx.update(dt, p, this.camera, this.renderer);
-    this.windshield.update(dt, this.rig.view === 'cockpit' && !this.paused, this.world.weather.rainAt(p.o.z), p.o.ias / 0.514444, p.isJet);
+    const inCockpit = this.rig.view === 'cockpit' && !this.paused;
+    this.windshield.update(dt, inCockpit, this.world.weather.rainAt(p.o.z), p.o.ias / 0.514444, p.isJet, inCockpit ? this.windowClip() : null);
     this.hud.update(dt);
     if (p.o.crashed && !this.crashShown) {
       this.crashShown = true;
@@ -345,6 +393,29 @@ class Game {
       setTimeout(() => { if (this.state === 'flight') this.endFlight(); }, 4500);
     }
     this.autosave(dt);
+  }
+
+  // Screen-space outlines of the cockpit's window openings (CSS px) so rain
+  // stays on the glass; null when the cockpit defines none or a window is behind the eye.
+  windowClip() {
+    const ck = this.player.cockpit;
+    if (!ck || !ck.windowPolys) return null;
+    // fresh matrices: this runs before the frame is rendered
+    ck.group.updateWorldMatrix(true, false);
+    this.camera.updateMatrixWorld();
+    const v = this._clipV || (this._clipV = new THREE.Vector3());
+    const out = [];
+    for (const poly of ck.windowPolys) {
+      const pts = [];
+      let ok = true;
+      for (const q of poly) {
+        v.set(q[0], q[1], q[2]).applyMatrix4(ck.group.matrixWorld).project(this.camera);
+        if (v.z > 1) { ok = false; break; }
+        pts.push([(v.x * 0.5 + 0.5) * innerWidth, (-v.y * 0.5 + 0.5) * innerHeight]);
+      }
+      if (ok) out.push(pts);
+    }
+    return out.length ? out : null;
   }
 
   // Data the glass cockpit shows besides the core outputs (route, TCAS traffic)
@@ -445,6 +516,7 @@ class Game {
         case 'checklist': this.hud.toggleChecklist(); break;
         case 'save': this.saveNow(); break;
         case 'help': this.hud.showHelp(); break;
+        case 'diag': this.settings.diag = !this.settings.diag; break;
         default: break;
       }
     }
@@ -788,6 +860,8 @@ class Game {
 }
 
 const game = new Game();
+// QA hooks for automated browsers only; they wait for boot before acting
+if (navigator.webdriver || /[?&]qa\b/.test(location.search)) import('./qa/hooks.js').then((m) => m.installQaHooks(game));
 if (Intro.wanted(game)) game.playIntro(true);
 game.boot().catch((e) => {
   console.error(e);

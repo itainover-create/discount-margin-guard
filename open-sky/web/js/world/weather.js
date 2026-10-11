@@ -58,6 +58,10 @@ export class Weather {
     const v = this.state.visM;
     const elev = this.world.fieldElevation || 0;
     if (v < 5000 && altM - elev > 600) return Math.min(40000, v * (1 + (altM - elev - 600) / 120));
+    // above the haze of the boundary layer (~2 km) the air clears: from
+    // cruise altitude the coastline is visible well over 100 km away
+    const above = altM - elev - 2000;
+    if (above > 0) return Math.min(170000, v * (1 + above / 1800));
     return v;
   }
 
@@ -113,60 +117,121 @@ export class Weather {
 }
 
 // ---------------------------------------------------------------------------
-// Clouds: clusters of soft billboard puffs placed on a world-anchored grid so
-// they do not move with the camera; overcast layers add a continuous deck.
+// Clouds: clusters of billboard puffs placed on a world-anchored grid so they
+// do not move with the camera; overcast layers add a continuous deck.
+// Each puff is shaded as a soft sphere bent toward its cluster's outward
+// direction (sunlit tops and flanks, darker flat bases, a silver lining when
+// looking toward the sun). Four eroded puff shapes live in one 2x2 atlas.
 // ---------------------------------------------------------------------------
 function puffTexture() {
-  const S = 128;
+  const S = 256, A = S * 2;
   const c = document.createElement('canvas');
-  c.width = c.height = S;
+  c.width = c.height = A;
   const g = c.getContext('2d');
-  const img = g.createImageData(S, S);
+  const img = g.createImageData(A, A);
   let seed = 7;
   const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
-  const blobs = [];
-  for (let i = 0; i < 14; i++) blobs.push([0.5 + (rnd() - 0.5) * 0.45, 0.55 + (rnd() - 0.5) * 0.35, 0.16 + rnd() * 0.18]);
-  for (let y = 0; y < S; y++) {
-    for (let x = 0; x < S; x++) {
-      const u = x / S, v = y / S;
-      let a = 0;
-      for (const b of blobs) {
-        const d = Math.hypot(u - b[0], v - b[1]) / b[2];
-        a += Math.max(0, 1 - d * d);
+  // value noise for billowy, eroded edges
+  const N = 64, grid = new Float32Array(N * N);
+  for (let i = 0; i < grid.length; i++) grid[i] = rnd();
+  const vn = (x, y) => {
+    const xi = Math.floor(x), yi = Math.floor(y), fx = x - xi, fy = y - yi;
+    const s = (t) => t * t * (3 - 2 * t);
+    const at = (a, b) => grid[((b & (N - 1)) * N) + (a & (N - 1))];
+    const a = at(xi, yi) + (at(xi + 1, yi) - at(xi, yi)) * s(fx);
+    const b = at(xi, yi + 1) + (at(xi + 1, yi + 1) - at(xi, yi + 1)) * s(fx);
+    return a + (b - a) * s(fy);
+  };
+  const fbm = (x, y) => vn(x, y) * 0.5 + vn(x * 2.1, y * 2.1) * 0.27 + vn(x * 4.3, y * 4.3) * 0.15 + vn(x * 8.7, y * 8.7) * 0.08;
+  for (let q = 0; q < 4; q++) {
+    const blobs = [];
+    const nb = 9 + q * 2;
+    for (let i = 0; i < nb; i++) {
+      // a cauliflower: bigger lobes on top, a flatter base
+      const ang = rnd() * Math.PI * 2, rr = Math.sqrt(rnd()) * 0.26;
+      blobs.push([0.5 + Math.cos(ang) * rr, 0.5 + Math.sin(ang) * rr * 0.8 - 0.04, 0.13 + rnd() * 0.15]);
+    }
+    const ox = (q % 2) * S, oy = Math.floor(q / 2) * S;
+    for (let y = 0; y < S; y++) {
+      for (let x = 0; x < S; x++) {
+        const u = x / S, v = y / S;
+        let a = 0;
+        for (const b of blobs) {
+          const d = Math.hypot(u - b[0], v - b[1]) / b[2];
+          a += Math.max(0, 1 - d * d);
+        }
+        const r = Math.hypot(u - 0.5, v - 0.5) * 2;
+        const n = fbm(u * 9 + q * 13.7, v * 9 + q * 5.1);
+        a = a * 0.8 - (1 - Math.min(1, a)) * 0.0;
+        a = Math.max(0, Math.min(1, (a - 0.18 - (n - 0.5) * 0.55) * 1.6));
+        a *= Math.max(0, 1 - Math.pow(r, 6));
+        const i = ((oy + y) * A + ox + x) * 4;
+        // rgb: density inside the puff (used to fake internal shadowing)
+        const dens = Math.round(Math.min(1, a * 1.2) * 255);
+        img.data[i] = dens; img.data[i + 1] = dens; img.data[i + 2] = dens;
+        img.data[i + 3] = Math.round(a * 255);
       }
-      const r = Math.hypot(u - 0.5, v - 0.5) * 2;
-      a = Math.min(1, a * 0.75) * Math.max(0, 1 - r * r);
-      const i = (y * S + x) * 4;
-      img.data[i] = img.data[i + 1] = img.data[i + 2] = 255;
-      img.data[i + 3] = Math.round(a * 255);
     }
   }
   g.putImageData(img, 0, 0);
   const t = new THREE.CanvasTexture(c);
+  t.generateMipmaps = true;
+  t.minFilter = THREE.LinearMipmapLinearFilter;
   return t;
 }
 
 const CLOUD_VS = /* glsl */ `
-attribute vec4 aPuff; // xyz offset (three coords, relative to layer origin), w = size
-attribute float aShade;
+attribute vec4 aPuff;   // xyz centre (three coords, layer space), w = size
+attribute vec4 aOut;    // xyz unit vector from the cluster centre, w = atlas variant 0..3
+attribute float aShade; // height inside the layer 0..1
 uniform vec3 uCamPos;
-varying vec2 vUv; varying float vShade; varying float vDist;
+varying vec2 vUv; varying vec2 vQ; varying float vShade; varying float vDist; varying float vWy;
+varying vec3 vRight; varying vec3 vUp; varying vec3 vToCam; varying vec3 vOut;
 void main(){
   vec3 center = (modelMatrix * vec4(aPuff.xyz, 1.0)).xyz;
   vec2 d = center.xz - uCamPos.xz;
   center.y -= dot(d, d) / 12742000.0;
   vec4 mv = viewMatrix * vec4(center, 1.0);
   mv.xy += position.xy * aPuff.w;
-  vUv = uv; vShade = aShade + position.y * 0.25; vDist = -mv.z;
+  float v = floor(aOut.w + 0.5);
+  vUv = uv * 0.5 + vec2(mod(v, 2.0), floor(v / 2.0)) * 0.5;
+  vQ = position.xy * 2.0;
+  vShade = aShade; vDist = -mv.z;
+  vRight = vec3(viewMatrix[0][0], viewMatrix[1][0], viewMatrix[2][0]);
+  vUp = vec3(viewMatrix[0][1], viewMatrix[1][1], viewMatrix[2][1]);
+  vToCam = vec3(viewMatrix[0][2], viewMatrix[1][2], viewMatrix[2][2]);
+  vOut = aOut.xyz;
+  vWy = center.y + vUp.y * position.y * aPuff.w;
   gl_Position = projectionMatrix * mv;
 }`;
 const CLOUD_FS = /* glsl */ `
 uniform sampler2D uMap; uniform vec3 uLit; uniform vec3 uShadow; uniform vec3 uFogColor; uniform float uFogDensity; uniform float uOpacity;
-varying vec2 vUv; varying float vShade; varying float vDist;
+uniform vec3 uSunDir; uniform vec3 uSunColor; uniform float uBase; uniform float uNight; uniform float uFlash;
+varying vec2 vUv; varying vec2 vQ; varying float vShade; varying float vDist; varying float vWy;
+varying vec3 vRight; varying vec3 vUp; varying vec3 vToCam; varying vec3 vOut;
 void main(){
-  float a = texture2D(uMap, vUv).a * uOpacity;
+  vec4 tx = texture2D(uMap, vUv);
+  float a = tx.a * uOpacity;
+  // flat cumulus bases: fade the part of a puff that hangs below the layer base
+  a *= smoothstep(uBase - 60.0, uBase + 25.0, vWy);
   if (a < 0.02) discard;
-  vec3 col = mix(uShadow, uLit, clamp(vShade, 0.0, 1.0));
+  float r2 = clamp(dot(vQ, vQ), 0.0, 1.0);
+  vec3 sphereN = normalize(vRight * vQ.x + vUp * vQ.y + vToCam * sqrt(1.0 - r2));
+  vec3 n = normalize(sphereN * 0.55 + vOut * 0.45);
+  float ndl = dot(n, uSunDir);
+  float wrap = clamp(ndl * 0.6 + 0.4, 0.0, 1.0);
+  // internal density darkens thick cores a little, thin edges stay bright
+  float core = tx.r * (1.0 - r2 * 0.5);
+  float lightK = wrap * (1.0 - core * 0.35);
+  float height = clamp(vShade * 0.8 + 0.2 + vQ.y * 0.12, 0.0, 1.0);
+  vec3 col = mix(uShadow, uLit, clamp(lightK * mix(0.65, 1.0, height), 0.0, 1.0));
+  // bottoms pick up a cooler, darker tone
+  col *= mix(0.78, 1.0, smoothstep(0.0, 0.45, height));
+  // silver lining: thin edges glow when looking toward the sun
+  vec3 viewDir = -vToCam;
+  float fwd = pow(max(dot(viewDir, uSunDir), 0.0), 6.0);
+  col += uSunColor * fwd * (1.0 - tx.a) * 1.4 * (1.0 - uNight);
+  col += vec3(0.85, 0.9, 1.0) * uFlash * (0.6 + 0.6 * (1.0 - core));
   float f = 1.0 - exp(-pow(vDist * uFogDensity * 0.6, 1.35));
   col = mix(col, uFogColor, clamp(f, 0.0, 1.0));
   a *= 1.0 - smoothstep(25.0, 4.0, vDist) * 0.9;
@@ -180,33 +245,37 @@ class CloudLayers {
     this.tex = puffTexture();
     this.layers = [];
     this.key = '';
+    const S = world.shared;
     this.uniforms = {
       uMap: { value: this.tex }, uLit: { value: new THREE.Color(1, 1, 1) }, uShadow: { value: new THREE.Color(0.6, 0.62, 0.66) },
-      uFogColor: world.shared.uFogColor, uFogDensity: world.shared.uFogDensity, uCamPos: world.shared.uCamPos, uOpacity: { value: 0.92 },
+      uFogColor: S.uFogColor, uFogDensity: S.uFogDensity, uCamPos: S.uCamPos, uOpacity: { value: 0.95 },
+      uSunDir: S.uSunDir, uSunColor: S.uSunColor, uNight: S.uNight, uFlash: S.uFlash,
     };
     this.quality = 1;
   }
 
   rebuild(weather) {
-    for (const l of this.layers) { this.group.remove(l.mesh); l.mesh.geometry.dispose(); if (l.deck) { this.group.remove(l.deck); l.deck.geometry.dispose(); } }
+    for (const l of this.layers) { this.group.remove(l.mesh); l.mesh.geometry.dispose(); l.mesh.material.dispose(); if (l.deck) { this.group.remove(l.deck); l.deck.geometry.dispose(); } }
     this.layers = [];
     const elev = this.world.fieldElevation || 0;
     weather.state.clouds.forEach((c, li) => {
       const base = elev + c.baseFt * 0.3048, top = elev + Math.max(c.topFt, c.baseFt + 600) * 0.3048;
       const cell = 1400, R = 22;          // grid cells around the camera (+-R)
       const prob = Math.min(1, c.cover / 8 + 0.05);
-      const puffsPer = Math.round((c.cover >= 7 ? 14 : 10) * this.quality);
+      const puffsPer = Math.round((c.cover >= 7 ? 14 : 12) * this.quality);
       const quad = new THREE.PlaneGeometry(1, 1);
       const g = new THREE.InstancedBufferGeometry();
       g.index = quad.index;
       g.attributes.position = quad.attributes.position;
       g.attributes.uv = quad.attributes.uv;
       const max = (2 * R + 1) ** 2 * puffsPer;
-      const aPuff = new Float32Array(max * 4), aShade = new Float32Array(max);
+      const aPuff = new Float32Array(max * 4), aOut = new Float32Array(max * 4), aShade = new Float32Array(max);
       g.setAttribute('aPuff', new THREE.InstancedBufferAttribute(aPuff, 4).setUsage(THREE.DynamicDrawUsage));
+      g.setAttribute('aOut', new THREE.InstancedBufferAttribute(aOut, 4).setUsage(THREE.DynamicDrawUsage));
       g.setAttribute('aShade', new THREE.InstancedBufferAttribute(aShade, 1).setUsage(THREE.DynamicDrawUsage));
       g.instanceCount = 0;
-      const mat = new THREE.ShaderMaterial({ uniforms: this.uniforms, ...logDepth(CLOUD_VS, CLOUD_FS), transparent: true, depthWrite: false });
+      const uniforms = { ...this.uniforms, uBase: { value: base } };
+      const mat = new THREE.ShaderMaterial({ uniforms, ...logDepth(CLOUD_VS, CLOUD_FS), transparent: true, depthWrite: false });
       const mesh = new THREE.Mesh(g, mat);
       mesh.frustumCulled = false;
       mesh.renderOrder = 3;
@@ -219,7 +288,7 @@ class CloudLayers {
         deck.renderOrder = 2;
         this.group.add(deck);
       }
-      this.layers.push({ c, base, top, cell, R, prob, puffsPer, mesh, aPuff, aShade, deck, li, lastCell: '' });
+      this.layers.push({ c, base, top, cell, R, prob, puffsPer, mesh, aPuff, aOut, aShade, deck, li, lastCell: '' });
     });
   }
 
@@ -228,8 +297,8 @@ class CloudLayers {
     if (key !== this.key) { this.key = key; this.rebuild(weather); }
     const night = this.world.shared.uNight.value;
     const sunC = this.world.shared.uSunColor.value;
-    this.uniforms.uLit.value.setRGB(0.95, 0.95, 0.96).multiplyScalar(1 - night * 0.93).add(sunC.clone().multiplyScalar(0.25));
-    this.uniforms.uShadow.value.copy(this.world.shared.uSkyAmb.value).multiplyScalar(0.85).lerp(new THREE.Color(0.35, 0.36, 0.40).multiplyScalar(1 - night * 0.9), 0.5);
+    this.uniforms.uLit.value.setRGB(0.97, 0.97, 0.98).multiplyScalar(1 - night * 0.93).add(sunC.clone().multiplyScalar(0.3));
+    this.uniforms.uShadow.value.copy(this.world.shared.uSkyAmb.value).multiplyScalar(0.8).lerp(new THREE.Color(0.42, 0.44, 0.5).multiplyScalar(1 - night * 0.9), 0.45);
     for (const L of this.layers) {
       const cx = Math.floor(camWorld.x / L.cell), cy = Math.floor(camWorld.y / L.cell);
       const ck = cx + ',' + cy;
@@ -242,6 +311,7 @@ class CloudLayers {
       L.lastCell = ck;
       let n = 0;
       const thick = L.top - L.base;
+      const stratus = L.c.cover >= 7;
       for (let j = -L.R; j <= L.R; j++) {
         for (let i = -L.R; i <= L.R; i++) {
           const gx = cx + i, gy = cy + j;
@@ -252,18 +322,30 @@ class CloudLayers {
           const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
           const ox = (gx + 0.2 + rnd() * 0.6) * L.cell, oy = (gy + 0.2 + rnd() * 0.6) * L.cell;
           const size = 280 + rnd() * 500 * (L.c.cover >= 5 ? 1.3 : 1);
+          // tower height of this cell: fair-weather cumulus are wider than tall
+          const tower = stratus ? 0.35 : 0.45 + rnd() * 0.55;
+          const cz = L.base + thick * 0.22;
           for (let k = 0; k < L.puffsPer; k++) {
-            const px = ox + (rnd() - 0.5) * size * 1.6, py = oy + (rnd() - 0.5) * size * 1.6;
-            const pz = L.base + rnd() * thick * 0.75 + (k / L.puffsPer) * thick * 0.25;
-            const s = size * (0.45 + rnd() * 0.6);
+            const tier = k / L.puffsPer;                      // 0 = base ring .. 1 = crown
+            const spread = size * (stratus ? 1.6 : 1.55 - tier * 0.95);
+            const px = ox + (rnd() - 0.5) * spread, py = oy + (rnd() - 0.5) * spread;
+            const s = size * (stratus ? 0.5 + rnd() * 0.5 : (0.62 - tier * 0.22) + rnd() * 0.4);
+            const pz = stratus
+              ? L.base + s * 0.25 + rnd() * thick * 0.6
+              : L.base + s * 0.3 + tier * thick * tower * 0.9 + rnd() * thick * 0.08;
             aPuffSet(L.aPuff, n, px, pz, -py, s);
-            L.aShade[n] = (pz - L.base) / Math.max(thick, 1) * 0.8 + 0.25;
+            let dx = px - ox, dy = (pz - cz) * 1.6, dz = -(py - oy);
+            const m = Math.hypot(dx, dy, dz) || 1;
+            dx /= m; dy /= m; dz /= m;
+            L.aOut[n * 4] = dx; L.aOut[n * 4 + 1] = dy; L.aOut[n * 4 + 2] = dz; L.aOut[n * 4 + 3] = Math.floor(rnd() * 4);
+            L.aShade[n] = Math.min(1, (pz - L.base) / Math.max(thick, 1));
             n++;
           }
         }
       }
       L.mesh.geometry.instanceCount = n;
       L.mesh.geometry.attributes.aPuff.needsUpdate = true;
+      L.mesh.geometry.attributes.aOut.needsUpdate = true;
       L.mesh.geometry.attributes.aShade.needsUpdate = true;
     }
   }

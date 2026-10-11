@@ -55,6 +55,7 @@ export const ACTIONS = {
   save: { label: 'Save point', he: 'נקודת שמירה', keys: ['KeyO'], once: true },
   pause: { label: 'Pause', he: 'השהיה', keys: ['KeyP'], once: true },
   help: { label: 'Controls help', he: 'עזרה', keys: ['F1'], once: true },
+  diag: { label: 'Diagnostics overlay (fps, core, streaming)', he: 'נתוני אבחון', keys: ['F3'], once: true },
   menu: { label: 'Menu', he: 'תפריט', keys: ['Escape'], once: true },
 };
 

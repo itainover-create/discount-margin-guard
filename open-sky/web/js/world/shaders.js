@@ -569,8 +569,13 @@ void main(){
   float arrow2 = step(s2, -8.0) * step(-d2, s2) * step(x, 1.0 + 3.0 * fract(-s2 / 40.0)) * step(fract(-s2 / 40.0), 0.6);
   m += (arrow1 + arrow2);
   float fade = clamp(1.0 - dist / 9000.0, 0.25, 1.0);
-  vec3 paint = vec3(0.86, 0.86, 0.84);
-  vec3 col = mix(asphalt, paint, clamp(m, 0.0, 1.0) * fade);
+  // weathered paint: grainy coverage, scuffed by tyres in the touchdown zones
+  float wear = 0.86 + 0.14 * vnoise(p * 3.1) - 0.08 * smoothstep(0.6, 0.9, vnoise(p * 0.7));
+  float paintK = clamp(m, 0.0, 1.0) * clamp(wear - rubber * 0.35, 0.45, 1.0);
+  vec3 paint = vec3(0.80, 0.79, 0.76);
+  vec3 col = mix(asphalt, paint, paintK * fade);
+  // tyre streaks along the centreline in the touchdown zones
+  col *= 1.0 - 0.25 * (box(s1, 60.0, 700.0) + box(s2, 60.0, 700.0)) * (1.0 - smoothstep(2.0, 10.0, x)) * step(0.55, vnoise(vec2(x * 3.0, v * 0.015)));
   vec3 lit = col * (lightDiffuse(vec3(0.0, 1.0, 0.0)) + landLight(vW, vec3(0.0, 1.0, 0.0)));
   if (uWetness > 0.0) {
     vec3 vdir = normalize(uCamPos - vWc);

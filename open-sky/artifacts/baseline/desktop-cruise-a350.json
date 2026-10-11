@@ -1,0 +1,99 @@
+{
+  "url": "http://127.0.0.1:8123/index.html?skipintro",
+  "mode": "desktop",
+  "state": "cruise-a350",
+  "requestedState": "cruise-a350",
+  "appliedState": "cruise-a350",
+  "runId": "baseline",
+  "seed": 42,
+  "screenshotPath": "artifacts/baseline/desktop-cruise-a350.png",
+  "gpu": {
+    "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+    "vendor": "Google Inc. (Google)",
+    "softwareRendered": true
+  },
+  "result": {
+    "ok": true,
+    "reason": "nonblank",
+    "rect": {
+      "x": 0,
+      "y": 0,
+      "width": 1280,
+      "height": 720
+    },
+    "drawingBuffer": {
+      "width": 1280,
+      "height": 720
+    },
+    "alphaPixels": 4096,
+    "variance": 250,
+    "colorBuckets": 87,
+    "metrics": {
+      "colorBuckets": 126,
+      "colorEntropyBits": 3.73,
+      "edgeDensity": 0.134,
+      "luminance": {
+        "mean": 123.3,
+        "p5": 18.5,
+        "p95": 179.5,
+        "contrast": 161
+      },
+      "dominantColorShare": 0.306,
+      "nonBackgroundShare": 0.694
+    },
+    "renderBudget": {
+      "tier": "desktop",
+      "note": "starting-point budget; adjust per game and document overrides",
+      "rows": [
+        {
+          "metric": "calls",
+          "actual": 96,
+          "limit": 300,
+          "ok": true
+        },
+        {
+          "metric": "triangles",
+          "actual": 42048,
+          "limit": 750000,
+          "ok": true
+        },
+        {
+          "metric": "geometries",
+          "actual": 97,
+          "limit": 300,
+          "ok": true
+        },
+        {
+          "metric": "textures",
+          "actual": 5,
+          "limit": 60,
+          "ok": true
+        }
+      ],
+      "withinBudget": true
+    },
+    "diagnostics": {
+      "renderer": {
+        "calls": 96,
+        "triangles": 42048,
+        "points": 21651,
+        "lines": 0,
+        "geometries": 97,
+        "textures": 5,
+        "programs": 12,
+        "pixelRatio": 1,
+        "toneMapping": 0,
+        "exposure": 1,
+        "shadowMap": false,
+        "postPasses": 0
+      },
+      "state": "cruise-a350",
+      "fps": 34,
+      "buildings": 6300
+    }
+  },
+  "consoleErrors": [],
+  "pageErrors": [],
+  "consoleErrorCount": 0,
+  "pageErrorCount": 0
+}

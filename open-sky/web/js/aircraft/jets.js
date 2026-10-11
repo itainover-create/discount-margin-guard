@@ -4,6 +4,7 @@
 // Styles: airliner (incl. rear-engine business jet), fighter, flying wing,
 // aerobatic monoplane. Every moving part is driven by core outputs.
 import * as THREE from 'three';
+import { applyMaterialKit, panelTexture } from './materials.js';
 import { B, loft, panel } from './models.js';
 import { emblemImage } from '../ui/brand.js';
 
@@ -102,22 +103,33 @@ function fuselageTexture(f, g, Ln, Lt) {
   stripe(0.0, 0.012, hex(lv.stripe)); stripe(0.976, 0.999, hex(lv.stripe));
   stripe(0.488, 0.524, hex(lv.stripe));
   stripe(0.958, 0.972, hex(lv.accent)); stripe(0.528, 0.542, hex(lv.accent));
-  // passenger windows
+  // passenger windows (drawn again on the emissive map: cabin lights at night)
   const rows = g.deck2 ? [[0.028, 0.048], [0.452, 0.472], [0.115, 0.13], [0.37, 0.385]] : [[0.03, 0.05], [0.45, 0.47]];
-  x.fillStyle = '#1b2430';
   const pitch = g.ovalWindows ? 1.05 : 0.53;
-  for (const [v0, v1] of rows) {
-    for (let m = Ln * 1.05; m < L - Lt * 0.75; m += pitch) {
-      const w = col(g.ovalWindows ? 0.42 : 0.26);
-      x.beginPath();
-      x.ellipse(col(m), (row(v0) + row(v1)) / 2, w / 2, (row(v0) - row(v1)) / 2, 0, 0, Math.PI * 2);
-      x.fill();
+  const ec = document.createElement('canvas');
+  ec.width = W; ec.height = H;
+  const ex = ec.getContext('2d');
+  ex.fillStyle = '#000'; ex.fillRect(0, 0, W, H);
+  const windows = (cx, fill, lit) => {
+    cx.fillStyle = fill;
+    let k = 0;
+    for (const [v0, v1] of rows) {
+      for (let m = Ln * 1.05; m < L - Lt * 0.75; m += pitch) {
+        k++;
+        if (lit && (k * 7919) % 13 === 0) continue;   // a few blinds down
+        const w = col(g.ovalWindows ? 0.42 : 0.26);
+        cx.beginPath();
+        cx.ellipse(col(m), (row(v0) + row(v1)) / 2, w / 2, (row(v0) - row(v1)) / 2, 0, 0, Math.PI * 2);
+        cx.fill();
+      }
     }
-  }
-  // upper deck windows (hump)
-  if (g.hump) for (const [v0, v1] of [[0.16, 0.175], [0.325, 0.34]]) for (let m = Ln * 1.0; m < L * 0.30; m += 0.53) {
-    x.fillRect(col(m), row(v1), col(0.26), row(v0) - row(v1));
-  }
+    // upper deck windows (hump)
+    if (g.hump) for (const [v0, v1] of [[0.16, 0.175], [0.325, 0.34]]) for (let m = Ln * 1.0; m < L * 0.30; m += 0.53) {
+      cx.fillRect(col(m), row(v1), col(0.26), row(v0) - row(v1));
+    }
+  };
+  windows(x, '#1b2430', false);
+  windows(ex, '#ffe2b0', true);
   // flight deck windows
   x.fillStyle = '#0d1218';
   const cw0 = Ln * 0.56, cw1 = Ln * 0.8;
@@ -135,6 +147,9 @@ function fuselageTexture(f, g, Ln, Lt) {
   const t = new THREE.CanvasTexture(c);
   t.colorSpace = THREE.SRGBColorSpace;
   t.anisotropy = 4;
+  const e = new THREE.CanvasTexture(ec);
+  e.colorSpace = THREE.SRGBColorSpace;
+  t.userData.emissive = e;
   return t;
 }
 
@@ -172,7 +187,7 @@ function mats(lv) {
     tire: new THREE.MeshStandardMaterial({ color: 0x141414, roughness: 0.95 }),
     glass: new THREE.MeshStandardMaterial({ color: 0x1a2632, roughness: 0.05, metalness: 0.7, transparent: true, opacity: 0.6 }),
     canopy: new THREE.MeshStandardMaterial({ color: 0xc8a84a, roughness: 0.04, metalness: 0.9, transparent: true, opacity: 0.45 }),
-    hot: new THREE.MeshStandardMaterial({ color: 0x5a4d44, roughness: 0.5, metalness: 0.7 }),
+    hot: new THREE.MeshStandardMaterial({ color: 0x8a8079, roughness: 0.55, metalness: 0.75 }),   // heat-tinted titanium
   };
 }
 
@@ -236,7 +251,8 @@ function buildAirliner(f, root, M, parts) {
   const tail = [[1.0, 1, 1, 0], [0.6, 0.82, 0.8, -0.2], [0.3, 0.52, 0.5, -0.42], [0.08, 0.2, 0.22, -0.58], [0, 0.1, 0.12, -0.62]];
   const H0 = g.hump ? g.fusD : H;
   for (const [k, w, h, z] of tail) S.push(st(L - k * Lt, g.fusD * w, H0 * h, z * R));
-  const fus = new THREE.Mesh(loft(S, 40, 2.15), new THREE.MeshStandardMaterial({ map: fuselageTexture(f, g, Ln, Lt), roughness: 0.32, metalness: 0.1 }));
+  const fusTex = fuselageTexture(f, g, Ln, Lt);
+  const fus = new THREE.Mesh(loft(S, 40, 2.15), new THREE.MeshStandardMaterial({ map: fusTex, roughness: 0.32, metalness: 0.1, emissive: 0xffffff, emissiveMap: fusTex.userData.emissive, emissiveIntensity: 0 }));
   fus.userData.exterior = true;
   root.add(fus);
   parts.fuselage = fus;
@@ -547,7 +563,7 @@ function buildFighter(f, root, M, parts) {
     if (g.nozzle === '2d') { noz = new THREE.Mesh(new THREE.BoxGeometry(r * 2.1, r * 1.3, 1.6), M.hot); }
     else { noz = new THREE.Mesh(new THREE.CylinderGeometry(r * 0.92, r * 1.05, 1.6, 20, 1, true), M.hot); noz.rotation.x = Math.PI / 2; }
     grp.add(noz);
-    const hole = new THREE.Mesh(new THREE.CircleGeometry(r * 0.85, 20), new THREE.MeshBasicMaterial({ color: 0x2a1408 }));
+    const hole = new THREE.Mesh(g.nozzle === '2d' ? new THREE.PlaneGeometry(r * 1.8, r * 1.05) : new THREE.CircleGeometry(r * 0.85, 20), new THREE.MeshBasicMaterial({ color: 0x2a1408 }));
     hole.position.z = 0.75;
     grp.add(hole);
     const flame = new THREE.Mesh(new THREE.ConeGeometry(r * 0.85, 6, 20, 1, true), new THREE.MeshBasicMaterial({ color: 0xff9a40, transparent: true, opacity: 0.0, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }));
@@ -784,6 +800,9 @@ export function createAircraftModel(f) {
   beaconMesh.position.copy(lights.beacon);
   root.add(beaconMesh);
   root.traverse((o) => { if (o.isMesh) { o.castShadow = true; if (o.userData.exterior === undefined) o.userData.exterior = true; } });
+  root.userData.fuselage = parts.fuselage;
+  const seams = f.style === 'airliner' ? panelTexture(f.g.L, { nose: f.g.fusD * 1.75, tail: f.g.fusD * 2.9 }) : null;
+  applyMaterialKit(root, { panel: seams, matte: f.style === 'fighter' || f.style === 'flyingwing' });
   return { root, parts, lights, beaconMesh, fleet: f, prop: parts.prop, fanAngle: 0 };
 }
 

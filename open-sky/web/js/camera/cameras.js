@@ -16,7 +16,9 @@ export class CameraRig {
     this.world = world;
     this.view = 'cockpit';
     this.look = { yaw: 0, pitch: -0.08, fov: 68 };
-    this.chase = { yaw: 0, pitch: 0.12, dist: 15, fov: 55 };
+    // default chase framing: a three-quarter rear view, slightly above, so the
+    // wing planform, fuselage side and livery read (orbit with the mouse)
+    this.chase = { yaw: 0.34, pitch: 0.15, dist: 15, fov: 55 };
     this.free = { pos: new THREE.Vector3(), yaw: 0, pitch: 0, fov: 60, speed: 60 };
     this.flyby = { pos: null };
     this.towerFov = 30;
@@ -75,9 +77,9 @@ export class CameraRig {
         this.chase.yaw -= input.lookDX * 0.005;
         this.chase.pitch = THREE.MathUtils.clamp(this.chase.pitch + input.lookDY * 0.004, -0.35, 1.3);
         const sz = aircraft.size || 11;
-        if (this.chaseFor !== aircraft.aircraftId) { this.chaseFor = aircraft.aircraftId; this.chase.dist = sz * 1.4; this.chase.pitch = aircraft.fleet && aircraft.fleet.style === 'flyingwing' ? 0.3 : 0.14; }
+        if (this.chaseFor !== aircraft.aircraftId) { this.chaseFor = aircraft.aircraftId; this.chase.dist = sz * 1.45; this.chase.yaw = 0.34; this.chase.pitch = aircraft.fleet && aircraft.fleet.style === 'flyingwing' ? 0.3 : 0.15; }
         this.chase.dist = THREE.MathUtils.clamp(this.chase.dist * (1 + input.wheel * 0.001), sz * 0.6, 600);
-        if (input.resetLook) { this.chase.yaw = 0; this.chase.pitch = 0.12; this.chase.dist = sz * 1.4; }
+        if (input.resetLook) { this.chase.yaw = 0.34; this.chase.pitch = 0.15; this.chase.dist = sz * 1.45; }
         // follow the heading (not roll); orbit offsets on top
         const hdg = o.psi;
         const yaw = -hdg + Math.PI + this.chase.yaw;

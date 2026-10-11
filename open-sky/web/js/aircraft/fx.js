@@ -9,25 +9,40 @@ const MAX = 6000;
 
 function particleMaterial(additive) {
   const sh = logDepth(`
-      attribute vec4 aColor; attribute float aSize;
-      varying vec4 vColor;
+      attribute vec4 aColor; attribute float aSize; attribute float aSeed;
+      varying vec4 vColor; varying float vSeed;
       uniform float uScale;
       void main() {
-        vColor = aColor;
+        vColor = aColor; vSeed = aSeed;
         vec4 mv = modelViewMatrix * vec4(position, 1.0);
         gl_PointSize = clamp(aSize * uScale / max(0.5, -mv.z), 0.0, 512.0);
         gl_Position = projectionMatrix * mv;
       }`, `
-      varying vec4 vColor;
+      varying vec4 vColor; varying float vSeed;
+      uniform float uSoft; uniform vec3 uSunDir; uniform vec3 uLight;
+      float h2(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+      float vn(vec2 p){ vec2 i = floor(p), f = fract(p); f = f*f*(3.0-2.0*f);
+        return mix(mix(h2(i), h2(i+vec2(1,0)), f.x), mix(h2(i+vec2(0,1)), h2(i+vec2(1,1)), f.x), f.y); }
       void main() {
         vec2 d = gl_PointCoord - 0.5;
         float r = dot(d, d) * 4.0;
         if (r > 1.0) discard;
         float a = vColor.a * (1.0 - r) * (1.0 - r);
-        gl_FragColor = vec4(vColor.rgb, a);
+        vec3 col = vColor.rgb;
+        if (uSoft > 0.5) {
+          // billowy edge: noise eats into the disc, rotated per particle
+          float ang = vSeed * 6.2831;
+          vec2 q = mat2(cos(ang), -sin(ang), sin(ang), cos(ang)) * d;
+          float n = vn(q * 5.0 + vSeed * 17.0) * 0.6 + vn(q * 11.0 - vSeed * 9.0) * 0.4;
+          a *= smoothstep(0.15, 0.75, n + (1.0 - r) * 0.55);
+          // lit from above: the sunward side of each puff is brighter
+          float top = clamp(0.5 - d.y * 1.6, 0.0, 1.0);
+          col = col * (0.75 + 0.5 * top) + uLight * top * 0.12 * (1.0 - vColor.r);
+        }
+        gl_FragColor = vec4(col, a);
       }`);
   return new THREE.ShaderMaterial({
-    uniforms: { uScale: { value: 600 } },
+    uniforms: { uScale: { value: 600 }, uSoft: { value: additive ? 0 : 1 }, uSunDir: { value: new THREE.Vector3(0, 1, 0) }, uLight: { value: new THREE.Color(1, 1, 1) } },
     vertexShader: sh.vertexShader,
     fragmentShader: sh.fragmentShader,
     transparent: true, depthWrite: false,
@@ -49,15 +64,18 @@ class Pool {
     this.a0 = new Float32Array(MAX);
     this.drag = new Float32Array(MAX);
     this.lift = new Float32Array(MAX);
+    this.seed = new Float32Array(MAX);
     const g = new THREE.BufferGeometry();
     g.setAttribute('position', new THREE.BufferAttribute(this.pos, 3).setUsage(THREE.DynamicDrawUsage));
     g.setAttribute('aColor', new THREE.BufferAttribute(this.col, 4).setUsage(THREE.DynamicDrawUsage));
     g.setAttribute('aSize', new THREE.BufferAttribute(this.size, 1).setUsage(THREE.DynamicDrawUsage));
+    g.setAttribute('aSeed', new THREE.BufferAttribute(this.seed, 1).setUsage(THREE.DynamicDrawUsage));
     this.geo = g;
     this.points = new THREE.Points(g, particleMaterial(additive));
     this.points.frustumCulled = false;
     this.points.renderOrder = additive ? 8 : 7;
     this.points.name = name;
+    this.soft = !additive;
     scene.add(this.points);
   }
   emit(p, v, life, size, grow, rgb, alpha, drag = 0.5, lift = 0) {
@@ -66,7 +84,7 @@ class Pool {
     this.pos.set([p.x, p.y, p.z], i * 3);
     this.vel.set([v.x, v.y, v.z], i * 3);
     this.life[i] = life; this.age[i] = 0; this.size[i] = size; this.grow[i] = grow;
-    this.rgb.set(rgb, i * 3); this.a0[i] = alpha; this.drag[i] = drag; this.lift[i] = lift;
+    this.rgb.set(rgb, i * 3); this.a0[i] = alpha; this.drag[i] = drag; this.lift[i] = lift; this.seed[i] = Math.random();
   }
   update(dt) {
     let w = 0;
@@ -75,7 +93,7 @@ class Pool {
       if (age >= this.life[i]) continue;
       if (w !== i) {
         this.pos.copyWithin(w * 3, i * 3, i * 3 + 3); this.vel.copyWithin(w * 3, i * 3, i * 3 + 3); this.rgb.copyWithin(w * 3, i * 3, i * 3 + 3);
-        this.life[w] = this.life[i]; this.size[w] = this.size[i]; this.grow[w] = this.grow[i]; this.a0[w] = this.a0[i]; this.drag[w] = this.drag[i]; this.lift[w] = this.lift[i];
+        this.life[w] = this.life[i]; this.size[w] = this.size[i]; this.grow[w] = this.grow[i]; this.a0[w] = this.a0[i]; this.drag[w] = this.drag[i]; this.lift[w] = this.lift[i]; this.seed[w] = this.seed[i];
       }
       this.age[w] = age;
       const k = Math.exp(-this.drag[w] * dt);
@@ -84,13 +102,22 @@ class Pool {
       this.size[w] += this.grow[w] * dt;
       const t = age / this.life[w];
       const fade = t < 0.1 ? t / 0.1 : 1 - (t - 0.1) / 0.9;
-      this.col[w * 4] = this.rgb[w * 3]; this.col[w * 4 + 1] = this.rgb[w * 3 + 1]; this.col[w * 4 + 2] = this.rgb[w * 3 + 2];
-      this.col[w * 4 + 3] = this.a0[w] * fade;
+      if (this.soft) {
+        // smoke disperses: dark soot greys out and thins as it ages
+        const k2 = Math.min(1, t * 1.3);
+        this.col[w * 4] = this.rgb[w * 3] + (0.46 - this.rgb[w * 3]) * k2 * 0.7;
+        this.col[w * 4 + 1] = this.rgb[w * 3 + 1] + (0.46 - this.rgb[w * 3 + 1]) * k2 * 0.7;
+        this.col[w * 4 + 2] = this.rgb[w * 3 + 2] + (0.48 - this.rgb[w * 3 + 2]) * k2 * 0.7;
+        this.col[w * 4 + 3] = this.a0[w] * fade * (1 - t * 0.45);
+      } else {
+        this.col[w * 4] = this.rgb[w * 3]; this.col[w * 4 + 1] = this.rgb[w * 3 + 1]; this.col[w * 4 + 2] = this.rgb[w * 3 + 2];
+        this.col[w * 4 + 3] = this.a0[w] * fade;
+      }
       w++;
     }
     this.n = w;
     this.geo.setDrawRange(0, w);
-    for (const a of ['position', 'aColor', 'aSize']) this.geo.attributes[a].needsUpdate = true;
+    for (const a of ['position', 'aColor', 'aSize', 'aSeed']) this.geo.attributes[a].needsUpdate = true;
   }
   shift(sx, tx, tz) {
     for (let i = 0; i < this.n; i++) { this.pos[i * 3] = sx * this.pos[i * 3] + tx; this.pos[i * 3 + 2] += tz; }
@@ -129,6 +156,7 @@ export class DamageFX {
     const o = player.o, m = player.model, P = m.parts || {}, root = player.root;
     const vel = tmp2.set(o.ve, o.vu, -o.vn);
     const scale = Math.max(0.4, (player.size || 11) / 35);
+    this.smoke.points.material.uniforms.uLight.value.copy(this.world.shared.uSunColor.value);
     this.acc += dt;
     const step = 1 / 40;
     const n = Math.min(4, Math.floor(this.acc / step));
@@ -143,7 +171,7 @@ export class DamageFX {
         const p = world(e.nozzle).clone();
         if (fire) {
           for (let j = 0; j < 3; j++) this.glow.emit(p.clone().add(jitter(1.2 * scale)), vel.clone().multiplyScalar(0.55).add(jitter(4)), 0.35 + Math.random() * 0.3, 2.2 * scale, 5 * scale, [1, 0.45 + Math.random() * 0.2, 0.08], 0.85, 1.5, 3);
-          this.smoke.emit(p.clone(), vel.clone().multiplyScalar(0.4).add(jitter(2)), 6, 2.5 * scale, 4 * scale, [0.08, 0.08, 0.08], 0.55, 0.8, 2.5);
+          this.smoke.emit(p.clone().add(jitter(0.6 * scale)), vel.clone().multiplyScalar(0.4).add(jitter(2.5)), 6, 2.2 * scale, 6.5 * scale, [0.1, 0.1, 0.1], 0.38, 0.8, 2.5);
         } else if (dmg > 0.3 && !o.crashed) {
           this.smoke.emit(p.clone(), vel.clone().multiplyScalar(0.5).add(jitter(1)), 4, 1.5 * scale, 3 * scale, [0.35, 0.35, 0.36], 0.35 * Math.min(1, dmg), 0.8, 1);
         }

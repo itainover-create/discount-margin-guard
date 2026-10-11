@@ -2,6 +2,7 @@
 // Model space: x = right, y = up, z = aft (nose toward -z), origin = CG.
 // Body FRD (x fwd, y right, z down) maps to model (y, -z, -x).
 import * as THREE from 'three';
+import { applyMaterialKit } from './materials.js';
 
 export const B = (x, y, z) => new THREE.Vector3(y, -z, -x); // body FRD -> model
 
@@ -287,6 +288,7 @@ export function createTrainer(opts = {}) {
   root.add(beaconMesh);
 
   root.traverse((o) => { if (o.isMesh) { o.castShadow = true; } });
+  applyMaterialKit(root);
   return { root, surfaces, prop: { group: prop, blades, disc }, lights, beaconMesh };
 }
 
@@ -401,6 +403,7 @@ export function createAIAircraft(type, liveryIndex = 0) {
   g.add(gear);
   g.userData.gear = gear;
   g.userData.gearHeight = R * 0.4 + gearH + R * 0.28;  // CG height above ground on gear
+  applyMaterialKit(g);
   aiCache.set(key, g);
   const c = g.clone();
   c.userData = { ...g.userData, gear: c.children[c.children.length - 1] };

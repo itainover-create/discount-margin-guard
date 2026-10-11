@@ -9,6 +9,13 @@ Two automated suites, both run on this delivery's build:
    headless Chromium; scripted test pilots fly through `Game.debugStep` (physics, ATC, runway
    authority, AI and en-route traffic, missions, scoring). **18 / 18 pass, 0 console errors.**
 
+## Graphics / UI pass with threejs-game-skills
+
+* Canvas inspector over 9 fixed scenes, before and after. All pass with 0 console errors.
+* Scorecard average went from 1.30 to 1.95; the cockpit-controls category is still below the premium bar.
+* Details, metrics and budget tradeoffs: [artifacts/final-evidence.md](../artifacts/final-evidence.md).
+* After the pass: native suite 227/227, browser e2e 18/18 (0 console errors).
+
 ## Browser end-to-end results (v2 additions)
 
 | # | Scenario | Result | Key numbers |

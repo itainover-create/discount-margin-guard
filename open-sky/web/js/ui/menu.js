@@ -54,6 +54,7 @@ export class Menu {
     document.body.classList.toggle('he-on', !!this.g.settings.hebrew);
     this.renderFeatured();
     this.renderMissions();
+    this.renderHomeFlights();
     this.renderSettings();
     this.renderControls();
     this.renderAbout();
@@ -212,11 +213,37 @@ export class Menu {
     let best = {};
     try { best = JSON.parse(localStorage.getItem('opensky.best') || '{}'); } catch { /* none */ }
     $('mission-list').innerHTML = MISSIONS.map((m) => `<div class="mission"><div class="meta">${esc(m.kind)} · ${esc(m.icao)} · ${esc(PRESETS[m.weather].label)} · ${esc(displayName(fleetEntry(m.aircraft ?? 0)))}</div><h3>${esc(m.title)}</h3>${g.settings.hebrew ? `<h3 dir="rtl" class="he" style="font-size:16px;color:#cdd6e4">${esc(m.titleHe)}</h3>` : ''}<p>${esc(m.desc)}</p>${g.settings.hebrew ? `<p dir="rtl" class="he">${esc(m.descHe)}</p>` : ''}${best[m.id] !== undefined ? `<div class="best">Best score: ${best[m.id]}/100</div>` : ''}<div style="display:flex;gap:8px;margin-top:auto"><button class="big-btn primary" data-m="${m.id}" data-mode="accessible">Fly (accessible)</button><button class="big-btn" data-m="${m.id}" data-mode="simulation">Simulation</button></div></div>`).join('') +
-      `<div class="mission"><div class="meta">Planned for the next versions</div><h3>Airliner and fighter training</h3><p>Airliner (737-class twinjet) and fighter (F-16-class) aircraft with their own flight models, systems and missions are on the roadmap. They will be added after the core flight system is validated (see docs/ROADMAP.md).</p></div>`;
+      '';
     $('mission-list').querySelectorAll('button[data-m]').forEach((b) => b.onclick = () => {
       const m = MISSIONS.find((x) => x.id === b.dataset.m);
       g.settings.mode = b.dataset.mode;
       g.startFlight({ icao: m.icao, start: m.start, mode: b.dataset.mode, hour: m.hour, weather: m.weather, missionId: m.id });
+    });
+  }
+
+  // Home: a row of ready-to-fly missions; the swatch shows each one's sky
+  // (time of day and weather), the meta line its aircraft and airport.
+  renderHomeFlights() {
+    const g = this.g, el = $('home-featured');
+    if (!el) return;
+    const ids = ['heavy', 'jetfire', 'storm', 'hudsonjet'];
+    const sky = (m) => {
+      const h = m.hour, wx = m.weather;
+      if (wx === 'storm') return 'linear-gradient(180deg,#1d2230 0%,#3b4152 55%,#59607a 100%)';
+      if (h >= 20.5 || h < 5.5) return 'linear-gradient(180deg,#05080f 0%,#0d1526 60%,#2a2230 100%)';
+      if (h >= 17.8) return 'linear-gradient(180deg,#2b3a68 0%,#c9785a 70%,#f2b072 100%)';
+      if (h >= 15.5) return 'linear-gradient(180deg,#3d6fb5 0%,#8fb3dd 70%,#e7d9b8 100%)';
+      return 'linear-gradient(180deg,#2f63b5 0%,#7fa9e0 70%,#cfe0f2 100%)';
+    };
+    const hh = (h) => `${String(Math.floor(h)).padStart(2, '0')}:${String(Math.round((h % 1) * 60)).padStart(2, '0')}`;
+    el.innerHTML = ids.map((id) => MISSIONS.find((m) => m.id === id)).filter(Boolean).map((m) => `
+      <button class="feat-card" data-m="${m.id}">
+        <span class="feat-sky" style="background:${sky(m)}"><span class="feat-time">${hh(m.hour)} · ${esc(PRESETS[m.weather].label)}</span></span>
+        <span class="feat-body"><span class="feat-kind">${esc(m.kind)} · ${esc(m.icao)}</span><span class="feat-title">${esc(m.title)}</span><span class="feat-ac">${esc(displayName(fleetEntry(m.aircraft ?? 0)))}</span></span>
+      </button>`).join('');
+    el.querySelectorAll('button[data-m]').forEach((b) => b.onclick = () => {
+      const m = MISSIONS.find((x) => x.id === b.dataset.m);
+      g.startFlight({ icao: m.icao, start: m.start, mode: g.settings.mode, hour: m.hour, weather: m.weather, missionId: m.id });
     });
   }
 

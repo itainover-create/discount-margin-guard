@@ -92,6 +92,7 @@ export class World {
 
   async loadPlace({ icao, lat, lon }, progress = () => {}) {
     this.clearPlace();
+    this.urbanGlow = 0.25;   // light pollution at night: a built city region glows on the horizon
     let entry = icao ? this.regionForAirport(icao) : null;
     if (!entry && lat !== undefined) {
       entry = this.catalog.regions.find((r) => lon > r.bbox[0] && lon < r.bbox[2] && lat > r.bbox[1] && lat < r.bbox[3]) || null;
@@ -117,6 +118,7 @@ export class World {
       region.bindShader(this.shared);
       this.status.place = `${entry.name} — tier ${entry.tier}`;
       this.placeTier = entry.tier;
+      this.urbanGlow = entry.id === 'nyc' || entry.id === 'tlv' || entry.id === 'las' ? 1 : 0.55;
       this.magVar = region.manifest.magVar;
     } else {
       const row = this.airportIndex.get(icao);

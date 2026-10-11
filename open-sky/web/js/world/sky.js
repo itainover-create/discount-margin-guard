@@ -144,6 +144,10 @@ export class Sky {
     const grayZ = new THREE.Color(0.48, 0.52, 0.56), grayH = new THREE.Color(0.66, 0.68, 0.70);
     const zen = dayZen.clone().lerp(setZen, twilight * 0.8).lerp(nightZen, night);
     const hor = dayHor.clone().lerp(setHor, twilight * 0.85).lerp(nightHor, night);
+    // sodium-orange sky glow over a lit city (stronger under an overcast)
+    const glow = (this.world.urbanGlow || 0) * night * (0.6 + 0.8 * overcast);
+    hor.add(new THREE.Color(0.075, 0.05, 0.032).multiplyScalar(glow));
+    zen.add(new THREE.Color(0.012, 0.011, 0.014).multiplyScalar(glow));
     const k = (1 - night) * overcast;
     zen.lerp(grayZ.clone().multiplyScalar(1 - night * 0.95), k * 0.9);
     hor.lerp(grayH.clone().multiplyScalar(1 - night * 0.95), k * 0.9);
@@ -187,7 +191,7 @@ export class Sky {
     if (camThree) { this.sunLight.position.add(camThree); this.sunLight.target.position.copy(camThree); }
     this.hemi.color.copy(skyAmb);
     this.hemi.groundColor.copy(S.uGroundAmb.value);
-    this.hemi.intensity = 1.6;
+    this.hemi.intensity = 1.6 * (this.hemiK ?? 1);
     this.world.scene.fog.color.copy(fog);
     this.world.scene.fog.density = S.uFogDensity.value * 0.75;
     this.world.renderer.setClearColor(hor);

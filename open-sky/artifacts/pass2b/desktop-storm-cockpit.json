@@ -1,0 +1,99 @@
+{
+  "url": "http://127.0.0.1:8123/index.html?skipintro",
+  "mode": "desktop",
+  "state": "storm-cockpit",
+  "requestedState": "storm-cockpit",
+  "appliedState": "storm-cockpit",
+  "runId": "pass2b",
+  "seed": 42,
+  "screenshotPath": "artifacts/pass2b/desktop-storm-cockpit.png",
+  "gpu": {
+    "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+    "vendor": "Google Inc. (Google)",
+    "softwareRendered": true
+  },
+  "result": {
+    "ok": true,
+    "reason": "nonblank",
+    "rect": {
+      "x": 0,
+      "y": 0,
+      "width": 1280,
+      "height": 720
+    },
+    "drawingBuffer": {
+      "width": 1280,
+      "height": 720
+    },
+    "alphaPixels": 4096,
+    "variance": 255,
+    "colorBuckets": 71,
+    "metrics": {
+      "colorBuckets": 122,
+      "colorEntropyBits": 4.12,
+      "edgeDensity": 0.183,
+      "luminance": {
+        "mean": 96.2,
+        "p5": 7.7,
+        "p95": 226,
+        "contrast": 218.4
+      },
+      "dominantColorShare": 0.175,
+      "nonBackgroundShare": 0.825
+    },
+    "renderBudget": {
+      "tier": "desktop",
+      "note": "starting-point budget; adjust per game and document overrides",
+      "rows": [
+        {
+          "metric": "calls",
+          "actual": 1724,
+          "limit": 300,
+          "ok": false
+        },
+        {
+          "metric": "triangles",
+          "actual": 4235665,
+          "limit": 750000,
+          "ok": false
+        },
+        {
+          "metric": "geometries",
+          "actual": 725,
+          "limit": 300,
+          "ok": false
+        },
+        {
+          "metric": "textures",
+          "actual": 108,
+          "limit": 60,
+          "ok": false
+        }
+      ],
+      "withinBudget": false
+    },
+    "diagnostics": {
+      "renderer": {
+        "calls": 1724,
+        "triangles": 4235665,
+        "points": 49121,
+        "lines": 6498,
+        "geometries": 725,
+        "textures": 108,
+        "programs": 32,
+        "pixelRatio": 1,
+        "toneMapping": 4,
+        "exposure": 1.12,
+        "shadowMap": true,
+        "postPasses": 0
+      },
+      "state": "storm-cockpit",
+      "fps": 33,
+      "buildings": 271692
+    }
+  },
+  "consoleErrors": [],
+  "pageErrors": [],
+  "consoleErrorCount": 0,
+  "pageErrorCount": 0
+}

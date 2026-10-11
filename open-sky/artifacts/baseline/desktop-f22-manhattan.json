@@ -1,0 +1,99 @@
+{
+  "url": "http://127.0.0.1:8123/index.html?skipintro",
+  "mode": "desktop",
+  "state": "f22-manhattan",
+  "requestedState": "f22-manhattan",
+  "appliedState": "f22-manhattan",
+  "runId": "baseline",
+  "seed": 42,
+  "screenshotPath": "artifacts/baseline/desktop-f22-manhattan.png",
+  "gpu": {
+    "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+    "vendor": "Google Inc. (Google)",
+    "softwareRendered": true
+  },
+  "result": {
+    "ok": true,
+    "reason": "nonblank",
+    "rect": {
+      "x": 0,
+      "y": 0,
+      "width": 1280,
+      "height": 720
+    },
+    "drawingBuffer": {
+      "width": 1280,
+      "height": 720
+    },
+    "alphaPixels": 4096,
+    "variance": 250,
+    "colorBuckets": 163,
+    "metrics": {
+      "colorBuckets": 214,
+      "colorEntropyBits": 5.8,
+      "edgeDensity": 0.404,
+      "luminance": {
+        "mean": 106.1,
+        "p5": 16.6,
+        "p95": 195,
+        "contrast": 178.4
+      },
+      "dominantColorShare": 0.099,
+      "nonBackgroundShare": 0.901
+    },
+    "renderBudget": {
+      "tier": "desktop",
+      "note": "starting-point budget; adjust per game and document overrides",
+      "rows": [
+        {
+          "metric": "calls",
+          "actual": 1215,
+          "limit": 300,
+          "ok": false
+        },
+        {
+          "metric": "triangles",
+          "actual": 3166357,
+          "limit": 750000,
+          "ok": false
+        },
+        {
+          "metric": "geometries",
+          "actual": 466,
+          "limit": 300,
+          "ok": false
+        },
+        {
+          "metric": "textures",
+          "actual": 47,
+          "limit": 60,
+          "ok": true
+        }
+      ],
+      "withinBudget": false
+    },
+    "diagnostics": {
+      "renderer": {
+        "calls": 1215,
+        "triangles": 3166357,
+        "points": 61173,
+        "lines": 498,
+        "geometries": 466,
+        "textures": 47,
+        "programs": 20,
+        "pixelRatio": 1,
+        "toneMapping": 0,
+        "exposure": 1,
+        "shadowMap": false,
+        "postPasses": 0
+      },
+      "state": "f22-manhattan",
+      "fps": 39,
+      "buildings": 345237
+    }
+  },
+  "consoleErrors": [],
+  "pageErrors": [],
+  "consoleErrorCount": 0,
+  "pageErrorCount": 0
+}

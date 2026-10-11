@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "runId": "baseline",
+  "captures": [
+    {
+      "mode": "desktop",
+      "state": "a320-cockpit-final",
+      "report": "artifacts/baseline/desktop-a320-cockpit-final.json"
+    },
+    {
+      "mode": "desktop",
+      "state": "storm-cockpit",
+      "report": "artifacts/baseline/desktop-storm-cockpit.json"
+    },
+    {
+      "mode": "desktop",
+      "state": "f22-manhattan",
+      "report": "artifacts/baseline/desktop-f22-manhattan.json"
+    },
+    {
+      "mode": "desktop",
+      "state": "engine-fire-738",
+      "report": "artifacts/baseline/desktop-engine-fire-738.json"
+    },
+    {
+      "mode": "desktop",
+      "state": "night-manhattan",
+      "report": "artifacts/baseline/desktop-night-manhattan.json"
+    },
+    {
+      "mode": "desktop",
+      "state": "cruise-a350",
+      "report": "artifacts/baseline/desktop-cruise-a350.json"
+    }
+  ]
+}

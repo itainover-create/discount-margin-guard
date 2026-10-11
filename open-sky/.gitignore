@@ -3,3 +3,5 @@ core/build/
 node_modules/
 *.pyc
 __pycache__/
+# raw inspector screenshots (JPEG previews in artifacts/previews are committed)
+artifacts/**/*.png

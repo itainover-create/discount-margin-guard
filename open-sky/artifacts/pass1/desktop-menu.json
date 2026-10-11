@@ -1,0 +1,99 @@
+{
+  "url": "http://127.0.0.1:8123/index.html?skipintro",
+  "mode": "desktop",
+  "state": "menu",
+  "requestedState": "menu",
+  "appliedState": "menu",
+  "runId": "pass1",
+  "seed": 42,
+  "screenshotPath": "artifacts/pass1/desktop-menu.png",
+  "gpu": {
+    "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+    "vendor": "Google Inc. (Google)",
+    "softwareRendered": true
+  },
+  "result": {
+    "ok": true,
+    "reason": "nonblank",
+    "rect": {
+      "x": 0,
+      "y": 0,
+      "width": 1280,
+      "height": 720
+    },
+    "drawingBuffer": {
+      "width": 1280,
+      "height": 720
+    },
+    "alphaPixels": 4096,
+    "variance": 250,
+    "colorBuckets": 147,
+    "metrics": {
+      "colorBuckets": 161,
+      "colorEntropyBits": 3.85,
+      "edgeDensity": 0.206,
+      "luminance": {
+        "mean": 43.1,
+        "p5": 11.8,
+        "p95": 147.2,
+        "contrast": 135.4
+      },
+      "dominantColorShare": 0.244,
+      "nonBackgroundShare": 0.756
+    },
+    "renderBudget": {
+      "tier": "desktop",
+      "note": "starting-point budget; adjust per game and document overrides",
+      "rows": [
+        {
+          "metric": "calls",
+          "actual": 0,
+          "limit": 300,
+          "ok": true
+        },
+        {
+          "metric": "triangles",
+          "actual": 0,
+          "limit": 750000,
+          "ok": true
+        },
+        {
+          "metric": "geometries",
+          "actual": 0,
+          "limit": 300,
+          "ok": true
+        },
+        {
+          "metric": "textures",
+          "actual": 0,
+          "limit": 60,
+          "ok": true
+        }
+      ],
+      "withinBudget": true
+    },
+    "diagnostics": {
+      "renderer": {
+        "calls": 0,
+        "triangles": 0,
+        "points": 0,
+        "lines": 0,
+        "geometries": 0,
+        "textures": 0,
+        "programs": 0,
+        "pixelRatio": 1,
+        "toneMapping": 4,
+        "exposure": 1.12,
+        "shadowMap": true,
+        "postPasses": 0
+      },
+      "state": "menu",
+      "fps": 55,
+      "buildings": 0
+    }
+  },
+  "consoleErrors": [],
+  "pageErrors": [],
+  "consoleErrorCount": 0,
+  "pageErrorCount": 0
+}

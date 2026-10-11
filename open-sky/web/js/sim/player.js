@@ -109,10 +109,23 @@ export class PlayerAircraft {
         }
       }
       v.root = v.model.root;
+      // the flight deck takes part in the sun shadow (frames and glareshield shade the panel)
+      v.cockpit.group.traverse((c) => { if (c.isMesh) { c.receiveShadow = true; c.castShadow = !(c.material && c.material.transparent); } });
       v.root.add(v.cockpit.group);
       v.cockpit.group.visible = false;
       v.exterior = [];
       v.root.traverse((c) => { if (c.userData.exterior) v.exterior.push(c); });
+      // logo lights (airliners): from the stabiliser tips up onto the fin
+      if (f.style === 'airliner') {
+        const box = new THREE.Box3().setFromObject(v.model.root);
+        const tl = v.model.lights.tail;
+        const spot = new THREE.SpotLight(0xfff1dc, 0, f.g.L * 0.6, 0.55, 0.6, 1.2);
+        spot.position.set(tl.x, tl.y + (box.max.y - tl.y) * 0.08, tl.z - f.g.L * 0.1);
+        spot.target.position.set(tl.x, tl.y + (box.max.y - tl.y) * 0.75, tl.z - f.g.L * 0.02);
+        spot.userData.k = 6 * Math.pow(f.g.L / 40, 2);
+        v.model.root.add(spot, spot.target);
+        v.logo = spot;
+      }
       v.lights = new LightBatch(this.world, 'aircraft-lights-' + f.key, 24);
       v.root.add(v.lights.points);
       const L = v.model.lights, big = f.style === 'trainer' || f.style === 'aerobatic' ? 1 : 1.8;
@@ -361,6 +374,11 @@ export class PlayerAircraft {
     L.setVisible(this.lightIds.landing, pw && this.sw.landing);
     L.setVisible(this.lightIds.taxi, pw && this.sw.taxi);
     L.flush();
+    // night: cabin windows glow; the logo lights wash the tail fin
+    const night = this.world.shared.uNight.value;
+    const fusM = this.model.parts && this.model.parts.fuselage && this.model.parts.fuselage.material;
+    if (fusM && fusM.emissiveMap) fusM.emissiveIntensity = pw ? night * 1.25 : 0;
+    if (this.variant.logo) this.variant.logo.intensity = pw && this.sw.nav ? night * this.variant.logo.userData.k : 0;
     this.model.beaconMesh.material.color.setHex(pw && this.sw.beacon && (performance.now() % 1100) < 160 ? 0xff2020 : 0x551111);
     // landing light into world shaders
     const S = this.world.shared;

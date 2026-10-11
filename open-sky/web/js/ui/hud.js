@@ -114,7 +114,7 @@ export class Hud {
     el.innerHTML = '<div class="boot-head"></div><pre></pre><div class="rights"></div>';
     el.querySelector('.boot-head').append(badge(), gameTitle('boot'));
     el.querySelector('.rights').textContent = RIGHTS;
-    const ac = g.player && g.player.def ? g.player.def.name : 'SKYLARK T1';
+    const ac = g.player && g.player.fleet ? g.player.fleet.name : 'SKYLARK T1';
     const lines = [
       `GLOBAL SKIES FLIGHT SYSTEM ${GAME.version} · ORION GAMES`,
       `FLIGHT CORE ........ C++ ${g.core.backend === 'wasm' ? 'WEBASSEMBLY' : 'JS'} OK`,
@@ -244,51 +244,85 @@ export class Hud {
     if (this.mapT <= 0 && this.mapOn && g.settings.hud) { this.mapT = 0.15; this.drawMap(); }
   }
 
+  // Flight strip: three primary readouts, state chips, then secondary rows.
+  // Exterior views only; in the cockpit the aircraft's own instruments show this.
+  _strip(prim, chips, rows, warn) {
+    const P = prim.map(([l, n, u, sub]) => `<div class="fd-big"><span class="fd-l">${l}</span><span class="fd-n">${n}</span><span class="fd-u">${u}</span><span class="fd-sub">${sub}</span></div>`).join('');
+    const C = chips.map(([t, k]) => `<span class="chip ${k || ''}">${t}</span>`).join('');
+    const R = rows.map(([k, v]) => `<span class="k">${k}</span><span class="v">${v}</span>`).join('');
+    $('hud-data').innerHTML = `<div class="fd-primary">${P}</div><div class="fd-chips">${C}</div><div class="fd-rows">${R}</div>${warn.length ? `<div class="fd-warn">${warn.join('')}</div>` : ''}`;
+  }
+
+  _vs(vs) {
+    const v = Math.round(vs / 10) * 10;
+    return `${v > 40 ? '▲' : v < -40 ? '▼' : '•'} ${Math.abs(v).toLocaleString('en-US')}`;
+  }
+
   drawData(o, sw) {
     if (this.g.player.isJet) return this.drawJetData(o, sw);
     const ias = o.indIas * KT, alt = o.indAlt * FT, vs = o.indVs * FT * 60;
     const warn = [];
-    if (o.stallWarn) warn.push('<span class="bad">STALL</span>');
-    if (o.overspeed) warn.push('<span class="bad">OVERSPEED</span>');
-    if (!o.engineRunning && !o.onGround) warn.push('<span class="bad">ENGINE OFF</span>');
-    if (sw.parkBrake && o.onGround) warn.push('<span class="warn">PARK BRAKE</span>');
-    if (o.lowFuelL || o.lowFuelR) warn.push('<span class="warn">LOW FUEL</span>');
-    if (o.lowVolts) warn.push('<span class="warn">LOW VOLTS</span>');
-    const w = this.g.world.weather.state;
-    const nav = this.g.nav;
+    if (o.stallWarn) warn.push('<span class="chip bad">STALL</span>');
+    if (o.overspeed) warn.push('<span class="chip bad">OVERSPEED</span>');
+    if (!o.engineRunning && !o.onGround) warn.push('<span class="chip bad">ENGINE OFF</span>');
+    if (sw.parkBrake && o.onGround) warn.push('<span class="chip warn">PARK BRAKE</span>');
+    if (o.lowFuelL || o.lowFuelR) warn.push('<span class="chip warn">LOW FUEL</span>');
+    if (o.lowVolts) warn.push('<span class="chip warn">LOW VOLTS</span>');
+    const w = this.g.world.weather.state, nav = this.g.nav, ui = this.g.player.ui;
+    const hdg = String(Math.round(o.hdgMag) % 360).padStart(3, '0');
+    const prim = [
+      ['IAS', ias.toFixed(0), 'KT', `GS ${(o.gs * KT).toFixed(0)}`],
+      ['ALT', (Math.round(alt / 10) * 10).toLocaleString('en-US'), 'FT', `HDG ${hdg}°`],
+      ['V/S', this._vs(vs), 'FPM', `TRIM ${Math.round(o.trim * 100)}`],
+    ];
+    const chips = [
+      [`FLAPS ${Math.round(o.flapsDeg)}°`, o.flapsDeg > 0.5 ? 'on' : ''],
+      [o.apEngaged ? `AP ${['ROL', 'HDG', 'NAV'][o.apLat]} ${['VS', 'ALT'][o.apVert]}` : 'AP OFF', o.apEngaged ? 'on' : 'off'],
+      [`THR ${Math.round(sw.throttle * 100)}%`, ''],
+    ];
     const rows = [
-      ['IAS', `${ias.toFixed(0)} kt`], ['ALT', `${Math.round(alt / 10) * 10} ft`], ['V/S', `${Math.round(vs / 10) * 10} fpm`],
-      ['HDG', `${String(Math.round(o.hdgMag) % 360).padStart(3, '0')}°`], ['GS', `${(o.gs * KT).toFixed(0)} kt`],
-      ['THR / RPM', `${Math.round(sw.throttle * 100)}% · ${Math.round(o.rpm)}`], ['FLAPS · TRIM', `${Math.round(o.flapsDeg)}° · ${Math.round(o.trim * 100)}`],
-      ['AP', o.apEngaged ? `${['ROL', 'HDG', 'NAV'][o.apLat]} ${['VS', 'ALT'][o.apVert]} · ${Math.round(this.g.player.ui.hdgBugDeg)}° ${this.g.player.ui.apAltFt} ft` : 'off'],
+      ['RPM', `${Math.round(o.rpm)}`],
       ['WIND', `${String(Math.round(w.windDir)).padStart(3, '0')}° / ${Math.round(w.windKt)}${w.gustKt ? 'G' + w.gustKt : ''} kt`],
       ['FUEL', `${((o.fuelL + o.fuelR) / 0.72 / 3.785).toFixed(1)} gal`],
     ];
-    if (nav) rows.push(['GPS', `${nav.name.slice(0, 14)} ${nav.distNm.toFixed(1)} nm ${String(Math.round(nav.brgMag)).padStart(3, '0')}°`]);
-    $('hud-data').innerHTML = rows.map(([k, v]) => `<span class="k">${k}</span><span class="v">${v}</span>`).join('') + (warn.length ? `<span class="k">!</span><span class="v">${warn.join(' ')}</span>` : '');
+    if (o.apEngaged) rows.push(['AP SEL', `${Math.round(ui.hdgBugDeg)}° · ${ui.apAltFt} ft`]);
+    if (nav) rows.push(['GPS', `${esc(nav.name.slice(0, 14))} ${nav.distNm.toFixed(1)} nm ${String(Math.round(nav.brgMag)).padStart(3, '0')}°`]);
+    this._strip(prim, chips, rows, warn);
   }
 
   drawJetData(o, sw) {
     const p = this.g.player, f = p.fleet;
     const ias = o.indIas * KT, alt = o.indAlt * FT, vs = o.indVs * FT * 60;
     const n1 = [o.n1_0, o.n1_1, o.n1_2, o.n1_3].slice(0, f.engines).map((v) => Math.round(v)).join(' · ');
-    const gear = o.gearPos > 0.99 ? '<span class="good">DOWN ▮▮▮</span>' : o.gearPos < 0.01 ? 'UP' : '<span class="warn">TRANSIT</span>';
     const w = this.g.world.weather.state;
+    const hdg = String(Math.round(o.hdgMag) % 360).padStart(3, '0');
+    const prim = [
+      ['IAS', ias.toFixed(0), 'KT', o.mach > 0.3 ? `M ${o.mach.toFixed(2)}` : `GS ${(o.gs * KT).toFixed(0)}`],
+      ['ALT', (Math.round(alt / 10) * 10).toLocaleString('en-US'), 'FT', `HDG ${hdg}°`],
+      ['V/S', this._vs(vs), 'FPM', `GS ${(o.gs * KT).toFixed(0)} KT`],
+    ];
+    const gearK = o.gearPos > 0.99 ? 'good' : o.gearPos < 0.01 ? '' : 'warn';
+    const gearT = o.gearPos > 0.99 ? 'GEAR DN' : o.gearPos < 0.01 ? 'GEAR UP' : 'GEAR ⇅';
+    const chips = [
+      [gearT, gearK],
+      [`FLAPS ${f.flaps[sw.flaps]}`, sw.flaps > 0 ? 'on' : ''],
+      [o.speedbrake > 0.02 ? `SPD BRK ${Math.round(o.speedbrake * 100)}%` : sw.spoilerArm ? 'SPLR ARM' : 'SPD BRK', o.speedbrake > 0.02 ? 'warn' : sw.spoilerArm ? 'on' : 'off'],
+      [o.apEngaged ? `AP ${['ROL', 'HDG', 'NAV'][o.apLat]} ${['VS', 'ALT'][o.apVert]}` : 'AP OFF', o.apEngaged ? 'on' : 'off'],
+      [sw.at ? `A/T ${p.ui.atSpdKt}` : 'A/T OFF', sw.at ? 'on' : 'off'],
+    ];
+    if (o.afterburner) chips.push(['AB', 'warn']);
+    if (o.reverser) chips.push(['REV', 'warn']);
     const rows = [
-      ['IAS · MACH', `${ias.toFixed(0)} kt · M${o.mach.toFixed(2)}`], ['ALT', `${Math.round(alt / 10) * 10} ft`], ['V/S', `${Math.round(vs / 10) * 10} fpm`],
-      ['HDG · GS', `${String(Math.round(o.hdgMag) % 360).padStart(3, '0')}° · ${(o.gs * KT).toFixed(0)} kt`],
-      ['N1 %', `${n1}${o.afterburner ? ' <span class="warn">AB</span>' : ''}${o.reverser ? ' <span class="warn">REV</span>' : ''}`],
-      ['THRUST LEVER', `${Math.round((sw.at ? o.atThr : sw.throttle) * 100)}%${sw.at ? ` · A/T ${p.ui.atSpdKt} kt` : ''}`],
-      ['GEAR · FLAPS', `${gear} · ${f.flaps[sw.flaps]} (${Math.round(o.flapsDeg)}°)`],
-      ['SPD BRK', o.speedbrake > 0.02 ? `<span class="warn">${Math.round(o.speedbrake * 100)}%</span>` : sw.spoilerArm ? 'ARMED' : 'DOWN'],
-      ['AP', o.apEngaged ? `${['ROL', 'HDG', 'NAV'][o.apLat]} ${['VS', 'ALT'][o.apVert]} · ${Math.round(p.ui.hdgBugDeg)}° ${p.ui.apAltFt} ft` : 'off'],
+      ['N1 %', n1],
+      ['THRUST', `${Math.round((sw.at ? o.atThr : sw.throttle) * 100)}%`],
       ['WIND', `${String(Math.round(w.windDir)).padStart(3, '0')}° / ${Math.round(w.windKt)}${w.gustKt ? 'G' + w.gustKt : ''} kt`],
       ['FUEL', `${((o.fuelL + o.fuelR) / 1000).toFixed(1)} t · ${Math.round(o.fuelFlow * 3600)} kg/h`],
     ];
-    if (this.g.nav) rows.push(['GPS', `${this.g.nav.name.slice(0, 14)} ${this.g.nav.distNm.toFixed(1)} nm ${String(Math.round(this.g.nav.brgMag)).padStart(3, '0')}°`]);
+    if (o.apEngaged) rows.push(['AP SEL', `${Math.round(p.ui.hdgBugDeg)}° · ${p.ui.apAltFt} ft`]);
+    if (this.g.nav) rows.push(['GPS', `${esc(this.g.nav.name.slice(0, 14))} ${this.g.nav.distNm.toFixed(1)} nm ${String(Math.round(this.g.nav.brgMag)).padStart(3, '0')}°`]);
     const A = alertsFor(o, sw, f).filter(([lvl]) => lvl === 'red' || lvl === 'amber');
-    const warn = A.slice(0, 5).map(([lvl, t]) => `<span class="${lvl === 'red' ? 'bad' : 'warn'}">${esc(t)}</span>`);
-    $('hud-data').innerHTML = rows.map(([k, v]) => `<span class="k">${k}</span><span class="v">${v}</span>`).join('') + (warn.length ? `<span class="k">!</span><span class="v">${warn.join(' ')}</span>` : '');
+    const warn = A.slice(0, 5).map(([lvl, t]) => `<span class="chip ${lvl === 'red' ? 'bad' : 'warn'}">${esc(t)}</span>`);
+    this._strip(prim, chips, rows, warn);
   }
 
   drawTutorial() {
@@ -309,7 +343,14 @@ export class Hud {
   drawStatus(o) {
     const g = this.g;
     const st = g.atc.state;
-    $('hud-status').innerHTML = `${esc(VIEW_NAMES[g.rig.view])} · ${g.player.simMode ? 'Simulation' : 'Accessible'} · core: ${g.core.backend.toUpperCase()} · ${Math.round(g.fps.value)} fps<br>${esc(g.world.status.place)} · ATC: ${esc(st)} · runway ${esc(g.atc.activeEnd ? g.atc.activeEnd.ident : '-')} · AI ${g.traffic.agents.length}<br>Terrain: ${esc(g.world.status.terrain)}`;
+    $('hud').classList.toggle('in-cockpit', g.rig.view === 'cockpit');
+    $('atc').classList.toggle('empty', !$('atc-log').children.length && !this.atcOpen);
+    const rw = g.atc.activeEnd ? g.atc.activeEnd.ident : '-';
+    if (g.settings.diag) {
+      $('hud-status').innerHTML = `${esc(VIEW_NAMES[g.rig.view])} · ${g.player.simMode ? 'Simulation' : 'Accessible'} · core: ${g.core.backend.toUpperCase()} · ${Math.round(g.fps.value)} fps<br>${esc(g.world.status.place)} · ATC: ${esc(st)} · runway ${esc(rw)} · AI ${g.traffic.agents.length}<br>Terrain: ${esc(g.world.status.terrain)} · F3 hides diagnostics`;
+    } else {
+      $('hud-status').innerHTML = `<span class="ctx">${esc(VIEW_NAMES[g.rig.view])}</span><span class="ctx">${g.player.simMode ? 'Simulation' : 'Accessible'}</span><span class="ctx">RWY ${esc(rw)}</span>`;
+    }
   }
 
   drawChecklist() {
@@ -324,8 +365,12 @@ export class Hud {
     const k = W / 2 / range;
     const toPx = (x, y) => [W / 2 + (x - o.x) * k, H / 2 - (y - o.y) * k];
     ctx.clearRect(0, 0, W, H);
-    ctx.fillStyle = 'rgba(8,14,26,0.85)';
+    ctx.fillStyle = 'rgba(8,14,26,0.88)';
     ctx.fillRect(0, 0, W, H);
+    this.drawLand(ctx, W, H, o, range);
+    // range ring at half range
+    ctx.strokeStyle = 'rgba(212,168,92,0.25)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.arc(W / 2, H / 2, W / 4, 0, Math.PI * 2); ctx.stroke();
     // airports
     for (const ap of g.world.airports) {
       ctx.strokeStyle = '#5c6b82';
@@ -380,6 +425,44 @@ export class Hud {
     ctx.fillStyle = '#9aa7bb';
     ctx.font = '11px sans-serif';
     ctx.fillText(`N↑  ${(range / 1852).toFixed(1)} nm`, 8, 14);
+  }
+
+  // Land, water and built-up areas from the region's land-class raster,
+  // sampled on a coarse grid and cached while the view barely moves.
+  drawLand(ctx, W, H, o, range) {
+    const regs = this.g.world.regions;
+    if (!regs.length) return;
+    const N = 80, cell = (2 * range) / N;
+    const key = `${Math.round(o.x / cell)},${Math.round(o.y / cell)},${Math.round(range)}`;
+    if (this._landKey !== key) {
+      this._landKey = key;
+      if (!this._land) { this._land = document.createElement('canvas'); this._land.width = this._land.height = N; }
+      const lx = this._land.getContext('2d'), img = lx.createImageData(N, N);
+      const tmp = {};
+      for (let j = 0; j < N; j++) {
+        for (let i = 0; i < N; i++) {
+          const wx = o.x + (i + 0.5 - N / 2) * cell, wy = o.y - (j + 0.5 - N / 2) * cell;
+          let c = -1;
+          for (const r of regs) { r.toRegion(wx, wy, tmp); c = r.classAt(tmp.x, tmp.y); if (c >= 0) break; }
+          let rgb = [24, 34, 44];                                   // land
+          if (c < 0) rgb = [14, 22, 34];                            // outside the detailed region
+          else if ((c >= 1 && c <= 4) || c === 44 || c === 45 || c === 46) rgb = [12, 38, 66];   // water
+          else if (c >= 10 && c <= 13) rgb = [44, 52, 62];          // built up
+          else if (c >= 20 && c <= 31) rgb = [22, 46, 34];          // parks, woods, fields
+          else if (c >= 50 && c <= 55) rgb = [58, 62, 70];          // airport
+          const k = (j * N + i) * 4;
+          img.data[k] = rgb[0]; img.data[k + 1] = rgb[1]; img.data[k + 2] = rgb[2]; img.data[k + 3] = 255;
+        }
+      }
+      lx.putImageData(img, 0, 0);
+    }
+    ctx.save();
+    ctx.imageSmoothingEnabled = true;
+    ctx.globalAlpha = 0.95;
+    ctx.filter = 'blur(1.5px)';
+    ctx.drawImage(this._land, 0, 0, W, H);
+    ctx.filter = 'none';
+    ctx.restore();
   }
 
   // -----------------------------------------------------------------

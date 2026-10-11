@@ -20,6 +20,81 @@ function labelTex(text, w = 256, h = 64, bg = '#1c2026', fg = '#e9e9e9', size = 
   return t;
 }
 
+
+// ---- flight deck surface kit: canvas textures shared by every glass deck ----
+let deckTex = null;
+function grainCanvas(size, base, amp, seed0, draw) {
+  const c = document.createElement('canvas');
+  c.width = c.height = size;
+  const g = c.getContext('2d');
+  const img = g.createImageData(size, size);
+  let seed = seed0;
+  const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
+  for (let i = 0; i < size * size; i++) {
+    const n = (rnd() - 0.5) * amp;
+    img.data[i * 4] = Math.max(0, Math.min(255, base[0] + n));
+    img.data[i * 4 + 1] = Math.max(0, Math.min(255, base[1] + n));
+    img.data[i * 4 + 2] = Math.max(0, Math.min(255, base[2] + n));
+    img.data[i * 4 + 3] = 255;
+  }
+  g.putImageData(img, 0, 0);
+  if (draw) draw(g, size, rnd);
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.anisotropy = 4;
+  return t;
+}
+function deckTextures() {
+  if (deckTex) return deckTex;
+  // instrument panel: fine-textured charcoal paint, panel seams and Dzus fasteners
+  const panel = grainCanvas(512, [58, 63, 71], 10, 3, (g, S) => {
+    g.strokeStyle = 'rgba(10,12,15,0.85)'; g.lineWidth = 3;
+    for (const v of [0, S / 2]) { g.strokeRect(4 + v * 0, 4 + v, S - 8, S / 2 - 8); }
+    g.strokeStyle = 'rgba(255,255,255,0.06)'; g.lineWidth = 1;
+    for (const v of [0, S / 2]) { g.strokeRect(6, 6 + v, S - 12, S / 2 - 12); }
+    const dzus = (x, y) => {
+      const gr = g.createRadialGradient(x - 2, y - 2, 1, x, y, 7);
+      gr.addColorStop(0, '#c9ccd0'); gr.addColorStop(1, '#4b5056');
+      g.fillStyle = gr; g.beginPath(); g.arc(x, y, 6, 0, Math.PI * 2); g.fill();
+      g.strokeStyle = '#1d2024'; g.lineWidth = 1.6; g.beginPath(); g.moveTo(x - 4, y); g.lineTo(x + 4, y); g.stroke();
+    };
+    for (const v of [0, S / 2]) for (const [x, y] of [[16, 16], [S - 16, 16], [16, S / 2 - 16], [S - 16, S / 2 - 16]]) dzus(x, y + v);
+  });
+  // glareshield: dark, slightly pebbled anti-glare finish
+  const glare = grainCanvas(256, [30, 32, 36], 16, 5);
+  // cabin lining for pillars, ceiling and side walls: light warm grey with a soft weave
+  const lining = grainCanvas(256, [98, 106, 116], 10, 9, (g, S) => {
+    g.strokeStyle = 'rgba(0,0,0,0.05)';
+    for (let i = 0; i < S; i += 4) { g.beginPath(); g.moveTo(i, 0); g.lineTo(i, S); g.stroke(); }
+  });
+  deckTex = { panel, glare, lining };
+  return deckTex;
+}
+function deckMat(kind, repeat = null) {
+  const t = deckTextures();
+  if (kind === 'panel') {
+    let map = t.panel;
+    if (repeat) { map = t.panel.clone(); map.repeat.set(repeat[0], repeat[1]); map.needsUpdate = true; }
+    return new THREE.MeshStandardMaterial({ map, roughness: 0.78, metalness: 0.05, envMapIntensity: 0.3 });
+  }
+  if (kind === 'glare') return new THREE.MeshStandardMaterial({ map: t.glare, roughness: 0.92, metalness: 0, envMapIntensity: 0.2 });
+  if (kind === 'lining') return new THREE.MeshStandardMaterial({ map: t.lining, roughness: 0.95, metalness: 0, envMapIntensity: 0.2 });
+  return new THREE.MeshStandardMaterial({ color: 0x15171b, roughness: 0.45, metalness: 0.2, envMapIntensity: 0.5 });   // bezel
+}
+// rounded glareshield: a lipped profile extruded across the deck
+function glareshieldGeometry(width, depth) {
+  const s = new THREE.Shape();
+  s.moveTo(0, 0); s.lineTo(depth, 0); s.lineTo(depth, 0.035);
+  s.quadraticCurveTo(depth * 0.4, 0.075, 0.02, 0.06);
+  s.quadraticCurveTo(-0.025, 0.045, -0.02, 0.0);
+  s.lineTo(0, 0);
+  const g = new THREE.ExtrudeGeometry(s, { depth: width, bevelEnabled: false, curveSegments: 10 });
+  g.rotateY(Math.PI / 2);                   // extrude along +x; the lip (shape x = 0) faces aft (+z)
+  g.translate(-width / 2, 0, 0);
+  return g;
+}
+
 class Screen {
   constructor(w = 512, h = 512, transparent = false) {
     this.canvas = document.createElement('canvas');
@@ -95,25 +170,32 @@ export class GlassCockpit {
     const G = this.group, f = this.f;
     const cxOff = -f.g.eye[1];   // aircraft centreline, model x relative to the eye
     const pz = -0.78;
-    const dark = this._mat(0x2a2f36, 0.85), panelMat = this._mat(0x39404a, 0.8), black = this._mat(0x0e1013, 0.7);
+    const dark = deckMat('glare'), panelMat = deckMat('panel', [Math.max(2, Math.round((cxOff * 2 + 0.9) / 0.45)), 1]), black = this._mat(0x0e1013, 0.7), bezel = deckMat('bezel');
     // main instrument panel and glareshield
     const panel = new THREE.Mesh(new THREE.BoxGeometry(cxOff * 2 + 0.9, 0.5, 0.03), panelMat);
     panel.position.set(cxOff, -0.33, pz - 0.02);
     panel.rotation.x = -0.12;
     G.add(panel);
-    const gs = new THREE.Mesh(new THREE.BoxGeometry(cxOff * 2 + 0.95, 0.06, 0.2), dark);
-    gs.position.set(cxOff, -0.06, pz + 0.04);
+    const gs = new THREE.Mesh(glareshieldGeometry(cxOff * 2 + 0.95, 0.2), dark);
+    gs.position.set(cxOff, -0.09, pz + 0.115);
     G.add(gs);
-    // window frames (inside view has no exterior fuselage)
-    const frame = this._mat(0x30353c, 0.9);
+    // window frames (inside view has no exterior fuselage): lined like the cabin
+    const frame = deckMat('lining');
     const post = (x, rz) => { const p = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.42, 0.06), frame); p.position.set(x, 0.14, pz - 0.05); p.rotation.z = rz; p.rotation.x = 0.35; G.add(p); };
     post(cxOff, 0); post(-0.42, 0.12); post(cxOff * 2 + 0.42, -0.12);
+    // window openings (group space) for the rain overlay: windscreen, left and right side windows
+    const xr = cxOff * 2 + 0.62;
+    this.windowPolys = [
+      [[-0.62, -0.03, pz + 0.12], [xr, -0.03, pz + 0.12], [xr, 0.3, pz + 0.04], [-0.62, 0.3, pz + 0.04]],
+      [[-0.6, -0.1, pz + 0.12], [-0.6, -0.1, 0.45], [-0.6, 0.27, 0.45], [-0.6, 0.3, pz + 0.04]],
+      [[xr - 0.02, -0.1, pz + 0.12], [xr - 0.02, -0.1, 0.45], [xr - 0.02, 0.27, 0.45], [xr - 0.02, 0.3, pz + 0.04]],
+    ];
     post(-0.55, 0.5); post(cxOff * 2 + 0.55, -0.5);
     const top = new THREE.Mesh(new THREE.BoxGeometry(cxOff * 2 + 1.2, 0.05, 0.5), frame);
     top.position.set(cxOff, 0.36, pz + 0.12);
     G.add(top);
     for (const s of [-1, 1]) {
-      const wall = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.55, 1.3), dark);
+      const wall = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.55, 1.3), frame);
       wall.position.set(cxOff + s * (cxOff + 0.62), -0.42, -0.2);
       G.add(wall);
       const sill = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.05, 1.3), frame);
@@ -124,7 +206,13 @@ export class GlassCockpit {
     const S = 0.205;
     const scr = this.screens;
     scr.pfd = new Screen(); scr.nd = new Screen(); scr.eicas = new Screen(); scr.sys = new Screen();
-    const place = (sc, x, y) => { const m = sc.mesh(S, S); m.position.set(x, y, pz + 0.001); m.rotation.x = -0.12; G.add(m); return m; };
+    const place = (sc, x, y) => {
+      const m = sc.mesh(S, S); m.position.set(x, y, pz + 0.004); m.rotation.x = -0.12; G.add(m);
+      // display unit bezel with a slight frame, proud of the panel
+      const bz = new THREE.Mesh(new THREE.BoxGeometry(S + 0.026, S + 0.03, 0.014), bezel);
+      bz.position.set(x, y - 0.002, pz - 0.004); bz.rotation.x = -0.12; G.add(bz);
+      return m;
+    };
     place(scr.pfd, -0.12, -0.27); place(scr.nd, 0.11, -0.27);
     place(scr.eicas, cxOff, -0.24); place(scr.sys, cxOff, -0.47);
     place(scr.nd, cxOff * 2 - 0.11, -0.27); place(scr.pfd, cxOff * 2 + 0.12, -0.27);
@@ -169,7 +257,12 @@ export class GlassCockpit {
     // engine fire handles (above the EICAS)
     for (let i = 0; i < f.engines; i++) {
       const x = cxOff - 0.09 + (i + 0.5) * (0.18 / f.engines);
-      const h = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.016, 0.02), this._mat(0xb01010, 0.5));
+      // T-handle in a dark recess (pull = fuel off + extinguisher)
+      const well = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.026, 0.01), this._mat(0x0f1114, 0.7));
+      well.position.set(x, -0.115, pz + 0.006);
+      G.add(well);
+      const h = new THREE.Mesh(new THREE.CapsuleGeometry(0.007, 0.022, 6, 10), this._mat(0xc41212, 0.42));
+      h.rotation.z = Math.PI / 2;
       h.position.set(x, -0.115, pz + 0.02);
       this._interactive(h, 'fire', `Engine ${i + 1} fire handle: pull = fuel off + extinguisher`, 'toggle', { index: i });
       (this.anim.fire || (this.anim.fire = [])).push(h);
@@ -203,10 +296,15 @@ export class GlassCockpit {
       const lg = new THREE.Group();
       const x = cxOff - 0.05 + (i + 0.5) * (0.1 / f.engines);
       lg.position.set(x, pedTop, -0.42);
-      const shaft = new THREE.Mesh(new THREE.BoxGeometry(0.008, 0.12, 0.012), this._mat(0x9aa0a6, 0.3, 0.8));
+      const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.0045, 0.007, 0.12, 12), this._mat(0x9aa0a6, 0.3, 0.8));
       shaft.position.y = 0.06;
-      const grip = new THREE.Mesh(new THREE.BoxGeometry(0.022, 0.022, 0.03), this._mat(0x15171a, 0.5));
-      grip.position.y = 0.125;
+      const collar = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.008, 14), this._mat(0x2a2d31, 0.5, 0.3));
+      collar.position.y = 0.012;
+      lg.add(collar);
+      // knob: a rounded bar with a dark rubber grip (capsule across the lever)
+      const grip = new THREE.Mesh(new THREE.CapsuleGeometry(0.012, 0.016, 6, 12), this._mat(0x1b1d21, 0.62));
+      grip.rotation.z = Math.PI / 2;
+      grip.position.y = 0.127;
       grip.userData = { action: 'throttle', label: 'Thrust levers (drag / wheel; > 92 % = takeoff thrust)', kind: 'drag' };
       this.interactives.push(grip);
       const rev = new THREE.Mesh(new THREE.BoxGeometry(0.012, 0.012, 0.02), this._mat(0xb7bcc2, 0.4, 0.6));
@@ -220,22 +318,27 @@ export class GlassCockpit {
     // speed brake lever (left), flap lever (right)
     const sbg = new THREE.Group();
     sbg.position.set(cxOff - 0.11, pedTop, -0.42);
-    const sbh = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.02, 0.04), this._mat(0xdedede, 0.5));
-    sbh.position.y = 0.08;
+    const sbh = new THREE.Mesh(new THREE.CapsuleGeometry(0.008, 0.03, 6, 10), this._mat(0xdcdcd8, 0.45));
+    sbh.rotation.z = Math.PI / 2;
+    sbh.position.y = 0.082;
     sbh.userData = { action: 'speedbrake', label: 'Speed brake: drag to extend; click retracted lever = ARM ground spoilers', kind: 'drag' };
     this.interactives.push(sbh);
-    const sbs = new THREE.Mesh(new THREE.BoxGeometry(0.006, 0.08, 0.006), this._mat(0x9aa0a6, 0.3, 0.8));
+    const sbs = new THREE.Mesh(new THREE.CylinderGeometry(0.003, 0.004, 0.08, 10), this._mat(0x9aa0a6, 0.3, 0.8));
     sbs.position.y = 0.04;
     sbg.add(sbs, sbh);
     G.add(sbg);
     this.anim.sb = sbg;
     const flg = new THREE.Group();
     flg.position.set(cxOff + 0.11, pedTop, -0.42);
-    const flh = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.025, 0.02), this._mat(0xe9e9e9, 0.5));
+    const fShape = new THREE.Shape();
+    fShape.moveTo(-0.015, 0); fShape.quadraticCurveTo(-0.017, 0.016, 0.0, 0.017); fShape.quadraticCurveTo(0.012, 0.012, 0.016, 0.0); fShape.lineTo(-0.015, 0);
+    const flGeo = new THREE.ExtrudeGeometry(fShape, { depth: 0.026, bevelEnabled: true, bevelThickness: 0.002, bevelSize: 0.0015, bevelSegments: 2 });
+    flGeo.translate(0, -0.008, -0.013);
+    const flh = new THREE.Mesh(flGeo, this._mat(0xe9e9e6, 0.45));
     flh.position.y = 0.08;
     flh.userData = { action: 'jflaps', label: 'Flap lever: click front half = retract one detent, rear half = extend', kind: 'flaps' };
     this.interactives.push(flh);
-    const fls = new THREE.Mesh(new THREE.BoxGeometry(0.006, 0.08, 0.006), this._mat(0x9aa0a6, 0.3, 0.8));
+    const fls = new THREE.Mesh(new THREE.CylinderGeometry(0.003, 0.004, 0.08, 10), this._mat(0x9aa0a6, 0.3, 0.8));
     fls.position.y = 0.04;
     flg.add(fls, flh);
     G.add(flg);
@@ -283,12 +386,18 @@ export class GlassCockpit {
   // -------------------------------------------------------------------------
   buildFighter() {
     const G = this.group, f = this.f;
-    const dark = this._mat(0x22262b, 0.85), black = this._mat(0x0d0f12, 0.7), grey = this._mat(0x4a5058, 0.7);
+    const dark = deckMat('panel'), black = this._mat(0x0d0f12, 0.7), grey = this._mat(0x4a5058, 0.45, 0.4), bezel = deckMat('bezel');
     const pz = -0.62;
     const panel = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.32, 0.03), dark);
     panel.position.set(0, -0.36, pz - 0.02);
     panel.rotation.x = -0.15;
     G.add(panel);
+    // canopy above the panel coaming and the side rails (rain overlay)
+    this.windowPolys = [
+      [[-0.55, -0.19, -0.5], [0.55, -0.19, -0.5], [0.7, 0.8, -0.45], [-0.7, 0.8, -0.45]],
+      [[-0.42, -0.18, -0.5], [-0.42, -0.18, 0.5], [-0.42, 0.8, 0.5], [-0.42, 0.8, -0.45]],
+      [[0.42, -0.18, -0.5], [0.42, -0.18, 0.5], [0.42, 0.8, 0.5], [0.42, 0.8, -0.45]],
+    ];
     // canopy bow / frame
     const bow = new THREE.Mesh(new THREE.TorusGeometry(0.42, 0.018, 8, 24, Math.PI), grey);
     bow.position.set(0, -0.12, -0.5);
@@ -312,7 +421,11 @@ export class GlassCockpit {
     hudFrame.position.set(0, -0.155, -0.52);
     G.add(hudFrame);
     scr.mfdL = new Screen(); scr.mfdR = new Screen(); scr.mfdC = new Screen();
-    const place = (sc, x, y, s = 0.15) => { const m = sc.mesh(s, s); m.position.set(x, y, pz + 0.001); m.rotation.x = -0.15; G.add(m); };
+    const place = (sc, x, y, s = 0.15) => {
+      const m = sc.mesh(s, s); m.position.set(x, y, pz + 0.004); m.rotation.x = -0.15; G.add(m);
+      const bz = new THREE.Mesh(new THREE.BoxGeometry(s + 0.03, s + 0.03, 0.014), bezel);
+      bz.position.set(x, y, pz - 0.004); bz.rotation.x = -0.15; G.add(bz);
+    };
     place(scr.mfdL, -0.17, -0.35); place(scr.mfdC, 0, -0.38, 0.13); place(scr.mfdR, 0.17, -0.35);
     // stick (centre) and throttle (left console)
     const stick = new THREE.Group();
@@ -376,7 +489,7 @@ export class GlassCockpit {
     if (A.fuelCtl) A.fuelCtl.rotation.x = sw.mixture > 0.5 ? -0.4 : 0.4;
     if (A.engStart) A.engStart.rotation.y = [0, 0, 0, 0.8, 1.6][sw.mags] || 0;
     if (A.parkBrake) A.parkBrake.position.z = (this.fighter ? A.parkBrake.position.z : (sw.parkBrake ? -0.1 : -0.12));
-    (A.fire || []).forEach((h, i) => { const on = ((sw.fireHandles || 0) >> i) & 1; h.scale.z = on ? 2.4 : 1; h.material.emissive && h.material.emissive.setHex(((o.fireMask >> i) & 1) ? 0xff2000 : 0x000000); });
+    (A.fire || []).forEach((h, i) => { const on = ((sw.fireHandles || 0) >> i) & 1; if (h.userData.z0 === undefined) h.userData.z0 = h.position.z; h.position.z = h.userData.z0 + (on ? 0.025 : 0); h.material.emissive && h.material.emissive.setHex(((o.fireMask >> i) & 1) ? 0xff2000 : 0x000000); });
     for (const s of A.switches || []) s.mesh.rotation.x = s.rot0 + (sw[s.id] ? -0.35 : 0.35);
     if (A.yoke) { A.yoke.position.z = -0.52 + (o.elev || 0) * 0.06; A.wheel.rotation.z = -(o.ail || 0) * 1.2; }
     if (A.stick) { A.stick.rotation.x = -(o.elev || 0) * 0.25; A.stick.rotation.z = -(o.ail || 0) * 0.25; }

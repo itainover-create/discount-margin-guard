@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "runId": "wip1",
+  "captures": [
+    {
+      "mode": "desktop",
+      "state": "hudson-a320",
+      "report": "artifacts/wip1/desktop-hudson-a320.json"
+    },
+    {
+      "mode": "desktop",
+      "state": "a320-cockpit-final",
+      "report": "artifacts/wip1/desktop-a320-cockpit-final.json"
+    },
+    {
+      "mode": "desktop",
+      "state": "engine-fire-738",
+      "report": "artifacts/wip1/desktop-engine-fire-738.json"
+    }
+  ]
+}
