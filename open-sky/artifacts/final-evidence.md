@@ -95,3 +95,24 @@ Verdict against the pack's premium bar (every category at least 2, average at le
 
 - **Native C++ core:** `make test` passes 227/227.
 - **Browser e2e:** `tests/flight_e2e.mjs` passes 18/18 with 0 console errors, including all six camera views, the fleet, the Google account flow and performance samples.
+
+## v2.1 follow-up pass (run `pass3`, 11 scenes)
+
+What changed:
+- Poster emblem, ORION wordmark and signature artwork.
+- 26 aircraft.
+- Los Angeles region.
+- Flight dock.
+- Landmark crowns.
+- Suburb fade around regions.
+- Far-start recentring.
+
+`artifacts/evidence.json` now declares 11 desktop scenes, adding `la-downtown` and `cockpit-cj4`. All 11 pass with 0 console errors and 0 page errors, and `check_evidence.py` confirms 11 artifacts.
+- `la-downtown` (dusk over Los Angeles): entropy 4.17, edges 0.30, contrast 55.8. It is over the draw-call (1,585) and triangle (2.45 M) budgets for the same reason as New York: the streamed city.
+- `cockpit-cj4`: entropy 5.22, contrast 173.4.
+
+Regression:
+- Native suite 368/368. The 141 new checks cover the 12 new aircraft types.
+- Browser e2e 18/18 with 0 console errors, including "all 26 aircraft spawn on the runway".
+
+Previews: `previews/v21-la-downtown.jpg`, `previews/v21-cockpit-cj4.jpg`, `previews/v21-menu.jpg`.
