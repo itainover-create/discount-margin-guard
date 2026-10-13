@@ -202,6 +202,11 @@ class Game {
       const fl = fleetEntry(acId);
       const start = spec.save ? this.startFromSave(spec.save) : this.computeStart(spec.start, ap, fl);
       start.aircraft = fl.id;
+      // starts far from the region anchor (e.g. Burbank, Newark): move the
+      // floating origin there first and load its terrain behind the loading
+      // screen, instead of re-basing under a parked aircraft on frame one
+      const moved = await this.recenterOn(start.x, start.y);
+      if (moved) { start.x = moved.x; start.y = moved.y; }
       if (def && def.pax && fl.id === 0) start.payload = [80, 75 * def.pax, 10];
       this.progress('Engine & systems', 0.8);
       this.player.spawn(start);
@@ -259,6 +264,19 @@ class Game {
       c.updateProjectionMatrix();
       L.shadow.normalBias = ext * 0.004;
     }
+  }
+
+  // Move the world's floating origin to (x, y) when it is far from it, and
+  // wait for the terrain around the new origin. Returns the point in the new
+  // frame, or null when no move was needed.
+  async recenterOn(x, y, limit = 15000) {
+    const a = this.world.maybeRebase(x, y, limit);
+    if (!a) return null;
+    const ll = this.world.frame.toLatLon(0, 0);
+    this.progress('Loading terrain', 0.75);
+    await this.world._prefetchTerrain(ll.lat, ll.lon);
+    this.world.terrain.invalidate();
+    return { x: a.sx * x + a.tx, y: y + a.ty };
   }
 
   nearestAirport(icao) {

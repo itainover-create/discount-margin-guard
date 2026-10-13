@@ -5,9 +5,18 @@
     "countryCode": "US",
     "character": "Megacity, harbour and skyline",
     "characterHe": "מטרופולין, נמל וקו רקיע",
-    "bbox": [-74.28, 40.48, -73.68, 40.92],
+    "bbox": [
+      -74.28,
+      40.48,
+      -73.68,
+      40.92
+    ],
     "anchor": "KJFK",
-    "airports": ["KJFK", "KLGA", "KEWR"],
+    "airports": [
+      "KJFK",
+      "KLGA",
+      "KEWR"
+    ],
     "detailAirport": "KJFK",
     "tier": "A",
     "style": "nyc",
@@ -15,15 +24,193 @@
     "terrainZoom": 13,
     "maxBuildingsPerTile": 4000,
     "minBuildingArea": 18,
-    "playerStands": {"KJFK": {"apronName": "GA TERMINAL"}},
-    "tower": {"KJFK": [40.64164, -73.77893, 98], "KLGA": [40.77514, -73.87526, 71], "KEWR": [40.69143, -74.18186, 99]},
+    "playerStands": {
+      "KJFK": {
+        "apronName": "GA TERMINAL"
+      }
+    },
+    "tower": {
+      "KJFK": [
+        40.64164,
+        -73.77893,
+        98
+      ],
+      "KLGA": [
+        40.77514,
+        -73.87526,
+        71
+      ],
+      "KEWR": [
+        40.69143,
+        -74.18186,
+        99
+      ]
+    },
     "landmarks": [
-      {"id": "liberty", "name": "Statue of Liberty", "lat": 40.68925, "lon": -74.04450, "kind": "statue", "height": 93},
-      {"id": "verrazzano", "name": "Verrazzano-Narrows Bridge", "kind": "suspension", "towers": [[40.60847, -74.04878], [40.60331, -74.03887]], "towerHeight": 211, "deck": 69, "ends": [[40.61295, -74.05722], [40.59861, -74.02999]]},
-      {"id": "gwb", "name": "George Washington Bridge", "kind": "suspension", "towers": [[40.85410, -73.95676], [40.84907, -73.96331]], "towerHeight": 184, "deck": 65, "ends": [[40.85160, -73.95242], [40.84646, -73.96960]]},
-      {"id": "brooklyn", "name": "Brooklyn Bridge", "kind": "suspension", "towers": [[40.70720, -74.00058], [40.70415, -73.99481]], "towerHeight": 84, "deck": 41, "ends": [[40.70972, -74.00446], [40.70178, -73.99052]], "stone": true},
-      {"id": "manhattan", "name": "Manhattan Bridge", "kind": "suspension", "towers": [[40.70923, -73.99327], [40.70537, -73.98824]], "towerHeight": 102, "deck": 41, "ends": [[40.71300, -73.99545], [40.70090, -73.98667]]},
-      {"id": "williamsburg", "name": "Williamsburg Bridge", "kind": "suspension", "towers": [[40.71386, -73.97606], [40.71074, -73.96765]], "towerHeight": 102, "deck": 41, "ends": [[40.71633, -73.98485], [40.71000, -73.95963]]}
+      {
+        "id": "liberty",
+        "name": "Statue of Liberty",
+        "lat": 40.68925,
+        "lon": -74.0445,
+        "kind": "statue",
+        "height": 93
+      },
+      {
+        "id": "verrazzano",
+        "name": "Verrazzano-Narrows Bridge",
+        "kind": "suspension",
+        "towers": [
+          [
+            40.60847,
+            -74.04878
+          ],
+          [
+            40.60331,
+            -74.03887
+          ]
+        ],
+        "towerHeight": 211,
+        "deck": 69,
+        "ends": [
+          [
+            40.61295,
+            -74.05722
+          ],
+          [
+            40.59861,
+            -74.02999
+          ]
+        ]
+      },
+      {
+        "id": "gwb",
+        "name": "George Washington Bridge",
+        "kind": "suspension",
+        "towers": [
+          [
+            40.8541,
+            -73.95676
+          ],
+          [
+            40.84907,
+            -73.96331
+          ]
+        ],
+        "towerHeight": 184,
+        "deck": 65,
+        "ends": [
+          [
+            40.8516,
+            -73.95242
+          ],
+          [
+            40.84646,
+            -73.9696
+          ]
+        ]
+      },
+      {
+        "id": "brooklyn",
+        "name": "Brooklyn Bridge",
+        "kind": "suspension",
+        "towers": [
+          [
+            40.7072,
+            -74.00058
+          ],
+          [
+            40.70415,
+            -73.99481
+          ]
+        ],
+        "towerHeight": 84,
+        "deck": 41,
+        "ends": [
+          [
+            40.70972,
+            -74.00446
+          ],
+          [
+            40.70178,
+            -73.99052
+          ]
+        ],
+        "stone": true
+      },
+      {
+        "id": "manhattan",
+        "name": "Manhattan Bridge",
+        "kind": "suspension",
+        "towers": [
+          [
+            40.70923,
+            -73.99327
+          ],
+          [
+            40.70537,
+            -73.98824
+          ]
+        ],
+        "towerHeight": 102,
+        "deck": 41,
+        "ends": [
+          [
+            40.713,
+            -73.99545
+          ],
+          [
+            40.7009,
+            -73.98667
+          ]
+        ]
+      },
+      {
+        "id": "williamsburg",
+        "name": "Williamsburg Bridge",
+        "kind": "suspension",
+        "towers": [
+          [
+            40.71386,
+            -73.97606
+          ],
+          [
+            40.71074,
+            -73.96765
+          ]
+        ],
+        "towerHeight": 102,
+        "deck": 41,
+        "ends": [
+          [
+            40.71633,
+            -73.98485
+          ],
+          [
+            40.71,
+            -73.95963
+          ]
+        ]
+      },
+      {
+        "id": "esb-mast",
+        "name": "Empire State Building mast",
+        "kind": "spire",
+        "style": "esb",
+        "lat": 40.74844,
+        "lon": -73.98566,
+        "base": 373,
+        "top": 443
+      },
+      {
+        "id": "chrysler-crown",
+        "name": "Chrysler Building crown",
+        "kind": "spire",
+        "style": "chrysler",
+        "lat": 40.75162,
+        "lon": -73.97545,
+        "base": 240,
+        "top": 319
+      }
     ]
   },
   "tlv": {
@@ -32,9 +219,17 @@
     "countryCode": "IL",
     "character": "Mediterranean coastal city",
     "characterHe": "עיר חוף ים-תיכונית",
-    "bbox": [34.70, 31.88, 35.02, 32.16],
+    "bbox": [
+      34.7,
+      31.88,
+      35.02,
+      32.16
+    ],
     "anchor": "LLBG",
-    "airports": ["LLBG", "LLSD"],
+    "airports": [
+      "LLBG",
+      "LLSD"
+    ],
     "detailAirport": "LLBG",
     "tier": "B",
     "style": "mediterranean",
@@ -42,7 +237,13 @@
     "terrainZoom": 13,
     "maxBuildingsPerTile": 3000,
     "minBuildingArea": 20,
-    "tower": {"LLBG": [32.00945, 34.87622, 46]},
+    "tower": {
+      "LLBG": [
+        32.00945,
+        34.87622,
+        46
+      ]
+    },
     "landmarks": []
   },
   "hnl": {
@@ -51,9 +252,16 @@
     "countryCode": "US",
     "character": "Volcanic island, reef and city",
     "characterHe": "אי געשי, שונית ועיר",
-    "bbox": [-158.10, 21.24, -157.68, 21.46],
+    "bbox": [
+      -158.1,
+      21.24,
+      -157.68,
+      21.46
+    ],
     "anchor": "PHNL",
-    "airports": ["PHNL"],
+    "airports": [
+      "PHNL"
+    ],
     "detailAirport": "PHNL",
     "tier": "B",
     "style": "tropical",
@@ -61,7 +269,13 @@
     "terrainZoom": 13,
     "maxBuildingsPerTile": 2500,
     "minBuildingArea": 20,
-    "tower": {"PHNL": [21.32402, -157.92636, 72]},
+    "tower": {
+      "PHNL": [
+        21.32402,
+        -157.92636,
+        72
+      ]
+    },
     "landmarks": []
   },
   "inn": {
@@ -70,9 +284,16 @@
     "countryCode": "AT",
     "character": "Alpine valley between high peaks",
     "characterHe": "עמק אלפיני בין פסגות",
-    "bbox": [11.16, 47.18, 11.56, 47.34],
+    "bbox": [
+      11.16,
+      47.18,
+      11.56,
+      47.34
+    ],
     "anchor": "LOWI",
-    "airports": ["LOWI"],
+    "airports": [
+      "LOWI"
+    ],
     "detailAirport": "LOWI",
     "tier": "B",
     "style": "alpine",
@@ -80,7 +301,13 @@
     "terrainZoom": 13,
     "maxBuildingsPerTile": 2500,
     "minBuildingArea": 20,
-    "tower": {"LOWI": [47.25813, 11.34658, 25]},
+    "tower": {
+      "LOWI": [
+        47.25813,
+        11.34658,
+        25
+      ]
+    },
     "landmarks": []
   },
   "las": {
@@ -89,9 +316,16 @@
     "countryCode": "US",
     "character": "Desert basin and resort strip",
     "characterHe": "אגן מדברי ושדרת המלונות",
-    "bbox": [-115.32, 35.98, -115.02, 36.24],
+    "bbox": [
+      -115.32,
+      35.98,
+      -115.02,
+      36.24
+    ],
     "anchor": "KLAS",
-    "airports": ["KLAS"],
+    "airports": [
+      "KLAS"
+    ],
     "detailAirport": "KLAS",
     "tier": "B",
     "style": "desert",
@@ -99,7 +333,13 @@
     "terrainZoom": 13,
     "maxBuildingsPerTile": 2500,
     "minBuildingArea": 25,
-    "tower": {"KLAS": [36.08389, -115.15695, 107]},
+    "tower": {
+      "KLAS": [
+        36.08389,
+        -115.15695,
+        107
+      ]
+    },
     "landmarks": []
   },
   "sab": {
@@ -108,9 +348,16 @@
     "countryCode": "BQ",
     "character": "Tiny volcanic island, 400 m runway",
     "characterHe": "אי געשי זעיר, מסלול של 400 מ'",
-    "bbox": [-63.275, 17.60, -63.205, 17.67],
+    "bbox": [
+      -63.275,
+      17.6,
+      -63.205,
+      17.67
+    ],
     "anchor": "TNCS",
-    "airports": ["TNCS"],
+    "airports": [
+      "TNCS"
+    ],
     "detailAirport": "TNCS",
     "tier": "B",
     "style": "tropical",
@@ -120,5 +367,96 @@
     "minBuildingArea": 10,
     "tower": {},
     "landmarks": []
+  },
+  "la": {
+    "name": "Los Angeles",
+    "country": "United States",
+    "countryCode": "US",
+    "character": "Basin megacity, beaches and hills",
+    "characterHe": "מטרופולין באגן, חופים וגבעות",
+    "bbox": [
+      -118.53,
+      33.9,
+      -118.15,
+      34.225
+    ],
+    "anchor": "KLAX",
+    "airports": [
+      "KLAX",
+      "KSMO",
+      "KBUR",
+      "KVNY"
+    ],
+    "detailAirport": "KLAX",
+    "tier": "A",
+    "style": "mediterranean",
+    "magVar": 11.5,
+    "terrainZoom": 13,
+    "maxBuildingsPerTile": 3000,
+    "minBuildingArea": 50,
+    "playerStands": {
+      "KVNY": {
+        "apronName": "Transient Parking"
+      }
+    },
+    "tower": {
+      "KLAX": [
+        33.943,
+        -118.4026,
+        84
+      ],
+      "KSMO": [
+        34.0145,
+        -118.4502,
+        25
+      ],
+      "KBUR": [
+        34.1962,
+        -118.3553,
+        41
+      ],
+      "KVNY": [
+        34.2105,
+        -118.488,
+        30
+      ]
+    },
+    "landmarks": [
+      {
+        "id": "hollywood-sign",
+        "name": "Hollywood Sign",
+        "kind": "sign",
+        "text": "HOLLYWOOD",
+        "lat": 34.1341,
+        "lon": -118.32153,
+        "headingDeg": 200,
+        "letterHeight": 13.7,
+        "width": 110
+      },
+      {
+        "id": "lax-theme",
+        "name": "LAX Theme Building",
+        "kind": "theme",
+        "lat": 33.9442,
+        "lon": -118.4022
+      },
+      {
+        "id": "griffith",
+        "name": "Griffith Observatory",
+        "kind": "observatory",
+        "lat": 34.11843,
+        "lon": -118.30039,
+        "headingDeg": 200
+      },
+      {
+        "id": "pacific-wheel",
+        "name": "Pacific Park Ferris Wheel, Santa Monica Pier",
+        "kind": "wheel",
+        "lat": 34.00894,
+        "lon": -118.49738,
+        "headingDeg": 235,
+        "diameter": 26
+      }
+    ]
   }
 }

@@ -18,6 +18,8 @@ const STATES = {
   'f22-manhattan': { spec: { icao: 'KJFK', start: 'air', mode: 'accessible', hour: 11, weather: 'fair', aircraft: 9 }, place: { lat: 40.735, lon: -74.02, hdg: 25, altM: 700, kt: 380, flaps: 0, gearDown: false }, view: 'chase', run: 2 },
   'engine-fire-738': { spec: { icao: 'KJFK', start: 'air', mode: 'accessible', hour: 14, weather: 'fair', aircraft: 1 }, damage: { part: 4, amount: 0.75 }, view: 'chase', run: 5 },
   'night-manhattan': { spec: { icao: 'KJFK', start: 'air', mode: 'accessible', hour: 21.5, weather: 'clear', aircraft: 3 }, place: { lat: 40.69, lon: -74.03, hdg: 30, altM: 600, kt: 230, flaps: 0, gearDown: false }, view: 'chase', run: 2 },
+  'la-downtown': { spec: { icao: 'KLAX', start: 'air', mode: 'accessible', hour: 17.8, weather: 'fair', aircraft: 4 }, place: { lat: 34.020, lon: -118.300, hdg: 40, altM: 620, kt: 210, flaps: 0, gearDown: false }, view: 'chase', run: 2 },
+  'cockpit-cj4': { spec: { icao: 'KLAX', start: 'air', mode: 'accessible', hour: 15, weather: 'fair', aircraft: 14 }, view: 'cockpit', run: 2 },
   'cruise-a350': { spec: { icao: 'KJFK', start: 'cruise', mode: 'accessible', hour: 15, weather: 'clear', aircraft: 6 }, view: 'chase', run: 3 },
 };
 
@@ -70,7 +72,8 @@ export function installQaHooks(game) {
     if (game.state !== 'flight') throw new Error(`flight did not start for ${name}`);
     const p = game.player;
     if (S.place) {
-      const xy = game.world.frame.toXY(S.place.lat, S.place.lon);
+      let xy = game.world.frame.toXY(S.place.lat, S.place.lon);
+      xy = (await game.recenterOn(xy.x, xy.y)) || xy;
       const f = fleetEntry(S.spec.aircraft ?? 0);
       p.spawn({ x: xy.x, y: xy.y, hdgDeg: S.place.hdg, onGround: false, altM: S.place.altM, iasKt: S.place.kt, flaps: S.place.flaps, gearDown: S.place.gearDown, aircraft: f.id, engine: true });
       game.rig.first = true;

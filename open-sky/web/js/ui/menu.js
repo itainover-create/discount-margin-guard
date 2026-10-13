@@ -226,7 +226,7 @@ export class Menu {
   renderHomeFlights() {
     const g = this.g, el = $('home-featured');
     if (!el) return;
-    const ids = ['heavy', 'jetfire', 'storm', 'hudsonjet'];
+    const ids = ['lasights', 'heavy', 'jetfire', 'storm', 'hudsonjet', 'supercruise'];
     const sky = (m) => {
       const h = m.hour, wx = m.weather;
       if (wx === 'storm') return 'linear-gradient(180deg,#1d2230 0%,#3b4152 55%,#59607a 100%)';

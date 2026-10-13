@@ -367,7 +367,7 @@ table.keys td { padding: 5px 6px; border-bottom: 1px solid var(--line); }
 /* home: featured flights (sky swatch = the mission's time of day and weather) */
 .featured-wrap { max-width: 1060px; margin: 0 auto 4vh; padding: 0 22px; }
 .featured-head { font-size: 11px; letter-spacing: 0.28em; color: var(--gold2); text-transform: uppercase; margin-bottom: 10px; }
-.featured { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+.featured { display: grid; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); gap: 12px; }
 .feat-card { display: flex; flex-direction: column; text-align: left; padding: 0; overflow: hidden; border-radius: 10px; border: 1px solid var(--line);
   background: var(--navy2); color: var(--text); cursor: pointer; font-family: inherit; transition: border-color 0.15s, transform 0.15s; }
 .feat-card:hover, .feat-card:focus-visible { border-color: var(--gold); transform: translateY(-2px); outline: none; }

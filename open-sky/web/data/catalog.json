@@ -102,6 +102,100 @@
    }
   },
   {
+   "id": "la",
+   "name": "Los Angeles",
+   "country": "United States",
+   "countryCode": "US",
+   "character": "Basin megacity, beaches and hills",
+   "characterHe": "\u05de\u05d8\u05e8\u05d5\u05e4\u05d5\u05dc\u05d9\u05df \u05d1\u05d0\u05d2\u05df, \u05d7\u05d5\u05e4\u05d9\u05dd \u05d5\u05d2\u05d1\u05e2\u05d5\u05ea",
+   "tier": "A",
+   "bbox": [
+    -118.53,
+    33.9,
+    -118.15,
+    34.225
+   ],
+   "anchor": {
+    "icao": "KLAX",
+    "lat": 33.9425,
+    "lon": -118.408,
+    "elevation": 38.1
+   },
+   "airports": [
+    {
+     "icao": "KLAX",
+     "name": "Los Angeles International Airport",
+     "iata": "LAX",
+     "elevation": 38.1,
+     "x": 0.0,
+     "y": 0.0,
+     "runways": [
+      "6L/24R",
+      "6R/24L",
+      "7L/25R",
+      "7R/25L"
+     ],
+     "graphNodes": 4137,
+     "gates": 148,
+     "detail": true
+    },
+    {
+     "icao": "KSMO",
+     "name": "Santa Monica Municipal Airport",
+     "iata": "SMO",
+     "elevation": 51.8,
+     "x": -3966.6,
+     "y": 8150.6,
+     "runways": [
+      "03/21"
+     ],
+     "graphNodes": 505,
+     "gates": 0,
+     "detail": false
+    },
+    {
+     "icao": "KBUR",
+     "name": "Hollywood Burbank/Bob Hope Airport",
+     "iata": "BUR",
+     "elevation": 237.1,
+     "x": 4607.8,
+     "y": 28947.4,
+     "runways": [
+      "08/26",
+      "15/33"
+     ],
+     "graphNodes": 1054,
+     "gates": 14,
+     "detail": false
+    },
+    {
+     "icao": "KVNY",
+     "name": "Van Nuys Airport",
+     "iata": "VNY",
+     "elevation": 244.4,
+     "x": -7564.3,
+     "y": 29722.4,
+     "runways": [
+      "16L/34R",
+      "16R/34L"
+     ],
+     "graphNodes": 1572,
+     "gates": 0,
+     "detail": false
+    }
+   ],
+   "magVar": 11.5,
+   "style": "mediterranean",
+   "stats": {
+    "buildings": 939961,
+    "buildingHeightsMeasuredPct": 100,
+    "roads": 171639,
+    "rail": 2111,
+    "trees": 23315,
+    "sizeMB": 48.2
+   }
+  },
+  {
    "id": "las",
    "name": "Las Vegas",
    "country": "United States",
@@ -229,7 +323,7 @@
     "roads": 263628,
     "rail": 6320,
     "trees": 71989,
-    "sizeMB": 64.9
+    "sizeMB": 64.8
    }
   },
   {
@@ -330,18 +424,6 @@
   }
  ],
  "planned": [
-  {
-   "name": "Los Angeles",
-   "country": "United States",
-   "character": "Coastal megacity, LAX, Hollywood hills",
-   "characterHe": "\u05de\u05d8\u05e8\u05d5\u05e4\u05d5\u05dc\u05d9\u05df \u05d7\u05d5\u05e4\u05d9, LAX \u05d5\u05d2\u05d1\u05e2\u05d5\u05ea \u05d4\u05d5\u05dc\u05d9\u05d5\u05d5\u05d3",
-   "status": "in development",
-   "anchor": {
-    "icao": "KLAX",
-    "lat": 33.9425,
-    "lon": -118.408
-   }
-  },
   {
    "name": "London",
    "country": "United Kingdom",

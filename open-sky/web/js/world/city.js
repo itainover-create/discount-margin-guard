@@ -419,7 +419,7 @@ function getTreeGeo() {
     const col = new Float32Array(n * 3);
     for (let i = 0; i < n; i++) { col[i * 3] = c[0]; col[i * 3 + 1] = c[1]; col[i * 3 + 2] = c[2]; }
     g.setAttribute('color', new THREE.BufferAttribute(col, 3));
-    return g.toNonIndexed();
+    return g.index ? g.toNonIndexed() : g;
   };
   const a = colorize(crown, [1, 1, 1]), b = colorize(trunk, [0.45, 0.35, 0.28]);
   const merged = new THREE.BufferGeometry();

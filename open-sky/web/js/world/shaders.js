@@ -221,8 +221,13 @@ void main(){
   col = mix(col, mix(vec3(0.40,0.38,0.35), vec3(0.52,0.50,0.47), vnoise(p * 0.08)), rock);
   float snow = smoothstep(uSnowLine - 150.0, uSnowLine + 250.0, h + 300.0 * (vnoise(p*0.004) - 0.5)) * (1.0 - smoothstep(0.45, 0.7, slope));
   col = mix(col, vec3(0.93,0.95,0.98), snow);
-  // beaches near sea level without data
-  if (!inRegion) col = mix(col, vec3(0.80,0.74,0.58), smoothstep(4.0, 0.5, h) * (1.0 - snow));
+  // beaches near sea level without data; elevation tiles read a flat 0 m over
+  // the sea, so outside a region anything at sea level is water, not sand
+  if (!inRegion) {
+    col = mix(col, vec3(0.80,0.74,0.58), smoothstep(4.0, 1.2, h) * (1.0 - snow));
+    float sea = 1.0 - smoothstep(0.35, 1.1, h);
+    if (sea > 0.0) { col = mix(col, vec3(0.05, 0.16, 0.24), sea); water = max(water, sea); }
+  }
   vec3 lit = col * (lightDiffuse(n) + landLight(vW, n));
   // wet ground darkens
   lit *= 1.0 - 0.25 * uWetness;

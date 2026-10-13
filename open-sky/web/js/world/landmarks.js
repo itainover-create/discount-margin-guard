@@ -13,6 +13,15 @@ export class Landmarks {
     this.bridges = new Map(); // regionId -> [{ax, ay, bx, by, len, ux, uy, deck, towerFrac}]
     this.nightMats = [];
     this.spinners = [];
+    this.grounded = [];   // objects that sit on the terrain: re-seated as detailed elevation streams in
+    this.groundT = 0;
+  }
+
+  // keep obj at (ground height under region point x,y) + off
+  _anchor(region, obj, x, y, off = 0) {
+    const h = this._ground(region, x, y);
+    obj.position.y = h + off;
+    this.grounded.push({ region, obj, x, y, off, h });
   }
 
   addRegion(region) {
@@ -211,7 +220,7 @@ export class Landmarks {
   _spire(region, lm) {
     const g = new THREE.Group();
     g.name = 'landmark:' + lm.id;
-    const gz = this._ground(region, lm.x, lm.y);
+    const gz = 0;   // children are built relative to the ground; _anchor seats the group
     const lights = [];
     const top = gz + lm.top;
     if (lm.style === 'chrysler') {
@@ -266,9 +275,10 @@ export class Landmarks {
         g.add(ring);
       }
     }
-    lights.push([lm.x, top + 0.8, -lm.y, 1.8, 2, Math.random(), [1, 0.12, 0.05]]);
     g.position.set(lm.x, 0, -lm.y);
+    this._anchor(region, g, lm.x, lm.y, 0);
     region.group.add(g);
+    lights.push([lm.x, g.position.y + top + 0.8, -lm.y, 1.8, 2, Math.random(), [1, 0.12, 0.05]]);
     region.lights.add(lights);
   }
 
@@ -304,16 +314,17 @@ export class Landmarks {
     for (let i = 0; i < text.length; i++) {
       const off = (i - (text.length - 1) / 2) * step;
       const x = lm.x + rx * off, y = lm.y + ry * off;
-      const gz = this._ground(region, x, y);
       const m = new THREE.Mesh(plane, letterMat(text[i]));
       // letters lean back slightly into the hill; staggered a little like the real sign
-      m.position.set(x, gz + H * 0.55 + (i % 2) * 1.2, -y);
+      m.position.set(x, 0, -y);
+      this._anchor(region, m, x, y, H * 0.55 + (i % 2) * 1.2);
       m.rotation.set(0, Math.atan2(fx, -fy), 0, 'YXZ');
       m.rotateX(-0.12);
       g.add(m);
       // support frame behind each letter
       const post = new THREE.Mesh(new THREE.BoxGeometry(0.4, H * 0.9, 0.4), this._std(0x6d6d6a, 0.8, 0.3));
-      post.position.set(x - fx * 1.2, gz + H * 0.45, -(y - fy * 1.2));
+      post.position.set(x - fx * 1.2, 0, -(y - fy * 1.2));
+      this._anchor(region, post, x - fx * 1.2, y - fy * 1.2, H * 0.45);
       g.add(post);
     }
     region.group.add(g);
@@ -345,9 +356,10 @@ export class Landmarks {
     glass.position.y = 23;
     this.nightMats.push({ mat: glass.material, color: new THREE.Color(0xffd9a0) });
     g.add(core, saucer, glass);
-    g.position.set(lm.x, gz, -lm.y);
+    g.position.set(lm.x, 0, -lm.y);
+    this._anchor(region, g, lm.x, lm.y, 0);
     region.group.add(g);
-    region.lights.add([[lm.x, gz + H + 1, -lm.y, 1.4, 2, 0.3, [1, 0.1, 0.05]]]);
+    region.lights.add([[lm.x, g.position.y + H + 1, -lm.y, 1.4, 2, 0.3, [1, 0.1, 0.05]]]);
   }
 
   // Griffith Observatory: white art-deco hall with the copper planetarium dome
@@ -372,10 +384,10 @@ export class Landmarks {
       d.position.set(sx * 27, 15, 0);
       g.add(drum, d);
     }
-    g.position.set(lm.x, gz - 1, -lm.y);
+    g.position.set(lm.x, 0, -lm.y);
+    this._anchor(region, g, lm.x, lm.y, -1);
     g.rotation.y = -((lm.headingDeg || 180) * Math.PI) / 180 + Math.PI;
     region.group.add(g);
-    region.lights.add([[lm.x, gz + 24, -lm.y, 1.6, 0, 0, [1, 0.95, 0.85]]]);
   }
 
   // Pacific Park wheel on the Santa Monica Pier: turns slowly, LED rim at night
@@ -428,5 +440,13 @@ export class Landmarks {
     for (const m of this.nightMats) m.mat.emissive.copy(m.color).multiplyScalar(night * 0.9);
     const t = performance.now() / 1000;
     for (const sp of this.spinners) sp.rotation.z = t * 0.12;
+    // re-seat grounded landmarks every second while terrain detail arrives
+    if (t - this.groundT > 1 && this.grounded.length) {
+      this.groundT = t;
+      for (const a of this.grounded) {
+        const h = this._ground(a.region, a.x, a.y);
+        if (Math.abs(h - a.h) > 0.3) { a.h = h; a.obj.position.y = h + a.off; }
+      }
+    }
   }
 }

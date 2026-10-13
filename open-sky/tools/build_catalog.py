@@ -52,7 +52,10 @@ def main():
     fi = {f: i for i, f in enumerate(db["fields"])}
     rows = {r[fi["ident"]]: r for r in db["rows"]}
     planned = []
+    baked = {a["icao"] for reg in regions for a in reg["airports"]} | {reg["anchor"]["icao"] for reg in regions}
     for icao, name, country, character, characterHe, stage in PLANNED:
+        if icao in baked:  # already a detailed region: do not list it twice
+            continue
         r = rows[icao]
         planned.append({"name": name, "country": country, "character": character, "characterHe": characterHe,
                         "status": stage, "anchor": {"icao": icao, "lat": r[fi["lat"]], "lon": r[fi["lon"]]}})

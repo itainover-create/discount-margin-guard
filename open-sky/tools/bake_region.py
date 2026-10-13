@@ -285,8 +285,63 @@ def fetch_terrain(bbox, zooms):
 
     with ThreadPoolExecutor(16) as ex:
         sizes = list(ex.map(get, jobs))
-    log(f"terrain: {len(jobs)} tiles, {sum(sizes) / 1e6:.1f} MB")
+    fixed = fix_sea_and_spikes(jobs)
+    sizes = [os.path.getsize(os.path.join(DATA, "terrain", str(z), str(x), f"{y}.png")) for z, x, y in jobs]
+    log(f"terrain: {len(jobs)} tiles, {sum(sizes) / 1e6:.1f} MB ({fixed} detail tiles patched: sea depth / spikes)")
     return [list(j) for j in jobs]
+
+
+def fix_sea_and_spikes(jobs, coarse_z=8):
+    """Detail Terrarium tiles over US waters come from NED, which is a flat 0 m
+    at sea: the ocean plane (y = 0) then z-fights with the terrain and the
+    shader paints it as beach outside the baked region. Where a detail pixel
+    is ~0 m but the coarse (bathymetric) tile says it is below -2 m, take the
+    coarse depth. Also removes the isolated -2000..-8000 m pits Terrarium has
+    along some coastlines (a pixel far below its 5x5 neighbourhood median)."""
+    from PIL import Image
+    from numpy.lib.stride_tricks import sliding_window_view
+
+    def load(z, x, y):
+        p = os.path.join(DATA, "terrain", str(z), str(x), f"{y}.png")
+        if not os.path.exists(p):
+            return None
+        a = np.asarray(Image.open(p).convert("RGB")).astype(np.int32)
+        return a[:, :, 0] * 256 + a[:, :, 1] - 32768
+
+    n = 0
+    for z, x, y in jobs:
+        if z <= coarse_z + 1:
+            continue
+        h = load(z, x, y)
+        s = z - coarse_z
+        par = load(coarse_z, x >> s, y >> s)
+        if h is None or par is None:
+            continue
+        orig = h.copy()
+        # coarse heights at this tile's pixel centres (bilinear)
+        k = 1 << s
+        u = ((x - ((x >> s) << s)) + (np.arange(256) + 0.5) / 256) / k * 256 - 0.5
+        v = ((y - ((y >> s) << s)) + (np.arange(256) + 0.5) / 256) / k * 256 - 0.5
+        u0 = np.clip(np.floor(u).astype(int), 0, 254); fu = np.clip(u - u0, 0, 1)
+        v0 = np.clip(np.floor(v).astype(int), 0, 254); fv = np.clip(v - v0, 0, 1)
+        p00 = par[np.ix_(v0, u0)]; p01 = par[np.ix_(v0, u0 + 1)]
+        p10 = par[np.ix_(v0 + 1, u0)]; p11 = par[np.ix_(v0 + 1, u0 + 1)]
+        coarse = (p00 * (1 - fu) + p01 * fu) * (1 - fv)[:, None] + (p10 * (1 - fu) + p11 * fu) * fv[:, None]
+        # isolated pits
+        med = np.median(sliding_window_view(np.pad(h, 2, mode="edge"), (5, 5)), axis=(2, 3))
+        pit = (h < -100) & (h < med - 200)
+        h = np.where(pit, med, h)
+        # flat 0 m sea -> coarse bathymetry
+        sea = (np.abs(h) <= 1) & (coarse < -2)
+        h = np.where(sea, np.round(coarse), h).astype(np.int32)
+        if not np.array_equal(h, orig):
+            n += 1
+            v16 = np.clip(h + 32768, 0, 65535)
+            img = np.zeros((256, 256, 3), np.uint8)
+            img[:, :, 0] = v16 >> 8
+            img[:, :, 1] = v16 & 255
+            Image.fromarray(img).save(os.path.join(DATA, "terrain", str(z), str(x), f"{y}.png"), "PNG", optimize=True)
+    return n
 
 
 # ---------------------------------------------------------------------------
