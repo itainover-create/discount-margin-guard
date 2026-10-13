@@ -28,6 +28,7 @@ export function createSharedUniforms() {
     uLandDir: { value: new THREE.Vector3(0, 0, -1) },
     uLandOn: { value: 0 },
     uFlash: { value: 0 },   // lightning flash 0..1
+    uUrban: { value: 0 },   // how built-up the land around a detailed region is (suburb fade-out)
   };
 }
 
@@ -99,7 +100,7 @@ void main(){
 const TERRAIN_FS = /* glsl */ `
 ${COMMON}
 uniform sampler2D uRegionTex; uniform vec4 uRegionInfo; uniform vec2 uRegionSize; uniform vec3 uRegionAffine;
-uniform int uStyle; uniform float uLat; uniform float uSnowLine;
+uniform int uStyle; uniform float uLat; uniform float uSnowLine; uniform float uUrban;
 varying vec3 vW; varying vec3 vN; varying vec3 vWc;
 
 vec3 styleLand(){
@@ -142,6 +143,24 @@ vec3 classColor(int c, vec2 p, out float water, out float emis){
   return styleLand() * (0.85 + 0.3 * n3) * (0.9 + 0.2 * n2);
 }
 
+// generic suburbs around a detailed region: street grid, lots with roofs and
+// yards, varying orientation per district (seen from the air, not up close)
+vec3 suburb(vec2 p, out float lights){
+  float a = 1.2 * hash12(floor(p / 2600.0) + 7.0);
+  vec2 q = mat2(cos(a), -sin(a), sin(a), cos(a)) * p;
+  vec2 cell = fract(q / vec2(118.0, 84.0));
+  float street = clamp(step(cell.x, 0.07) + step(cell.y, 0.09), 0.0, 1.0);
+  vec2 lot = floor(q / vec2(23.0, 27.0));
+  float r = hash12(lot), r2 = hash12(lot + 3.7), tree = vnoise(p * 0.035);
+  vec3 roof = mix(mix(vec3(0.44, 0.42, 0.40), vec3(0.50, 0.38, 0.32), step(0.7, r2)), vec3(0.62, 0.60, 0.57), step(0.9, r2));
+  vec3 yard = mix(vec3(0.27, 0.36, 0.21), vec3(0.33, 0.38, 0.25), r2);
+  vec3 c = mix(yard, roof, step(0.55, r) * 0.85);
+  c = mix(c, vec3(0.20, 0.30, 0.16), smoothstep(0.5, 0.75, tree) * 0.8);   // street trees and yards
+  c = mix(c, vec3(0.36, 0.36, 0.37), street * 0.85);
+  lights = street * step(0.7, fract(q.x / 37.0 + q.y / 41.0)) + step(0.42, r) * step(0.8, r2) * 0.4;
+  return c;
+}
+
 vec3 biome(vec3 n, float h, vec2 p, out float water){
   water = 0.0;
   float lat = abs(uLat);
@@ -159,10 +178,18 @@ void main(){
   float slope = 1.0 - n.y;
   vec3 col; float water = 0.0; float emis = 0.0;
   bool inRegion = false;
+  float edgeDist = 1e9;   // metres outside the detailed region (0 inside)
   if (uRegionInfo.w > 0.5) {
     vec2 rp = vec2((p.x - uRegionAffine.y) / uRegionAffine.x, p.y - uRegionAffine.z);
     vec2 tc = vec2((rp.x - uRegionInfo.x) / uRegionInfo.z, (uRegionInfo.y - rp.y) / uRegionInfo.z) - 0.5;
-    if (tc.x >= 0.0 && tc.y >= 0.0 && tc.x < uRegionSize.x - 1.0 && tc.y < uRegionSize.y - 1.0) {
+    vec2 outside = max(max(-tc, tc - (uRegionSize - 1.0)), 0.0);
+    // ragged rather than ruler-straight edge: the last few hundred metres
+    // inside the data hand over to the generic surroundings by a noise mask
+    vec2 inside = min(tc, (uRegionSize - 1.0) - tc);
+    float insideM = min(inside.x, inside.y) * uRegionInfo.z;
+    edgeDist = length(outside) * uRegionInfo.z;
+    bool ragged = insideM < 700.0 * fbm(p * 0.0011) * uUrban;
+    if (!ragged && tc.x >= 0.0 && tc.y >= 0.0 && tc.x < uRegionSize.x - 1.0 && tc.y < uRegionSize.y - 1.0) {
       inRegion = true;
       ivec2 i0 = ivec2(floor(tc)); vec2 f = fract(tc);
       // sharpen class boundaries with a noisy threshold (avoids blurry blends up close)
@@ -178,7 +205,17 @@ void main(){
       emis = mix(mix(e0, e1, f.x), mix(e2, e3, f.x), f.y);
     }
   }
-  if (!inRegion) col = biome(n, h, p, water);
+  if (!inRegion) {
+    col = biome(n, h, p, water);
+    // suburbs fade out over ~9 km around a built-up region, in patchy districts
+    float urb = uUrban * (1.0 - smoothstep(1500.0, 9000.0, edgeDist)) * smoothstep(0.35, 0.6, fbm(p * 0.00045) + 0.25 * (1.0 - smoothstep(0.0, 3000.0, edgeDist)));
+    urb *= (1.0 - smoothstep(25.0, 140.0, h)) * (1.0 - smoothstep(0.2, 0.4, slope));
+    if (urb > 0.01 && h > 1.5) {
+      float sl;
+      col = mix(col, suburb(p, sl), urb * 0.8);
+      emis = max(emis, sl * urb * 0.7);
+    }
+  }
   // rock on steep slopes, snow above the snow line
   float rock = smoothstep(0.28, 0.5, slope) * (1.0 - water);
   col = mix(col, mix(vec3(0.40,0.38,0.35), vec3(0.52,0.50,0.47), vnoise(p * 0.08)), rock);

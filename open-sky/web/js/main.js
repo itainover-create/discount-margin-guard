@@ -42,8 +42,10 @@ class Game {
     this.paused = false;
     this.settings = Object.assign({
       quality: 'high', trafficDensity: null, carDensity: null, atcVoice: true, hebrew: false, hud: true, online: true,
-      volume: 0.8, music: 0.7, intro: true, mode: 'accessible', units: 'aviation', aircraft: 0, realNames: false,
+      volume: 0.8, music: 0.7, intro: true, mode: 'accessible', units: 'aviation', aircraft: 0, realNames: true, dock: true,
     }, this._loadSettings());
+    // v2.1: real aircraft type names are shown by default (older saves stored false)
+    if (!this.settings.v21) { this.settings.realNames = true; this.settings.v21 = true; }
     FLEET_OPTIONS.realNames = !!this.settings.realNames;
     this.cloud = new CloudSave(this.settings);
     this.audio = new AudioEngine();  // created early: the intro plays music before the world has loaded

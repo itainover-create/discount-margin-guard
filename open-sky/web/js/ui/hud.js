@@ -5,6 +5,7 @@ import { ACTIONS, keyLabel } from '../input/input.js';
 import { VIEW_NAMES } from '../camera/cameras.js';
 import { PHASE } from '../sim/traffic.js';
 import { alertsFor } from '../aircraft/displays.js';
+import { FlightDock } from './dock.js';
 
 const $ = (id) => document.getElementById(id);
 const D2R = Math.PI / 180;
@@ -77,6 +78,7 @@ export class Hud {
     this.atcOpen = false;
     this.mapOn = true;
     this.checkOn = false;
+    this.dock = new FlightDock(game);
     this.t = 0;
     this.mapT = 0;
     $('hud-buttons').addEventListener('click', (e) => {
@@ -238,6 +240,7 @@ export class Hud {
       if (g.settings.hud) this.drawData(o, sw);
       this.drawTutorial();
       this.drawStatus(o);
+      this.dock.update();
       if (this.checkOn) this.drawChecklist();
     }
     this.mapT -= dt;

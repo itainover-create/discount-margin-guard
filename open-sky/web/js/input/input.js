@@ -78,6 +78,8 @@ export class Input {
     this.dom = dom;
     this.down = new Set();
     this.pressed = [];
+    this.virtualHeld = new Set();   // actions held by on-screen buttons (flight dock)
+    this.queued = [];               // one-shot actions fired by on-screen buttons
     this.mouse = { dx: 0, dy: 0, wheel: 0, drag: false, button: -1, x: 0, y: 0, clicked: null };
     this.axes = { pitch: 0, roll: 0, yaw: 0 };
     const saved = loadSettings();
@@ -119,7 +121,7 @@ export class Input {
       if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'PageUp', 'PageDown', 'Home', 'End', 'Slash', 'F1', 'F2', 'Backquote', 'Quote', 'Tab'].includes(e.code)) e.preventDefault();
     });
     window.addEventListener('keyup', (e) => { this.down.delete(e.code); });
-    window.addEventListener('blur', () => this.down.clear());
+    window.addEventListener('blur', () => { this.down.clear(); this.virtualHeld.clear(); });
     const el = this.dom;
     el.addEventListener('contextmenu', (e) => e.preventDefault());
     el.addEventListener('mousedown', (e) => {
@@ -144,7 +146,12 @@ export class Input {
     el.addEventListener('wheel', (e) => { this.mouse.wheel += e.deltaY; e.preventDefault(); }, { passive: false });
   }
 
+  // on-screen controls: fire a one-shot action, or hold / release a continuous one
+  trigger(action) { this.queued.push(action); }
+  hold(action, on) { if (on) this.virtualHeld.add(action); else this.virtualHeld.delete(action); }
+
   held(action) {
+    if (this.virtualHeld.has(action)) return true;
     const shift = this.down.has('ShiftLeft') || this.down.has('ShiftRight');
     // axis keys are ignored while Shift is held (Shift+key = one-shot commands),
     // except throttle and brakes
@@ -204,6 +211,8 @@ export class Input {
       }
     }
     this.pressed.length = 0;
+    out.events.push(...this.queued);
+    this.queued.length = 0;
     if (mode === 'free') {
       out.freeMove.y = (this.down.has('KeyW') ? 1 : 0) - (this.down.has('KeyS') ? 1 : 0);
       out.freeMove.x = (this.down.has('KeyD') ? 1 : 0) - (this.down.has('KeyA') ? 1 : 0);

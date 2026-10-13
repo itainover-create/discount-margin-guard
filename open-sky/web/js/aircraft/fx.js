@@ -180,6 +180,20 @@ export class DamageFX {
           this.smoke.emit(p.clone(), vel.clone().multiplyScalar(0.9), 14, 0.9 * scale, 1.4 * scale, [0.95, 0.96, 0.98], 0.32, 0.05, 0);
         }
       });
+      // wingtip vortices made visible: condensation in hard pulls, and on a
+      // humid approach with the flaps out (wisps that trail and fade fast)
+      const L = m.lights;
+      if (L && L.navL && L.navR && !o.crashed && o.tas > 55 && k % 2 === 0) {
+        const humid = this.world.weather ? Math.min(1, (this.world.weather.state.precip || 0) + (this.world.weather.overcastFactor ? this.world.weather.overcastFactor() * 0.6 : 0)) : 0;
+        const pull = Math.max(0, (o.nz || 1) - 1.7) / 2.5;
+        const flaps = Math.min(1, (o.flapsDeg || 0) / 25) * (o.alpha || 0) > 0.08 ? humid * 0.8 : 0;
+        const vap = Math.min(1, pull * (0.5 + humid) + flaps);
+        if (vap > 0.08) {
+          for (const tip of [L.navL, L.navR]) {
+            this.smoke.emit(world(tip).clone(), vel.clone().multiplyScalar(0.92), 0.9 + vap, 0.25 * scale + 0.15, 0.9 * scale, [0.96, 0.97, 0.99], 0.35 * vap, 0.1, 0);
+          }
+        }
+      }
       // fuel vapour from leaking wings
       if (o.fuelLeak > 0.05 && P.wing && !o.crashed) for (const w of P.wing) {
         const d = w.side < 0 ? o.dmgWingL : o.dmgWingR;

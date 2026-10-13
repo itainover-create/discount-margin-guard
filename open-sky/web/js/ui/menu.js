@@ -268,6 +268,7 @@ export class Menu {
         <div class="note">Accessible: auto-rudder, stall protection, attitude hold when the stick is centred, auto mixture, perfect gyros, easy engine start, more crash tolerance, taxi steering assist. Simulation: none of these; priming, mixture, vacuum gyros and heading-indicator drift are modelled.</div>
         <div class="row">Taxi route line in simulation mode <input type="checkbox" id="set-route" ${s.routeInSim ? 'checked' : ''}></div>
         <div class="row">Show real aircraft type names <input type="checkbox" id="set-real" ${s.realNames ? 'checked' : ''}></div>
+        <div class="row">On-screen flight buttons (thrust, gear, flaps, autopilot) <input type="checkbox" id="set-dock" ${s.dock !== false ? 'checked' : ''}></div>
         <div class="note">Off by default: the fleet uses original names with the real type as a class reference. Turn on only if you hold the rights to use manufacturers' type names.</div>
       </fieldset>
       <fieldset><legend>ACCOUNT &amp; CLOUD SAVE</legend>
@@ -289,6 +290,7 @@ export class Menu {
     $('set-cars').oninput = (e) => { s.carDensity = +e.target.value; $('cars-v').textContent = e.target.value; save(); g.vehicles.setDensity(s.carDensity); };
     $('set-mode').onchange = (e) => { s.mode = e.target.value; $('mode').value = s.mode; save(); };
     $('set-route').onchange = (e) => { s.routeInSim = e.target.checked; save(); };
+    $('set-dock').onchange = (e) => { s.dock = e.target.checked; save(); };
     $('set-real').onchange = (e) => { s.realNames = e.target.checked; FLEET_OPTIONS.realNames = s.realNames; save(); this.renderAll(); };
     $('set-vol').oninput = (e) => { s.volume = +e.target.value; g.audio.volume.master = s.volume; if (g.audio.master) g.audio.master.gain.value = s.volume; save(); };
     $('set-voice').onchange = (e) => { s.atcVoice = e.target.checked; save(); };

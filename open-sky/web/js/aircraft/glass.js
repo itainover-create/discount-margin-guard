@@ -8,6 +8,25 @@ import * as THREE from 'three';
 import { B } from './models.js';
 import { drawPFD, drawND, drawEICAS, drawSystems, drawHUD } from './displays.js';
 
+// merge simple non-indexed/indexed geometries (position, normal, uv) into one
+function mergeGeos(list) {
+  const parts = list.map((g) => (g.index ? g.toNonIndexed() : g));
+  const n = parts.reduce((a, g) => a + g.attributes.position.count, 0);
+  const pos = new Float32Array(n * 3), nor = new Float32Array(n * 3), uv = new Float32Array(n * 2);
+  let o = 0;
+  for (const g of parts) {
+    pos.set(g.attributes.position.array, o * 3);
+    nor.set(g.attributes.normal.array, o * 3);
+    if (g.attributes.uv) uv.set(g.attributes.uv.array, o * 2);
+    o += g.attributes.position.count;
+  }
+  const out = new THREE.BufferGeometry();
+  out.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  out.setAttribute('normal', new THREE.BufferAttribute(nor, 3));
+  out.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
+  return out;
+}
+
 function labelTex(text, w = 256, h = 64, bg = '#1c2026', fg = '#e9e9e9', size = 28) {
   const c = document.createElement('canvas');
   c.width = w; c.height = h;
@@ -142,7 +161,15 @@ export class GlassCockpit {
   }
 
   _switch(id, label, x, y, z, rotX = 0, txt = null) {
-    const s = new THREE.Mesh(new THREE.BoxGeometry(0.012, 0.022, 0.012), this._mat(0xd0d4d8, 0.4, 0.6));
+    // bat-handle toggle: chrome lever with a ball tip on a small base plate
+    const geo = this._batGeo || (this._batGeo = (() => {
+      const g = new THREE.CylinderGeometry(0.0022, 0.0032, 0.02, 10);
+      g.translate(0, 0.01, 0);
+      const tip = new THREE.SphereGeometry(0.0042, 10, 8).translate(0, 0.021, 0);
+      const base = new THREE.CylinderGeometry(0.0065, 0.0065, 0.004, 14).translate(0, 0.0, 0);
+      return mergeGeos([g, tip, base]);
+    })());
+    const s = new THREE.Mesh(geo, this._chrome || (this._chrome = this._mat(0xd6dadf, 0.25, 0.9)));
     s.position.set(x, y, z);
     s.rotation.x = rotX;
     this._interactive(s, id, label, 'toggle');
@@ -159,9 +186,15 @@ export class GlassCockpit {
   }
 
   _knob(action, label, x, y, z, r = 0.009) {
-    const k = new THREE.Mesh(new THREE.CylinderGeometry(r, r * 1.1, 0.014, 18), this._mat(0x15171a, 0.5));
+    // knurled cap on a wider skirt, with a white index line
+    const k = new THREE.Mesh(new THREE.CylinderGeometry(r, r * 1.05, 0.014, 20), this._mat(0x15171a, 0.5));
     k.rotation.x = Math.PI / 2;
     k.position.set(x, y, z);
+    const skirt = new THREE.Mesh(new THREE.CylinderGeometry(r * 1.45, r * 1.5, 0.004, 24), this._mat(0x2b2f35, 0.45, 0.3));
+    skirt.position.y = -0.006;
+    const mark = new THREE.Mesh(new THREE.BoxGeometry(0.0012, 0.0016, r * 0.8), new THREE.MeshBasicMaterial({ color: 0xf2f2f2 }));
+    mark.position.set(0, 0.0072, -r * 0.45);
+    k.add(skirt, mark);
     return this._interactive(k, action, label, 'knob');
   }
 

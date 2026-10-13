@@ -1,8 +1,8 @@
 // Opening sequence: the Orion constellation forms in a night sky, gathers into
-// the sparkle, which draws the orbit around the gold "A"; ORION GAMES, the
+// the poster's sparkle, which sweeps the orbit and reveals the ORION mark; ORION GAMES, the
 // slogan and the signature follow, then the GLOBAL SKIES title over in-engine
 // key art. Synchronised with the score in audio/music.js. Skippable.
-import { lockup, gameTitle, loadEmblem, RIGHTS, COPYRIGHT, COMPANY } from './brand.js';
+import { lockup, gameTitle, loadEmblem, RIGHTS, COPYRIGHT, COMPANY, EMBLEM_GEO, EMBLEM_URL } from './brand.js';
 import { Music } from '../audio/music.js';
 
 // Orion (as seen from the northern hemisphere), normalised screen positions
@@ -67,42 +67,18 @@ export class Intro {
     this._resize = () => { this.canvas.width = innerWidth * devicePixelRatio; this.canvas.height = innerHeight * devicePixelRatio; };
     this._resize();
     addEventListener('resize', this._resize);
-    // emblem parts
-    const svg = this.logo.querySelector('svg.emblem');
-    const n = svg.dataset.n;
-    this.svg = svg;
-    this.partA = svg.querySelector(`#orion${n}-a`);
-    this.sparkle = svg.querySelector(`#orion${n}-sparkle`);
-    this.orbit = svg.querySelector(`#orion${n}-orbit-path`);
-    // ring reveal: a mask that follows the orbit centre line
-    const NS = 'http://www.w3.org/2000/svg';
-    const mask = document.createElementNS(NS, 'mask');
-    mask.id = `orion${n}-reveal`;
-    mask.setAttribute('maskUnits', 'userSpaceOnUse');
-    const mp = document.createElementNS(NS, 'path');
-    mp.setAttribute('d', this.orbit.getAttribute('d'));
-    mp.setAttribute('fill', 'none');
-    mp.setAttribute('stroke', '#fff');
-    mp.setAttribute('stroke-width', '34');
-    mp.setAttribute('stroke-linecap', 'round');
-    mp.setAttribute('pathLength', '1');
-    mp.setAttribute('stroke-dasharray', '1 1');
-    mp.setAttribute('stroke-dashoffset', '1');
-    mask.appendChild(mp);
-    svg.querySelector('defs').appendChild(mask);
-    this.maskPath = mp;
-    for (const id of ['ring-back', 'ring-front']) svg.querySelector(`#orion${n}-${id}`).setAttribute('mask', `url(#${mask.id})`);
-    // the glint that runs along the orbit while it is drawn
-    const glint = document.createElementNS(NS, 'g');
-    glint.innerHTML = `<circle r="22" fill="url(#og${n}-glow)"/><circle r="4" fill="#fff"/>`;
-    glint.setAttribute('opacity', '0');
-    svg.appendChild(glint);
-    this.glint = glint;
-    this.orbitLen = this.orbit.getTotalLength();
-    this.sparkle.style.opacity = '0';
-    this.sparkle.style.transformBox = 'fill-box';
-    this.sparkle.style.transformOrigin = 'center';
-    this.partA.style.opacity = '0';
+    // emblem: revealed by a sweep that follows the orbit from the sparkle
+    this.emb = this.logo.querySelector('.brand-emblem');
+    this.emb.style.setProperty('--emblem-mask', `url("${EMBLEM_URL}")`);
+    this.glint = document.createElement('i');
+    this.glint.className = 'orbit-glint';
+    this.flare = document.createElement('i');
+    this.flare.className = 'spark-flare';
+    this.emb.append(this.glint, this.flare);
+    this._setSweep(0);
+    this.sig = this.logo.querySelector('.brand-sig');
+    this.pen = this.sig.querySelector('.pen');
+    this.sigImg = this.sig.querySelector('img');
     // stars
     this.stars = Array.from({ length: 420 }, () => ({ x: Math.random(), y: Math.random(), r: Math.random() * 1.2 + 0.2, p: Math.random() * 6.28, s: 0.5 + Math.random() * 2 }));
   }
@@ -144,7 +120,7 @@ export class Intro {
     this.el.addEventListener('pointerdown', this._skip);
     const cues = [
       [3.30, () => this.el.classList.add('a-on')],
-      [4.25, () => this.el.classList.add('shine')],
+      [4.85, () => this.el.classList.add('shine')],
       [5.00, () => this.logo.classList.add('word-on')],
       [5.80, () => this.logo.classList.add('games-on')],
       [6.40, () => this.logo.classList.add('slogan-on')],
@@ -226,26 +202,65 @@ export class Intro {
     x.globalAlpha = 1;
   }
 
+  // point on the orbit ellipse (emblem fractions) for parameter th (radians)
+  _orbitPt(th) {
+    const G = EMBLEM_GEO, r = (G.rot * Math.PI) / 180;
+    const ux = Math.cos(r), uy = Math.sin(r);
+    // ellipse in pixel-aspect space (x scaled by the image aspect)
+    const ax = G.a * Math.cos(th), by = G.b * Math.sin(th);
+    const px = ax * ux - by * uy, py = ax * uy + by * ux;
+    return [G.center[0] + px, G.center[1] + py * G.aspect];
+  }
+
   _sparkleScreen() {
-    const r = this.svg.getBoundingClientRect(), vb = this.svg.viewBox.baseVal;
-    const p = this.orbit.getPointAtLength(0);
-    return [(r.left + (p.x - vb.x) / vb.width * r.width) * devicePixelRatio, (r.top + (p.y - vb.y) / vb.height * r.height) * devicePixelRatio];
+    const r = this.emb.getBoundingClientRect(), [sx, sy] = EMBLEM_GEO.sparkle;
+    return [(r.left + sx * r.width) * devicePixelRatio, (r.top + sy * r.height) * devicePixelRatio];
+  }
+
+  // conic mask around the orbit centre: everything the sweep has passed is visible
+  _setSweep(k) {
+    const G = EMBLEM_GEO;
+    const cx = (G.center[0] * 100).toFixed(1), cy = (G.center[1] * 100).toFixed(1);
+    let m;
+    if (k <= 0) m = 'linear-gradient(transparent, transparent)';
+    else if (k >= 1) m = 'none';
+    else {
+      // the sparkle sits at ~174deg (screen, from +x, y down); the sweep runs counter-clockwise
+      const startCss = 174 + 90, span = 360 * k;
+      m = `conic-gradient(from ${(startCss - span).toFixed(1)}deg at ${cx}% ${cy}%, transparent 0deg, #000 6deg, #000 ${span.toFixed(1)}deg, transparent ${span.toFixed(1)}deg)`;
+    }
+    this.emb.style.webkitMaskImage = m;
+    this.emb.style.maskImage = m;
   }
 
   _emblem(t) {
-    const k = ease((t - 3.05) / 1.6);
-    this.maskPath.setAttribute('stroke-dashoffset', String(1 - k));
-    if (t > 3.0 && t < 4.9) {
-      const p = this.orbit.getPointAtLength(this.orbitLen * k);
-      this.glint.setAttribute('transform', `translate(${p.x} ${p.y})`);
-      this.glint.setAttribute('opacity', String(Math.min(1, (4.9 - t) * 3)));
-    } else {
-      this.glint.setAttribute('opacity', '0');
-    }
+    const k = ease((t - 3.05) / 1.7);
+    this._setSweep(t < 3.05 ? 0 : k);
+    const r = this.emb.getBoundingClientRect();
+    if (t > 3.0 && t < 5.0) {
+      // glint rides the orbit: from the sparkle (-127deg) round the bottom, right side and top
+      const th = (-127 - 313 * k) * Math.PI / 180;
+      const [fx, fy] = this._orbitPt(th);
+      this.glint.style.left = `${fx * r.width}px`;
+      this.glint.style.top = `${fy * r.height}px`;
+      this.glint.style.opacity = String(Math.min(1, (5.0 - t) * 3));
+    } else this.glint.style.opacity = '0';
     if (t > 4.55) {
-      const s = ease((t - 4.55) / 0.35);
-      this.sparkle.style.opacity = String(s);
-      this.sparkle.style.transform = `scale(${0.2 + s * 0.8 + Math.max(0, Math.sin((t - 4.55) * 6)) * 0.25 * (1 - s * 0.6)}) rotate(${(1 - s) * 90}deg)`;
+      const s = ease((t - 4.55) / 0.4);
+      const pulse = Math.max(0, Math.sin((t - 4.55) * 5)) * (1 - s * 0.5);
+      this.flare.style.left = `${EMBLEM_GEO.sparkle[0] * r.width}px`;
+      this.flare.style.top = `${EMBLEM_GEO.sparkle[1] * r.height}px`;
+      this.flare.style.opacity = String(Math.min(1, s) * (t < 6.2 ? 1 : Math.max(0.25, 1 - (t - 6.2) / 1.2)));
+      this.flare.style.transform = `translate(-50%, -50%) scale(${0.3 + s * 0.7 + pulse * 0.35}) rotate(${(1 - s) * 60}deg)`;
+    }
+    // signature: written left to right with the pen glow at the edge
+    if (t > 7.4) {
+      const w = ease((t - 7.4) / 2.0);
+      this.sigImg.style.clipPath = `inset(0 ${((1 - w) * 100).toFixed(1)}% 0 0)`;
+      const ir = this.sigImg.getBoundingClientRect(), sr = this.sig.getBoundingClientRect();
+      this.pen.style.left = `${ir.left - sr.left + w * ir.width}px`;
+      this.pen.style.top = `${ir.top - sr.top + ir.height * (0.45 + 0.12 * Math.sin(w * 31))}px`;
+      this.pen.style.opacity = String(w < 1 ? 0.95 : Math.max(0, 1 - (t - 9.4) * 3));
     }
   }
 
