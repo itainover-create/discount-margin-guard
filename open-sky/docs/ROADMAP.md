@@ -27,7 +27,7 @@ area → landing → debrief.
 ## Stage 2.0 — delivered (this release)
 | Area | Delivered |
 |---|---|
-| Fleet | 14 aircraft: trainer, 737-, A320-, 787-9-, 777-300ER-, 747-400-, A350-, A380-class airliners, F-15C-, F-22-, F-35A-class fighters, B-2-class flying wing, G650-class business jet, Extra 330-class aerobatic; original names + class references |
+| Fleet | 26 real aircraft types: Cessna 172, Extra 330; Citation CJ4, Phenom 300E, G650, Global 7500; A220-300, E195-E2, 737-800, 737 MAX 8, A320, A321neo, 767-300ER, 787-9, A330-900, A350-900, 777-300ER, 747-400, A380; F-15C, F-16C, F/A-18E, Typhoon, F-22, F-35A, B-2. Real type names shown (original names optional) |
 | Core | Turbofans (spool, lapse, TSFC, afterburner, reversers, start sequence), fly-by-wire normal law with protections, gear/spoilers/autothrottle/generators, wave drag; consequential damage model; 227 native checks |
 | Client | Hangar, procedural models, glass flight decks / fighter HUD, jet audio + GPWS, damage effects, storms + lightning, windshield rain, glass reflections, radio wheel, en-route traffic + TCAS, 5 new missions, Google sign-in + Drive cloud save; 18 e2e scenarios |
 

@@ -3,8 +3,9 @@
 // class-typical non-dimensional values (airliner / fighter / flying wing /
 // business jet / aerobatic) applied to that geometry, then checked by
 // tests/test_main.cpp against published performance figures of the class.
-// Names in the game are original; the real type each one is modelled on is
-// given as a class reference only (see docs/FLIGHT_MODEL.md).
+// Each design has an original internal name; the real type it is modelled on
+// (shown by default in the client) is given in the comment above its Spec
+// (see docs/FLIGHT_MODEL.md).
 #include "osk/aircraft.h"
 
 namespace osk {
@@ -323,9 +324,144 @@ const Spec kSpecs[] = {
      1, 13.5, 4.9, 2.4, 1.0, 9, 250, 0,
      -14.0, 13.0, 0, 0, 0, 340, 0.925, 0.85, 0.05, 2.5, -1.0, 3.7, 140, 125,
      2.5, -1.0, 20, 15, 0, 3, {11.3, -0.5, -0.9}, 7, 65, 0.06, 0.45, 0.03, 0},
+
+    // ---- v2.1 fleet extension: ids 14-25 (AC_CJ4 ... AC_EF2000), published type figures
+    // Swiftlet 4 — Cessna Citation CJ4: light jet, 2 x FJ44-4A (16.1 kN), no reversers,
+    // conventional controls + yaw damper, rear engines, cruciform tail
+    {"swiftlet-4", Category::Bizjet, ControlLaw::Direct,
+     7761, 4663, 2644, 30.66, 15.49, 2.10, 16.26, 12.5,
+     0.20, 0.0220, 0.80, 1.45, 2.10, 0.070, 0.018,
+     3, {0, 15, 35, 0, 0, 0}, {0, 200, 161, 0, 0, 0}, 3.0,
+     2, 16110, 0, 24, 0.05, 2.8, 2.0, 1.45e-5, 0, -0.40, 0.75, 0, 0,
+     {{-4.6, -1.35, -0.55}, {-4.6, 1.35, -0.55}, {}, {}},
+     1, 6.5, 4.2, 1.45, 0.6, 7, 250, 0,
+     -8.4, 14.0, 0, 0, 0, 305, 0.77, 0.73, 0.05, 3.0, -1.2, 3.7, 110, 105,
+     0, 0, 0, 0, 0, 3, {5.6, -0.42, -0.55}, 7, 60, 0.06, 0.40, 0.03, 0},
+    // Petrel 300 — Embraer Phenom 300E: light jet, 2 x PW535E1 (15.5 kN), no reversers,
+    // conventional controls + yaw damper, rear engines, T-tail, winglets
+    {"petrel-300", Category::Bizjet, ControlLaw::Direct,
+     8415, 5425, 2428, 28.5, 15.91, 1.95, 15.64, 23,
+     0.20, 0.0215, 0.82, 1.45, 2.45, 0.070, 0.018,
+     5, {0, 9, 15, 26, 36, 0}, {0, 180, 170, 160, 150, 0}, 3.0,
+     2, 15470, 0, 24, 0.05, 2.8, 2.0, 1.45e-5, 0, -0.40, 0.75, 0, 0,
+     {{-4.2, -1.4, -0.7}, {-4.2, 1.4, -0.7}, {}, {}},
+     1, 6.3, 3.75, 1.4, 0.6, 7, 250, 0,
+     -8.0, 13.0, 0, 0, 0, 320, 0.80, 0.75, 0.05, 3.0, -1.2, 3.7, 112, 110,
+     0, 0, 0, 0, 0, 3, {5.4, -0.42, -0.55}, 7, 60, 0.06, 0.40, 0.03, 0},
+    // Borealis 75 — Bombardier Global 7500: ultra-long-range business jet, 2 x Passport
+    // (84.2 kN), fly-by-wire with a control column, leading-edge slats, T-tail
+    {"borealis-75", Category::Bizjet, ControlLaw::FlyByWireG,
+     52096, 25764, 23360, 110.0, 31.7, 4.0, 33.88, 33,
+     0.20, 0.0180, 0.84, 1.45, 2.70, 0.070, 0.016,
+     4, {0, 6, 16, 30, 0, 0}, {0, 230, 210, 175, 0, 0}, 2.5,
+     2, 84160, 0, 24, 0.05, 3.2, 2.3, 1.15e-5, 0, -0.45, 0.75, 0.35, 0,
+     {{-11.0, -2.6, -1.2}, {-11.0, 2.6, -1.2}, {}, {}},
+     1, 15.3, 4.3, 2.5, 1.0, 9, 250, 0,
+     -17.5, 12.0, 0, 0, 0, 340, 0.925, 0.86, 0.05, 2.5, -1.0, 3.7, 138, 115,
+     2.5, -1.0, 20, 15, 0, 3, {13.2, -0.5, -0.95}, 7, 65, 0.06, 0.45, 0.03, 0},
+    // Lumen 223 — Airbus A220-300: narrowbody twin, 2 x PW1524G geared turbofans
+    // (103.6 kN), fly-by-wire sidestick with protections
+    {"lumen-223", Category::Airliner, ControlLaw::FlyByWireG,
+     70900, 37081, 17440, 112.3, 35.1, 3.7, 38.7, 26,
+     0.22, 0.0200, 0.83, 1.45, 2.65, 0.080, 0.018,
+     5, {0, 10, 15, 20, 35, 0}, {0, 230, 210, 190, 165, 0}, 2.0,
+     2, 103640, 0, 20, 0.045, 3.2, 2.5, 0.92e-5, 0, -0.48, 0.75, 0.40, 0,
+     {{2.3, -5.3, 1.45}, {2.3, 5.3, 1.45}, {}, {}},
+     1, 16.3, 6.7, 2.8, 1.2, 10, 250, 0,
+     -18.0, 12.0, 5.3, 2.2, 2.3, 330, 0.82, 0.77, 0.06, 2.5, -1.0, 3.7, 140, 130,
+     2.5, -1.0, 15, 15.0, 67, 0, {15.6, -0.55, -1.05}, 7, 70, 0.07, 0.50, 0.04, 0},
+    // Egret 295 — Embraer E195-E2: regional twin, 2 x PW1900G geared turbofans (102 kN),
+    // closed-loop fly-by-wire with control columns
+    {"egret-295", Category::Airliner, ControlLaw::FlyByWireG,
+     62500, 35700, 13690, 103.0, 35.12, 3.4, 41.5, 26,
+     0.22, 0.0205, 0.82, 1.45, 2.60, 0.080, 0.018,
+     6, {0, 7, 10, 20, 25, 37}, {0, 230, 215, 200, 180, 165}, 2.0,
+     2, 102300, 0, 20, 0.045, 3.2, 2.5, 0.92e-5, 0, -0.48, 0.75, 0.40, 0,
+     {{2.0, -5.6, 1.4}, {2.0, 5.6, 1.4}, {}, {}},
+     1, 17.5, 6.2, 2.8, 1.2, 10, 250, 0,
+     -20.0, 10.5, 5.6, 2.2, 2.0, 320, 0.82, 0.77, 0.06, 2.5, -1.0, 3.7, 145, 130,
+     2.5, -1.0, 15, 15.0, 67, 0, {17.6, -0.55, -1.0}, 7, 70, 0.07, 0.50, 0.04, 0},
+    // Meridian 8M — Boeing 737 MAX 8: narrowbody twin, 2 x LEAP-1B (130 kN), split-tip
+    // winglets, conventional controls + yaw damper
+    {"meridian-8m", Category::Airliner, ControlLaw::Direct,
+     82191, 45070, 20730, 127.0, 35.92, 4.17, 39.52, 25,
+     0.22, 0.0200, 0.82, 1.45, 2.65, 0.085, 0.018,
+     6, {0, 1, 5, 15, 30, 40}, {0, 250, 250, 200, 175, 162}, 2.0,
+     2, 130410, 0, 21, 0.045, 3.4, 2.6, 0.93e-5, 0, -0.48, 0.75, 0.40, 0,
+     {{3.0, -4.9, 1.45}, {3.0, 4.9, 1.45}, {}, {}},
+     1, 15.6, 5.72, 3.1, 1.3, 10, 270, 0,
+     -18.0, 11.0, 4.9, 2.3, 3.0, 340, 0.82, 0.77, 0.06, 2.5, -1.0, 3.7, 150, 145,
+     0, 0, 0, 0, 0, 0, {16.3, -0.55, -1.05}, 7, 60, 0.07, 0.50, 0.04, 0},
+    // Aurora 321N — Airbus A321neo: long narrowbody twin, 2 x LEAP-1A / PW1100G (147 kN),
+    // fly-by-wire sidestick with protections
+    {"aurora-321n", Category::Airliner, ControlLaw::FlyByWireG,
+     97000, 50100, 18860, 122.6, 35.8, 4.29, 44.51, 25,
+     0.22, 0.0200, 0.83, 1.45, 2.80, 0.085, 0.018,
+     5, {0, 10, 15, 20, 35, 0}, {0, 235, 225, 215, 190, 0}, 2.0,
+     2, 147000, 0, 20, 0.045, 3.4, 2.6, 0.93e-5, 0, -0.48, 0.75, 0.40, 0,
+     {{2.8, -5.75, 1.5}, {2.8, 5.75, 1.5}, {}, {}},
+     1, 16.91, 7.59, 2.9, 1.3, 10, 280, 0,
+     -21.0, 11.2, 5.75, 2.3, 2.8, 350, 0.82, 0.77, 0.06, 2.5, -1.0, 3.7, 155, 140,
+     2.5, -1.0, 15, 15.0, 67, 0, {19.0, -0.55, -1.1}, 7, 70, 0.07, 0.50, 0.04, 2},
+    // Vista 763 — Boeing 767-300ER: semi-widebody long-haul twin, 2 x CF6-80C2 / PW4000
+    // (276 kN), conventional controls + yaw damper
+    {"vista-763", Category::Airliner, ControlLaw::Direct,
+     186880, 90011, 73100, 283.3, 47.57, 6.0, 54.94, 31.5,
+     0.22, 0.0185, 0.80, 1.40, 2.55, 0.080, 0.018,
+     6, {0, 1, 5, 15, 20, 30}, {0, 250, 230, 205, 195, 170}, 1.6,
+     2, 276000, 0, 21, 0.04, 4.5, 3.0, 1.0e-5, 0, -0.45, 0.75, 0.40, 0,
+     {{4.3, -7.6, 2.2}, {4.3, 7.6, 2.2}, {}, {}},
+     1, 22.76, 9.3, 4.2, 1.6, 12, 270, 0,
+     -27.0, 10.0, 7.6, 3.6, 4.3, 360, 0.86, 0.79, 0.06, 2.5, -1.0, 3.7, 160, 142,
+     0, 0, 0, 0, 0, 0, {23.8, -0.55, -1.3}, 7, 70, 0.07, 0.50, 0.04, 3},
+    // Solstice 339 — Airbus A330-900: widebody long-haul twin, 2 x Trent 7000 (324 kN),
+    // fly-by-wire sidestick with protections
+    {"solstice-339", Category::Airliner, ControlLaw::FlyByWireG,
+     251000, 132000, 111270, 465.0, 64.0, 7.3, 63.66, 30,
+     0.22, 0.0172, 0.86, 1.42, 2.60, 0.075, 0.016,
+     5, {0, 10, 15, 20, 32, 0}, {0, 240, 215, 205, 186, 0}, 1.6,
+     2, 324000, 0, 21, 0.04, 4.8, 3.0, 0.85e-5, 0, -0.50, 0.75, 0.40, 0,
+     {{4.2, -9.4, 2.3}, {4.2, 9.4, 2.3}, {}, {}},
+     1, 25.37, 10.68, 4.6, 1.9, 12, 250, 0,
+     -30.0, 10.0, 9.4, 3.9, 4.2, 330, 0.86, 0.80, 0.06, 2.5, -1.0, 3.7, 155, 137,
+     2.5, -1.0, 15, 14.0, 67, 0, {28.4, -0.6, -1.5}, 7, 70, 0.07, 0.50, 0.04, 0},
+    // Ocelot 16 — Lockheed Martin F-16C Block 50/52: single-engine multirole fighter,
+    // F110-GE-129 (76.3 / 131 kN), first production fly-by-wire fighter, sidestick
+    {"ocelot-16", Category::Fighter, ControlLaw::FlyByWireG,
+     19187, 8570, 3175, 27.87, 9.96, 3.45, 15.06, 40,
+     0.04, 0.0200, 0.78, 1.55, 1.75, 0.03, 0.020,
+     2, {0, 20, 0, 0, 0, 0}, {0, 250, 0, 0, 0, 0}, 15,
+     1, 76300, 131000, 65, 0.06, 1.4, 1.1, 2.15e-5, 5.6e-5, 0.15, 0.80, 0, 0,
+     {{-6.0, 0.0, 0.0}, {}, {}, {}},
+     1, 4.0, 2.36, 1.7, 0.6, 5, 300, 0,
+     -7.0, 15.0, 0, 0, 0, 800, 2.05, 0.92, 0.045, 9.0, -3.0, 4.5, 140, 145,
+     9.0, -3.0, 300, 25, 0, 1, {4.0, 0.0, -1.05}, 10, 45, 0.06, 0.0, 0.0, 0},
+    // Corvid 18 — Boeing F/A-18E Super Hornet: twin-engine carrier multirole fighter,
+    // 2 x F414-GE-400 (62.3 / 97.9 kN), fly-by-wire, 7.5 g, carrier-strength gear
+    {"corvid-18", Category::Fighter, ControlLaw::FlyByWireG,
+     29937, 14552, 6531, 46.45, 13.62, 3.9, 18.31, 28,
+     0.05, 0.0230, 0.75, 1.65, 2.05, 0.04, 0.020,
+     3, {0, 30, 40, 0, 0, 0}, {0, 250, 250, 0, 0, 0}, 15,
+     2, 62300, 97900, 65, 0.06, 1.5, 1.2, 2.2e-5, 5.6e-5, 0.12, 0.80, 0, 0,
+     {{-7.5, -0.55, 0.1}, {-7.5, 0.55, 0.1}, {}, {}},
+     1, 5.85, 3.11, 2.0, 0.8, 6, 250, 0,
+     -9.0, 15.0, 0, 0, 0, 750, 1.6, 0.90, 0.05, 7.5, -3.0, 7.0, 150, 140,
+     7.5, -3.0, 200, 35, 0, 1, {5.6, 0.0, -1.1}, 10, 45, 0.06, 0.0, 0.0, 0},
+    // Monsoon 2K — Eurofighter Typhoon: canard-delta twin-engine fighter, 2 x EJ200
+    // (60 / 90 kN), unstable airframe with quadruplex fly-by-wire, supercruise
+    {"monsoon-2k", Category::Fighter, ControlLaw::FlyByWireG,
+     23500, 11000, 4996, 51.2, 10.95, 5.5, 15.96, 53,
+     0.02, 0.0195, 0.70, 1.55, 1.65, 0.02, 0.020,
+     2, {0, 15, 0, 0, 0, 0}, {0, 250, 0, 0, 0, 0}, 15,
+     2, 60000, 90000, 65, 0.06, 1.4, 1.1, 2.15e-5, 5.0e-5, 0.25, 0.80, 0, 0,
+     {{-6.8, -0.45, 0.1}, {-6.8, 0.45, 0.1}, {}, {}},
+     1, 4.9, 3.4, 1.9, 0.7, 5, 250, 0,
+     -7.8, 15.0, 0, 0, 0, 750, 2.0, 0.93, 0.030, 9.0, -3.0, 4.5, 140, 150,
+     9.0, -3.0, 250, 30, 0, 1, {4.6, 0.0, -1.1}, 10, 45, 0.06, 0.0, 0.0, 0},
 };
 
 AircraftDef gFleet[sizeof(kSpecs) / sizeof(kSpecs[0])];
+static_assert(sizeof(kSpecs) / sizeof(kSpecs[0]) == AC_COUNT - 2, "one Spec per fleet id (trainer and Stinger are built separately)");
 AircraftDef gExtra;
 bool gBuilt = false;
 
@@ -385,7 +521,8 @@ const AircraftDef& aircraftDef(int id) {
   build();
   if (id <= AC_TRAINER || id >= AC_COUNT) return trainerDef();
   if (id == AC_EXTRA) return gExtra;
-  return gFleet[id - 1];
+  // kSpecs: ids 1..12 then (after the aerobatic Stinger, id 13) ids 14..
+  return gFleet[id < AC_EXTRA ? id - 1 : id - 2];
 }
 
 }  // namespace osk

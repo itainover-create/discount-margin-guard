@@ -96,7 +96,7 @@ export class Menu {
     $('hangar-list').querySelectorAll('.hl-card').forEach((b) => b.onclick = () => this.pickAircraft(+b.dataset.id));
     const n = (v) => Number(v).toLocaleString('en-US');
     const cruise = cur.cruise.mach ? `M${cur.cruise.mach} at FL${cur.cruise.ft / 100}` : `${cur.cruise.kt} kt at ${n(cur.cruise.ft)} ft`;
-    const law = { sidestick: 'Fly-by-wire, sidestick, envelope protections', yoke: cur.id === 1 || cur.id === 5 ? 'Conventional controls, yaw damper' : 'Fly-by-wire, control column', fighter: 'Fly-by-wire (g / AoA limiter)', trainer: 'Direct cables', aerobatic: 'Direct cables' }[cur.cockpit];
+    const law = { sidestick: 'Fly-by-wire, sidestick, envelope protections', yoke: cur.law === 'conventional' ? 'Conventional controls, yaw damper' : 'Fly-by-wire, control column', fighter: 'Fly-by-wire (g / AoA limiter)', trainer: 'Direct cables', aerobatic: 'Direct cables' }[cur.cockpit];
     $('hangar-specs').innerHTML = `<h2>${esc(displayName(cur))}</h2>
       <div class="hs-class">${esc(cur.classRef)} · ${esc(cur.cat)}</div>
       <p>${esc(cur.role)}</p>
@@ -112,7 +112,7 @@ export class Menu {
       </table>
       ${he ? `<p dir="rtl" class="he">כל מטוס בצי טס במודל טיסה משלו בליבת ה-C++: מסה, גאומטריה, מנועים, כן נסע ומערכות.</p>` : ''}
       <button class="big-btn primary" id="hangar-fly">Fly the ${esc(displayName(cur))} from JFK</button>
-      <div class="note">Original design names; the real type each is modelled on is given as a class reference. Performance is calibrated against public figures (see About &amp; Data).</div>`;
+      <div class="note">Real aircraft types, each with its own flight model in the C++ core, calibrated against published figures (see About &amp; Data). Liveries are original. Settings can switch the names to original design names.</div>`;
     $('hangar-fly').onclick = () => g.startFlight({ icao: 'KJFK', start: cur.style === 'trainer' ? 'stand' : 'runway', mode: g.settings.mode, hour: 12, weather: 'fair', aircraft: cur.id });
     $('hangar-title').textContent = displayName(cur);
     if (!this.hangar) { this.hangar = new Hangar($('hangar-canvas')); }

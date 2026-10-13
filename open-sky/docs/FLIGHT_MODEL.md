@@ -142,7 +142,7 @@ Parts: left/right wing, tail, fuselage, each engine, each gear leg (0 = intact �
 | Hydraulic leak (wings, tail, engines) | Slower or frozen surfaces, no flaps, gear only by free-fall; FBW degrades to direct law |
 | Fuselage damage > 0.65 | Electrical failure: displays black (instrument blackout); ≥ 1: break-up |
 
-## Fleet calibration (native harness, `make test` — 227/227 checks pass in this build)
+## Fleet calibration (native harness, `make test` — 368/368 checks pass in this build)
 References are public figures for the real type each design is modelled on (TOFL at MTOW,
 typical cruise fuel flow at that weight, V-speeds, roll rates, performance envelopes).
 Takeoffs: MTOW, SL ISA, takeoff flaps, full thrust (fighters clean with afterburner);
@@ -282,6 +282,138 @@ cruise: autopilot ALT + autothrottle Mach hold; approach: landing flaps, gear do
 | Nightwing 2 (B-2 class): approach N1 (AT, landing config) | 39.62 % | 55.0 | 35.0 – 82.0 | PASS |
 | Nightwing 2 (B-2 class): approach speed hold (AT) | 0.80 kt | 0.0 | 0.0 – 6.0 | PASS |
 | Nightwing 2 (B-2 class): approach without stall warning | 0.00  | 0.0 | 0.0 – 0.0 | PASS |
+| Cessna Citation CJ4: takeoff distance to 35 ft x1.15 (MTOW, SL ISA) | 1017.76 m | 1039.0 | 748.1 – 1298.8 | PASS | ref: published TOFL (usually engine-out governed, longer)
+| Cessna Citation CJ4: lift-off speed / Vr | 1.16  | 1.1 | 1.0 – 1.2 | PASS |
+| Cessna Citation CJ4: takeoff without tail strike, crash or damage | 0.00  | 0.0 | 0.0 – 0.0 | PASS |
+| Cessna Citation CJ4: cruise M0.70 FL450 on AP+AT, altitude hold | 0.01 ft | 0.0 | 0.0 – 100.0 | PASS |
+| Cessna Citation CJ4: cruise Mach hold (autothrottle) | 0.00  | 0.0 | 0.0 – 0.0 | PASS |
+| Cessna Citation CJ4: cruise N1 (thrust margin) | 84.18 % | 85.0 | 70.0 – 97.0 | PASS |
+| Cessna Citation CJ4: cruise fuel flow | 331.31 kg/h | 380.0 | 266.0 – 513.0 | PASS | ref: typical block fuel / time at that weight
+| Cessna Citation CJ4: 3-deg approach pitch attitude at Vref | 1.35 deg | 2.5 | -1.0 – 6.0 | PASS |
+| Cessna Citation CJ4: approach N1 (AT, landing config) | 48.89 % | 55.0 | 35.0 – 82.0 | PASS |
+| Cessna Citation CJ4: approach speed hold (AT) | 0.07 kt | 0.0 | 0.0 – 6.0 | PASS |
+| Cessna Citation CJ4: approach without stall warning | 0.00  | 0.0 | 0.0 – 0.0 | PASS |
+| Embraer Phenom 300E: takeoff distance to 35 ft x1.15 (MTOW, SL ISA) | 1162.68 m | 978.0 | 704.2 – 1222.5 | PASS | ref: published TOFL (usually engine-out governed, longer)
+| Embraer Phenom 300E: lift-off speed / Vr | 1.17  | 1.1 | 1.0 – 1.2 | PASS |
+| Embraer Phenom 300E: takeoff without tail strike, crash or damage | 0.00  | 0.0 | 0.0 – 0.0 | PASS |
+| Embraer Phenom 300E: cruise M0.74 FL410 on AP+AT, altitude hold | 0.01 ft | 0.0 | 0.0 – 100.0 | PASS |
+| Embraer Phenom 300E: cruise Mach hold (autothrottle) | 0.00  | 0.0 | 0.0 – 0.0 | PASS |
+| Embraer Phenom 300E: cruise N1 (thrust margin) | 85.18 % | 85.0 | 70.0 – 97.0 | PASS |
+| Embraer Phenom 300E: cruise fuel flow | 380.48 kg/h | 420.0 | 294.0 – 567.0 | PASS | ref: typical block fuel / time at that weight
+| Embraer Phenom 300E: 3-deg approach pitch attitude at Vref | 0.16 deg | 2.5 | -1.0 – 6.0 | PASS |
+| Embraer Phenom 300E: approach N1 (AT, landing config) | 49.24 % | 55.0 | 35.0 – 82.0 | PASS |
+| Embraer Phenom 300E: approach speed hold (AT) | 0.09 kt | 0.0 | 0.0 – 6.0 | PASS |
+| Embraer Phenom 300E: approach without stall warning | 0.00  | 0.0 | 0.0 – 0.0 | PASS |
+| Bombardier Global 7500: takeoff distance to 35 ft x1.15 (MTOW, SL ISA) | 1774.95 m | 1756.0 | 1264.3 – 2195.0 | PASS | ref: published TOFL (usually engine-out governed, longer)
+| Bombardier Global 7500: lift-off speed / Vr | 1.12  | 1.1 | 1.0 – 1.2 | PASS |
+| Bombardier Global 7500: takeoff without tail strike, crash or damage | 0.00  | 0.0 | 0.0 – 0.0 | PASS |
+| Bombardier Global 7500: cruise M0.85 FL450 on AP+AT, altitude hold | 0.01 ft | 0.0 | 0.0 – 100.0 | PASS |
+| Bombardier Global 7500: cruise Mach hold (autothrottle) | 0.00  | 0.0 | 0.0 – 0.0 | PASS |
+| Bombardier Global 7500: cruise N1 (thrust margin) | 85.10 % | 85.0 | 70.0 – 97.0 | PASS |
+| Bombardier Global 7500: cruise fuel flow | 1382.36 kg/h | 1600.0 | 1120.0 – 2160.0 | PASS | ref: typical block fuel / time at that weight
+| Bombardier Global 7500: 3-deg approach pitch attitude at Vref | 4.92 deg | 2.5 | -1.0 – 6.0 | PASS |
+| Bombardier Global 7500: approach N1 (AT, landing config) | 47.59 % | 55.0 | 35.0 – 82.0 | PASS |
+| Bombardier Global 7500: approach speed hold (AT) | 0.20 kt | 0.0 | 0.0 – 6.0 | PASS |
+| Bombardier Global 7500: approach without stall warning | 0.00  | 0.0 | 0.0 – 0.0 | PASS |
+| Airbus A220-300: takeoff distance to 35 ft x1.15 (MTOW, SL ISA) | 1905.35 m | 1890.0 | 1360.8 – 2362.5 | PASS | ref: published TOFL (usually engine-out governed, longer)
+| Airbus A220-300: lift-off speed / Vr | 1.09  | 1.1 | 1.0 – 1.2 | PASS |
+| Airbus A220-300: takeoff without tail strike, crash or damage | 0.00  | 0.0 | 0.0 – 0.0 | PASS |
+| Airbus A220-300: cruise M0.78 FL350 on AP+AT, altitude hold | 0.01 ft | 0.0 | 0.0 – 100.0 | PASS |
+| Airbus A220-300: cruise Mach hold (autothrottle) | 0.00  | 0.0 | 0.0 – 0.0 | PASS |
+| Airbus A220-300: cruise N1 (thrust margin) | 78.47 % | 85.0 | 70.0 – 97.0 | PASS |
+| Airbus A220-300: cruise fuel flow | 1569.49 kg/h | 1850.0 | 1295.0 – 2497.5 | PASS | ref: typical block fuel / time at that weight
+| Airbus A220-300: 3-deg approach pitch attitude at Vref | 4.76 deg | 2.5 | -1.0 – 6.0 | PASS |
+| Airbus A220-300: approach N1 (AT, landing config) | 47.49 % | 55.0 | 35.0 – 82.0 | PASS |
+| Airbus A220-300: approach speed hold (AT) | 0.43 kt | 0.0 | 0.0 – 6.0 | PASS |
+| Airbus A220-300: approach without stall warning | 0.00  | 0.0 | 0.0 – 0.0 | PASS |
+| Embraer E195-E2: takeoff distance to 35 ft x1.15 (MTOW, SL ISA) | 1774.05 m | 1970.0 | 1418.4 – 2462.5 | PASS | ref: published TOFL (usually engine-out governed, longer)
+| Embraer E195-E2: lift-off speed / Vr | 1.09  | 1.1 | 1.0 – 1.2 | PASS |
+| Embraer E195-E2: takeoff without tail strike, crash or damage | 0.00  | 0.0 | 0.0 – 0.0 | PASS |
+| Embraer E195-E2: cruise M0.78 FL350 on AP+AT, altitude hold | 0.01 ft | 0.0 | 0.0 – 100.0 | PASS |
+| Embraer E195-E2: cruise Mach hold (autothrottle) | 0.00  | 0.0 | 0.0 – 0.0 | PASS |
+| Embraer E195-E2: cruise N1 (thrust margin) | 74.71 % | 85.0 | 70.0 – 97.0 | PASS |
+| Embraer E195-E2: cruise fuel flow | 1404.34 kg/h | 1700.0 | 1190.0 – 2295.0 | PASS | ref: typical block fuel / time at that weight
+| Embraer E195-E2: 3-deg approach pitch attitude at Vref | 4.26 deg | 2.5 | -1.0 – 6.0 | PASS |
+| Embraer E195-E2: approach N1 (AT, landing config) | 44.41 % | 55.0 | 35.0 – 82.0 | PASS |
+| Embraer E195-E2: approach speed hold (AT) | 0.48 kt | 0.0 | 0.0 – 6.0 | PASS |
+| Embraer E195-E2: approach without stall warning | 0.00  | 0.0 | 0.0 – 0.0 | PASS |
+| Boeing 737 MAX 8: takeoff distance to 35 ft x1.15 (MTOW, SL ISA) | 2011.97 m | 2500.0 | 1800.0 – 3125.0 | PASS | ref: published TOFL (usually engine-out governed, longer)
+| Boeing 737 MAX 8: lift-off speed / Vr | 1.09  | 1.1 | 1.0 – 1.2 | PASS |
+| Boeing 737 MAX 8: takeoff without tail strike, crash or damage | 0.00  | 0.0 | 0.0 – 0.0 | PASS |
+| Boeing 737 MAX 8: cruise M0.79 FL350 on AP+AT, altitude hold | 0.02 ft | 0.0 | 0.0 – 100.0 | PASS |
+| Boeing 737 MAX 8: cruise Mach hold (autothrottle) | 0.00  | 0.0 | 0.0 – 0.0 | PASS |
+| Boeing 737 MAX 8: cruise N1 (thrust margin) | 76.62 % | 85.0 | 70.0 – 97.0 | PASS |
+| Boeing 737 MAX 8: cruise fuel flow | 1894.68 kg/h | 2150.0 | 1505.0 – 2902.5 | PASS | ref: typical block fuel / time at that weight
+| Boeing 737 MAX 8: 3-deg approach pitch attitude at Vref | 1.87 deg | 2.5 | -1.0 – 6.0 | PASS |
+| Boeing 737 MAX 8: approach N1 (AT, landing config) | 50.32 % | 55.0 | 35.0 – 82.0 | PASS |
+| Boeing 737 MAX 8: approach speed hold (AT) | 1.95 kt | 0.0 | 0.0 – 6.0 | PASS |
+| Boeing 737 MAX 8: approach without stall warning | 0.00  | 0.0 | 0.0 – 0.0 | PASS |
+| Airbus A321neo: takeoff distance to 35 ft x1.15 (MTOW, SL ISA) | 2231.31 m | 2300.0 | 1656.0 – 2875.0 | PASS | ref: published TOFL (usually engine-out governed, longer)
+| Airbus A321neo: lift-off speed / Vr | 1.08  | 1.1 | 1.0 – 1.2 | PASS |
+| Airbus A321neo: takeoff without tail strike, crash or damage | 0.00  | 0.0 | 0.0 – 0.0 | PASS |
+| Airbus A321neo: cruise M0.78 FL350 on AP+AT, altitude hold | 0.01 ft | 0.0 | 0.0 – 100.0 | PASS |
+| Airbus A321neo: cruise Mach hold (autothrottle) | 0.00  | 0.0 | 0.0 – 0.0 | PASS |
+| Airbus A321neo: cruise N1 (thrust margin) | 75.10 % | 85.0 | 70.0 – 97.0 | PASS |
+| Airbus A321neo: cruise fuel flow | 2061.41 kg/h | 2400.0 | 1680.0 – 3240.0 | PASS | ref: typical block fuel / time at that weight
+| Airbus A321neo: 3-deg approach pitch attitude at Vref | 5.34 deg | 2.5 | -1.0 – 6.0 | PASS |
+| Airbus A321neo: approach N1 (AT, landing config) | 48.18 % | 55.0 | 35.0 – 82.0 | PASS |
+| Airbus A321neo: approach speed hold (AT) | 0.42 kt | 0.0 | 0.0 – 6.0 | PASS |
+| Airbus A321neo: approach without stall warning | 0.00  | 0.0 | 0.0 – 0.0 | PASS |
+| Boeing 767-300ER: takeoff distance to 35 ft x1.15 (MTOW, SL ISA) | 2399.11 m | 2700.0 | 1944.0 – 3375.0 | PASS | ref: published TOFL (usually engine-out governed, longer)
+| Boeing 767-300ER: lift-off speed / Vr | 1.06  | 1.1 | 1.0 – 1.2 | PASS |
+| Boeing 767-300ER: takeoff without tail strike, crash or damage | 0.00  | 0.0 | 0.0 – 0.0 | PASS |
+| Boeing 767-300ER: cruise M0.80 FL350 on AP+AT, altitude hold | 0.02 ft | 0.0 | 0.0 – 100.0 | PASS |
+| Boeing 767-300ER: cruise Mach hold (autothrottle) | 0.00  | 0.0 | 0.0 – 0.0 | PASS |
+| Boeing 767-300ER: cruise N1 (thrust margin) | 78.85 % | 85.0 | 70.0 – 97.0 | PASS |
+| Boeing 767-300ER: cruise fuel flow | 4761.36 kg/h | 5200.0 | 3640.0 – 7020.0 | PASS | ref: typical block fuel / time at that weight
+| Boeing 767-300ER: 3-deg approach pitch attitude at Vref | 3.53 deg | 2.5 | -1.0 – 6.0 | PASS |
+| Boeing 767-300ER: approach N1 (AT, landing config) | 54.29 % | 55.0 | 35.0 – 82.0 | PASS |
+| Boeing 767-300ER: approach speed hold (AT) | 2.50 kt | 0.0 | 0.0 – 6.0 | PASS |
+| Boeing 767-300ER: approach without stall warning | 0.00  | 0.0 | 0.0 – 0.0 | PASS |
+| Airbus A330-900: takeoff distance to 35 ft x1.15 (MTOW, SL ISA) | 2482.56 m | 2800.0 | 2016.0 – 3500.0 | PASS | ref: published TOFL (usually engine-out governed, longer)
+| Airbus A330-900: lift-off speed / Vr | 1.05  | 1.1 | 1.0 – 1.2 | PASS |
+| Airbus A330-900: takeoff without tail strike, crash or damage | 0.00  | 0.0 | 0.0 – 0.0 | PASS |
+| Airbus A330-900: cruise M0.82 FL370 on AP+AT, altitude hold | 0.01 ft | 0.0 | 0.0 – 100.0 | PASS |
+| Airbus A330-900: cruise Mach hold (autothrottle) | 0.00  | 0.0 | 0.0 – 0.0 | PASS |
+| Airbus A330-900: cruise N1 (thrust margin) | 87.85 % | 85.0 | 70.0 – 97.0 | PASS |
+| Airbus A330-900: cruise fuel flow | 5207.89 kg/h | 5700.0 | 3990.0 – 7695.0 | PASS | ref: typical block fuel / time at that weight
+| Airbus A330-900: 3-deg approach pitch attitude at Vref | 1.16 deg | 2.5 | -1.0 – 6.0 | PASS |
+| Airbus A330-900: approach N1 (AT, landing config) | 54.50 % | 55.0 | 35.0 – 82.0 | PASS |
+| Airbus A330-900: approach speed hold (AT) | 0.66 kt | 0.0 | 0.0 – 6.0 | PASS |
+| Airbus A330-900: approach without stall warning | 0.00  | 0.0 | 0.0 – 0.0 | PASS |
+| Lockheed Martin F-16C: takeoff ground roll (clean, AB) | 380.52 m | 450.0 | 150.0 – 900.0 | PASS |
+| Lockheed Martin F-16C: lift-off speed / Vr | 1.28  | 1.1 | 1.0 – 1.4 | PASS | afterburner: fast acceleration during rotation
+| Lockheed Martin F-16C: takeoff without tail strike, crash or damage | 0.00  | 0.0 | 0.0 – 0.0 | PASS |
+| Lockheed Martin F-16C: cruise M0.90 FL300 on AP+AT, altitude hold | 0.01 ft | 0.0 | 0.0 – 100.0 | PASS |
+| Lockheed Martin F-16C: cruise Mach hold (autothrottle) | 0.00  | 0.0 | 0.0 – 0.0 | PASS |
+| Lockheed Martin F-16C: cruise N1 (thrust margin) | 80.68 % | 85.0 | 70.0 – 97.0 | PASS |
+| Lockheed Martin F-16C: cruise fuel flow | 1504.75 kg/h | 1600.0 | 1120.0 – 2160.0 | PASS | ref: typical block fuel / time at that weight
+| Lockheed Martin F-16C: 3-deg approach pitch attitude at Vref | 8.50 deg | 8.0 | 2.0 – 14.0 | PASS |
+| Lockheed Martin F-16C: approach N1 (AT, landing config) | 75.88 % | 55.0 | 35.0 – 82.0 | PASS |
+| Lockheed Martin F-16C: approach speed hold (AT) | 0.02 kt | 0.0 | 0.0 – 6.0 | PASS |
+| Lockheed Martin F-16C: approach without stall warning | 0.00  | 0.0 | 0.0 – 0.0 | PASS |
+| Boeing F/A-18E Super Hornet: takeoff ground roll (clean, AB) | 465.97 m | 450.0 | 150.0 – 900.0 | PASS |
+| Boeing F/A-18E Super Hornet: lift-off speed / Vr | 1.21  | 1.1 | 1.0 – 1.4 | PASS | afterburner: fast acceleration during rotation
+| Boeing F/A-18E Super Hornet: takeoff without tail strike, crash or damage | 0.00  | 0.0 | 0.0 – 0.0 | PASS |
+| Boeing F/A-18E Super Hornet: cruise M0.85 FL300 on AP+AT, altitude hold | 0.01 ft | 0.0 | 0.0 – 100.0 | PASS |
+| Boeing F/A-18E Super Hornet: cruise Mach hold (autothrottle) | 0.00  | 0.0 | 0.0 – 0.0 | PASS |
+| Boeing F/A-18E Super Hornet: cruise N1 (thrust margin) | 82.03 % | 85.0 | 70.0 – 97.0 | PASS |
+| Boeing F/A-18E Super Hornet: cruise fuel flow | 2669.12 kg/h | 3200.0 | 2240.0 – 4320.0 | PASS | ref: typical block fuel / time at that weight
+| Boeing F/A-18E Super Hornet: 3-deg approach pitch attitude at Vref | 7.61 deg | 8.0 | 2.0 – 14.0 | PASS |
+| Boeing F/A-18E Super Hornet: approach N1 (AT, landing config) | 77.41 % | 55.0 | 35.0 – 82.0 | PASS |
+| Boeing F/A-18E Super Hornet: approach speed hold (AT) | 0.02 kt | 0.0 | 0.0 – 6.0 | PASS |
+| Boeing F/A-18E Super Hornet: approach without stall warning | 0.00  | 0.0 | 0.0 – 0.0 | PASS |
+| Eurofighter Typhoon: takeoff ground roll (clean, AB) | 350.15 m | 450.0 | 150.0 – 900.0 | PASS |
+| Eurofighter Typhoon: lift-off speed / Vr | 1.22  | 1.1 | 1.0 – 1.4 | PASS | afterburner: fast acceleration during rotation
+| Eurofighter Typhoon: takeoff without tail strike, crash or damage | 0.00  | 0.0 | 0.0 – 0.0 | PASS |
+| Eurofighter Typhoon: cruise M0.90 FL300 on AP+AT, altitude hold | 0.02 ft | 0.0 | 0.0 – 100.0 | PASS |
+| Eurofighter Typhoon: cruise Mach hold (autothrottle) | 0.00  | 0.0 | 0.0 – 0.0 | PASS |
+| Eurofighter Typhoon: cruise N1 (thrust margin) | 81.11 % | 85.0 | 70.0 – 97.0 | PASS |
+| Eurofighter Typhoon: cruise fuel flow | 2645.47 kg/h | 2800.0 | 1960.0 – 3780.0 | PASS | ref: typical block fuel / time at that weight
+| Eurofighter Typhoon: 3-deg approach pitch attitude at Vref | 7.90 deg | 8.0 | 2.0 – 14.0 | PASS |
+| Eurofighter Typhoon: approach N1 (AT, landing config) | 76.25 % | 55.0 | 35.0 – 82.0 | PASS |
+| Eurofighter Typhoon: approach speed hold (AT) | 0.02 kt | 0.0 | 0.0 – 6.0 | PASS |
+| Eurofighter Typhoon: approach without stall warning | 0.00  | 0.0 | 0.0 – 0.0 | PASS |
 | 738: cold & dark, engines stopped | 0.00  | 0.0 | 0.0 – 0.0 | PASS |
 | 738: engine start, starter to stable idle | 43.13 s | 40.0 | 15.0 – 70.0 | PASS | ref: ~40-60 s per engine
 | 738: idle N1 | 21.00 % | 21.0 | 18.0 – 24.0 | PASS |
@@ -307,6 +439,15 @@ cruise: autopilot ALT + autothrottle Mach hold; approach: landing flaps, gear do
 | F-22 class: supercruise, military power, FL400, Mach after 120 s | 1.56  | 1.6 | 1.4 – 1.8 | PASS | no afterburner
 | F-22 class: supercruise without afterburner | 0.00  | 0.0 | 0.0 – 0.0 | PASS |
 | Stinger 330 (Extra 330 class): full aileron roll rate at 150 KIAS | 409.94 deg/s | 400.0 | 320.0 – 460.0 | PASS | ref: ~400 deg/s
+| F-16C: full aft stick 450 KIAS, g limiter | 8.57 g | 9.0 | 8.3 – 9.4 | PASS | ref: +9 g FLCS limit
+| F-16C: 9 g pull, no structural damage | 0.00  | 0.0 | 0.0 – 0.0 | PASS |
+| F-16C: full lateral stick roll rate, 400 KIAS | 247.66 deg/s | 300.0 | 220.0 – 330.0 | PASS | ref: ~300 deg/s FLCS roll-rate limit
+| F/A-18E: full aft stick 450 KIAS, g limiter | 7.28 g | 7.5 | 6.9 – 7.9 | PASS | ref: +7.5 g FCS limit
+| F/A-18E: 7.5 g pull, no structural damage | 0.00  | 0.0 | 0.0 – 0.0 | PASS |
+| Typhoon: full aft stick 450 KIAS, g limiter | 8.52 g | 9.0 | 8.3 – 9.4 | PASS | ref: +9 g carefree handling
+| Typhoon: supercruise, military power, FL360, Mach after 120 s | 1.25  | 1.3 | 1.1 – 1.6 | PASS | ref: ~M1.1-1.5 without reheat
+| Typhoon: supercruise without afterburner | 0.00  | 0.0 | 0.0 – 0.0 | PASS |
+| A220-300 FBW: full roll stick, bank angle protection | 66.07 deg | 67.0 | 60.0 – 70.0 | PASS |
 | 738 damage: engine 1 hit -> fire warning | 1.00  | 1.0 | 1.0 – 1.0 | PASS |
 | 738 damage: damaged engine runs down (N1) | 17.20 % | 10.0 | 0.0 – 30.0 | PASS |
 | 738 damage: AP holds heading on one engine | 0.93 deg | 0.0 | 0.0 – 5.0 | PASS |
@@ -333,6 +474,33 @@ cruise: autopilot ALT + autothrottle Mach hold; approach: landing flaps, gear do
 Notes: published TOFL is usually engine-out governed, so all-engine distances ×1.15 sit at
 the low end of the accepted range; fighter lift-off speeds are well above the rotation speed
 because afterburner acceleration during the rotation is ~10 kt/s.
+
+## v2.1 real-type extension (ids 14-25)
+Twelve further types, each with its own `Spec` in `core/src/aircraft_fleet.cpp` and a mirrored
+entry in `web/js/aircraft/fleet.js`. Figures are manufacturer / public data (SL ISA, MTOW);
+"est." marks values not published by the manufacturer, chosen to be consistent with the
+published ones. Control law: FBW = `FlyByWireG` (C* pitch, rate-command roll, protections),
+conventional = `Direct` + yaw damper.
+
+| Id | Type | MTOW / OEW / fuel (kg) | Wing area, span, length, sweep | Engines (dry / AB per engine) | Vr / Vref (kt) | Cruise | Ceiling, range, seats | Controls |
+|---|---|---|---|---|---|---|---|---|
+| 14 | Cessna Citation CJ4 | 7,761 / 4,663 / 2,644 | 30.7 m², 15.5 m, 16.3 m, 12.5° | 2 × FJ44-4A 16.1 kN, no reversers | 110 / 105 | M0.70 FL450 | 45,000 ft, 2,165 nm, 9 | conventional, yoke |
+| 15 | Embraer Phenom 300E | 8,415 / 5,425 / 2,428 | 28.5 m², 15.9 m, 15.6 m, 23° (est.) | 2 × PW535E1 15.5 kN, no reversers | 112 / 110 | M0.74 FL410 | 45,000 ft, 2,010 nm, 9 | conventional, yoke |
+| 16 | Bombardier Global 7500 | 52,096 / 25,764 / 23,360 | 110 m² (est.), 31.7 m, 33.9 m, 33° | 2 × Passport 84.2 kN | 138 / 115 | M0.85 FL450 | 51,000 ft, 7,700 nm, 17 | FBW, yoke |
+| 17 | Airbus A220-300 | 70,900 / 37,081 / 17,440 | 112.3 m², 35.1 m, 38.7 m, 26° | 2 × PW1524G 103.6 kN | 140 / 130 | M0.78 FL350 | 41,000 ft, 3,450 nm, 140 | FBW, sidestick |
+| 18 | Embraer E195-E2 | 62,500 / 35,700 / 13,690 | 103 m², 35.1 m, 41.5 m, 26° | 2 × PW1900G 102 kN | 145 / 130 | M0.78 FL350 | 41,000 ft, 2,600 nm, 132 | FBW, yoke |
+| 19 | Boeing 737 MAX 8 | 82,191 / 45,070 / 20,730 | 127 m², 35.9 m, 39.5 m, 25° | 2 × LEAP-1B 130 kN | 150 / 145 | M0.79 FL350 | 41,000 ft, 3,550 nm, 172 | conventional, yoke |
+| 20 | Airbus A321neo | 97,000 / 50,100 / 18,860 | 122.6 m², 35.8 m, 44.5 m, 25° | 2 × LEAP-1A / PW1100G 147 kN | 155 / 140 | M0.78 FL350 | 39,800 ft, 3,500 nm, 206 | FBW, sidestick |
+| 21 | Boeing 767-300ER | 186,880 / 90,011 / 73,100 | 283.3 m², 47.6 m, 54.9 m, 31.5° | 2 × CF6-80C2 / PW4000 276 kN | 160 / 142 | M0.80 FL350 | 43,100 ft, 5,980 nm, 261 | conventional, yoke |
+| 22 | Airbus A330-900 | 251,000 / 132,000 (est.) / 111,270 | 465 m², 64.0 m, 63.7 m, 30° | 2 × Trent 7000 324 kN | 155 / 137 | M0.82 FL370 | 41,450 ft, 7,200 nm, 287 | FBW, sidestick |
+| 23 | Lockheed Martin F-16C | 19,187 / 8,570 / 3,175 | 27.9 m², 10.0 m, 15.1 m, 40° LE | 1 × F110-GE-129 76.3 / 131 kN | 140 / 145 | M0.9 FL300 | 50,000 ft, 2,280 nm ferry | FBW (+9 g), sidestick |
+| 24 | Boeing F/A-18E Super Hornet | 29,937 / 14,552 / 6,531 | 46.5 m², 13.6 m, 18.3 m, 28° | 2 × F414-GE-400 62.3 / 97.9 kN | 150 / 140 | M0.85 FL300 | 50,000 ft, 1,800 nm ferry | FBW (+7.5 g), centre stick |
+| 25 | Eurofighter Typhoon | 23,500 / 11,000 / 4,996 | 51.2 m², 11.0 m, 16.0 m, 53° LE | 2 × EJ200 60 / 90 kN | 140 / 150 | M0.9 FL300 | 55,000 ft, 2,000 nm ferry | FBW (+9 g), centre stick |
+
+Per-type checks beyond takeoff / cruise / approach: F-16C 9 g limiter and ~250-300°/s roll
+rate, F/A-18E 7.5 g limiter, Typhoon 9 g limiter and supercruise (military power, FL360,
+stays above M1.1), A220-300 bank-angle protection. Tail-strike angles are for extended
+oleos (the contact geometry is uncompressed), e.g. A321neo 11.2°.
 
 ## v2 simplifications (stated plainly)
 * Class-typical aerodynamic derivatives per category, not type-specific wind-tunnel data.

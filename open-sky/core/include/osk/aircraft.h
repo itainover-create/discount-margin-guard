@@ -175,7 +175,10 @@ struct AircraftDef {
 // Built-in aircraft catalogue.
 enum AircraftId : int {
   AC_TRAINER = 0, AC_NB738, AC_A320, AC_B789, AC_B77W, AC_B744, AC_A359, AC_A388,
-  AC_F15, AC_F22, AC_F35, AC_B2, AC_G650, AC_EXTRA, AC_COUNT
+  AC_F15, AC_F22, AC_F35, AC_B2, AC_G650, AC_EXTRA,
+  // v2.1: real-type fleet extension (business jets, airliners, fighters)
+  AC_CJ4, AC_PHENOM300, AC_GLOBAL7500, AC_A223, AC_E195E2, AC_B38M, AC_A21N, AC_B763, AC_A339,
+  AC_F16, AC_F18E, AC_EF2000, AC_COUNT
 };
 const AircraftDef& aircraftDef(int id);
 

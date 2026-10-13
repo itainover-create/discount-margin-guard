@@ -263,7 +263,6 @@ function buildAirliner(f, root, M, parts) {
     const d = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshStandardMaterial({ map: titleTex, transparent: true, roughness: 0.4, depthWrite: false }));
     d.position.copy(B(nx - Ln - w * 0.55, side * (g.fusD / 2 + 0.03), -R * (g.deck2 ? 0.85 : 0.5) + zAt(Ln + 2)));
     d.rotation.y = side > 0 ? Math.PI / 2 : -Math.PI / 2;
-    if (side < 0) d.scale.x = -1;
     d.userData.exterior = true;
     root.add(d);
   }
@@ -297,6 +296,8 @@ function buildAirliner(f, root, M, parts) {
       const top = { x: t.x - h * 0.7, y: t.y + side * h * Math.sin(cant * D2R), z: t.z - h * Math.cos(cant * D2R), c: cT * 0.38 };
       grpOut.add(new THREE.Mesh(surface(base, top, 0.08, true), M.tail));
       if (wl === 'fence') { const bot = { x: t.x + 0.3, y: t.y, z: t.z + h * 0.6, c: cT * 0.5 }; grpOut.add(new THREE.Mesh(surface(base, bot, 0.08, true), M.tail)); }
+      // split-tip winglet: smaller element swept aft and down below the tip
+      if (wl === 'split') { const bot = { x: t.x - h * 0.45, y: t.y + side * h * 0.1, z: t.z + h * 0.42, c: cT * 0.4 }; grpOut.add(new THREE.Mesh(surface(base, bot, 0.08, true), M.tail)); }
     } else if (wl === 'raked') {
       const rk = { x: t.x - g.b * 0.05, y: side * (b2 + g.b * 0.02), z: t.z - 0.1, c: cT * 0.25 };
       grpOut.add(new THREE.Mesh(panel(side < 0 ? rk : t, side < 0 ? t : rk, 0.08), wingMats));
@@ -421,11 +422,14 @@ function buildAirliner(f, root, M, parts) {
   parts.tail.push(rg);
   // horizontal tail (T-tail on top of the fin for rear-engine jets)
   const hS = g.htail / 2, hCr = (2 * g.S * 0.26) / (g.htail * 1.3), hCt = hCr * 0.33;
-  const hx = g.ttail ? finTip.x + vCt * 0.3 : tx + Lt * 0.72, hz = g.ttail ? finTip.z + 0.1 : -R * 0.15;
+  // optional g.htailFrac (0..1): cruciform tail, stabiliser that far up the fin
+  const hf = g.ttail ? 0 : (g.htailFrac || 0);
+  const hx = g.ttail ? finTip.x + vCt * 0.3 : hf ? vx - vH * hf * vSweep + (vCr + (vCt - vCr) * hf) * 0.1 : tx + Lt * 0.72;
+  const hz = g.ttail ? finTip.z + 0.1 : hf ? vz - vH * hf : -R * 0.15;
   const hSweep = Math.tan(34 * D2R);
   parts.elevators = [];
   for (const side of [-1, 1]) {
-    const a = { x: hx, y: side * (g.ttail ? 0.1 : R * 0.25), z: hz, c: hCr }, bb = { x: hx - hS * hSweep, y: side * hS, z: hz - hS * 0.08, c: hCt };
+    const a = { x: hx, y: side * (g.ttail || hf ? 0.1 : R * 0.25), z: hz, c: hCr }, bb = { x: hx - hS * hSweep, y: side * hS, z: hz - hS * 0.08, c: hCt };
     const stab = new THREE.Mesh(panel(side < 0 ? bb : a, side < 0 ? a : bb, 0.09), M.tail.color.getHex() === f.livery.body ? M.body : wingMats);
     root.add(stab);
     parts.tail.push(stab);
@@ -478,8 +482,18 @@ function buildFighter(f, root, M, parts) {
   can.userData.exterior = true;
   root.add(can);
   parts.canopy = can;
-  // intakes
-  for (const side of [-1, 1]) {
+  // intakes: side boxes, or one ventral (chin) intake with g.intake === 'chin'
+  if (g.intake === 'chin') {
+    const iw = g.intakeW || 1.1;
+    const ib = new THREE.Mesh(new THREE.BoxGeometry(iw, 0.8, L * 0.3), M.body);
+    ib.position.copy(B(nx - L * 0.42, 0, Hh * 0.42));
+    root.add(ib);
+    const mouth = new THREE.Mesh(new THREE.PlaneGeometry(iw * 0.86, 0.66), M.dark);
+    mouth.position.copy(B(nx - L * 0.27 + 0.01, 0, Hh * 0.42));
+    mouth.rotation.y = Math.PI;
+    root.add(mouth);
+  }
+  for (const side of g.intake === 'chin' ? [] : [-1, 1]) {
     const ib = new THREE.Mesh(new THREE.BoxGeometry(0.75, 1.0, L * 0.3), M.body);
     ib.position.copy(B(nx - L * 0.42, side * (W * 0.5 - 0.15), 0.1));
     if (g.intake === 'caret') ib.rotation.z = side * 0.2;
@@ -497,7 +511,8 @@ function buildFighter(f, root, M, parts) {
   const stabPivot = tx + hCr * 0.6, stabLE = stabPivot + hCr * 0.5;
   const yR = W * 0.38;
   const cAt = (y) => cr * (1 - (1 - lam) * Math.abs(y) / b2);
-  const rootTE = stabLE + 0.3;
+  // g.canard: close-coupled canards ahead of a tailless delta wing that runs to the tail
+  const rootTE = g.canard ? tx + 0.8 : stabLE + 0.3;
   const leAt = (y) => rootTE + cAt(yR) - (Math.abs(y) - yR) * sw;
   const teAt = (y) => { const t = (Math.abs(y) - yR) / (b2 - yR); return rootTE + t * ((leAt(b2) - cAt(b2)) - rootTE); };
   const xLEr = leAt(yR);
@@ -517,10 +532,10 @@ function buildFighter(f, root, M, parts) {
     root.add(grpIn, grpOut);
     parts.wing.push({ inner: grpIn, outer: grpOut, flaps: [flap], ail, spoilers: [], side, tip: B(t.x - t.c * 0.5, side * b2, t.z), mid: B(leAt(b2 * 0.5) - cAt(b2 * 0.5) * 0.5, side * b2 * 0.5, g.wingZ) });
   }
-  // twin canted fins + all-moving stabilators
+  // twin canted fins (or one centreline fin, g.tails === 'single') + all-moving stabilators
   parts.tail = [];
   const vH = g.vtail, vCr = L * 0.17, vCt = vCr * 0.38, vs = Math.tan(42 * D2R);
-  for (const side of [-1, 1]) {
+  for (const side of g.tails === 'single' ? [0] : [-1, 1]) {
     const yb = side * W * 0.36;
     const fg = new THREE.Group();
     fg.position.copy(B(tx + hCr * 0.9 + vCr, yb, -Hh * 0.35));
@@ -544,13 +559,15 @@ function buildFighter(f, root, M, parts) {
   const hS = g.htail / 2;
   for (const side of [-1, 1]) {
     const pg = new THREE.Group();
-    pg.position.copy(B(stabPivot, side * W * 0.42, 0.15));
-    const m = new THREE.Mesh(panel(side < 0 ? { x: -hCr * 0.5 - (hS - W * 0.42) * 0.8, y: -(hS - W * 0.42), z: 0, c: hCr * 0.35 } : { x: hCr * 0.5, y: 0, z: 0, c: hCr },
-      side < 0 ? { x: hCr * 0.5, y: 0, z: 0, c: hCr } : { x: hCr * 0.5 - (hS - W * 0.42) * 0.8, y: hS - W * 0.42, z: 0, c: hCr * 0.35 }, 0.05), M.tail);
-    m.position.z = -hCr * 0.1;
+    // canards: smaller all-moving foreplanes just behind the cockpit
+    const sc = g.canard ? hCr * 0.6 : hCr;
+    pg.position.copy(g.canard ? B(nx - L * 0.28, side * W * 0.42, -0.1) : B(stabPivot, side * W * 0.42, 0.15));
+    const m = new THREE.Mesh(panel(side < 0 ? { x: -sc * 0.5 - (hS - W * 0.42) * 0.8, y: -(hS - W * 0.42), z: 0, c: sc * 0.35 } : { x: sc * 0.5, y: 0, z: 0, c: sc },
+      side < 0 ? { x: sc * 0.5, y: 0, z: 0, c: sc } : { x: sc * 0.5 - (hS - W * 0.42) * 0.8, y: hS - W * 0.42, z: 0, c: sc * 0.35 }, 0.05), M.tail);
+    m.position.z = -sc * 0.1;
     pg.add(m);
     root.add(pg);
-    parts.stabs.push({ g: pg, side });
+    parts.stabs.push({ g: pg, side, canard: !!g.canard });
     parts.tail.push(pg);
   }
   // engines: nozzles + afterburner flames
@@ -831,7 +848,7 @@ export function poseAircraft(m, o, dt) {
     for (const s of w.spoilers) s.rotation.x = -Math.min(0.85, sb * 0.85 + rollUp * 0.6);
   }
   for (const e of P.elevators || []) e.rotation.x = -el * 0.4;
-  for (const s of P.stabs || []) s.g.rotation.x = -el * 0.35 + (s.side < 0 ? -ail : ail) * 0.12;
+  for (const s of P.stabs || []) s.g.rotation.x = s.canard ? el * 0.3 : -el * 0.35 + (s.side < 0 ? -ail : ail) * 0.12;
   if (P.rudder) P.rudder.rotation.y = -rud * 0.45;
   for (const r of P.rudders || []) r.rotation.y = -rud * 0.4;
   // gear

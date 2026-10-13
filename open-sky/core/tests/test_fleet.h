@@ -28,6 +28,19 @@ static const FleetRef kFleetRefs[] = {
     {AC_F22, "Specter 22 (F-22 class)", 0, 30000, 0.90, 0.0, 3500},
     {AC_F35, "Arrow 35 (F-35A class)", 0, 30000, 0.90, 0.0, 3000},
     {AC_B2, "Nightwing 2 (B-2 class)", 3000, 40000, 0.80, 0.80, 6000},
+    // v2.1 real-type extension (ids 14-25)
+    {AC_CJ4, "Cessna Citation CJ4", 1039, 45000, 0.70, 0.75, 380},
+    {AC_PHENOM300, "Embraer Phenom 300E", 978, 41000, 0.74, 0.75, 420},
+    {AC_GLOBAL7500, "Bombardier Global 7500", 1756, 45000, 0.85, 0.75, 1600},
+    {AC_A223, "Airbus A220-300", 1890, 35000, 0.78, 0.80, 1850},
+    {AC_E195E2, "Embraer E195-E2", 1970, 35000, 0.78, 0.80, 1700},
+    {AC_B38M, "Boeing 737 MAX 8", 2500, 35000, 0.79, 0.80, 2150},
+    {AC_A21N, "Airbus A321neo", 2300, 35000, 0.78, 0.80, 2400},
+    {AC_B763, "Boeing 767-300ER", 2700, 35000, 0.80, 0.78, 5200},
+    {AC_A339, "Airbus A330-900", 2800, 37000, 0.82, 0.78, 5700},
+    {AC_F16, "Lockheed Martin F-16C", 0, 30000, 0.90, 0.0, 1600},
+    {AC_F18E, "Boeing F/A-18E Super Hornet", 0, 30000, 0.85, 0.0, 3200},
+    {AC_EF2000, "Eurofighter Typhoon", 0, 30000, 0.90, 0.0, 2800},
 };
 
 static bool fleetVerbose = false;
@@ -75,7 +88,7 @@ static void fleetTakeoff(const FleetRef& r) {
   double rotRate = fighter ? 6.0 * DEG : 2.5 * DEG;
   double thetaMax = fighter ? 12.0 * DEG : 7.5 * DEG;  // attitude for lift-off (tail clearance)
   double t = 0, liftoffDist = -1, dist35 = -1, liftoffIas = 0, maxTheta = 0;
-  double x0 = o(OUT_Y), thetaCmd = 0;
+  double x0 = o(OUT_Y), thetaCmd = 0, strikeT = -1;
   bool rotating = false;
   while (t < 150) {
     holdLateral(0, FDT, rud, ailp);
@@ -94,6 +107,11 @@ static void fleetTakeoff(const FleetRef& r) {
     sim.advance(FDT);
     t += FDT;
     maxTheta = maxf(maxTheta, o(OUT_THETA));
+    if (fleetVerbose && strikeT < 0 && ((int)o(OUT_EVENTS) & EV_TAIL_STRIKE)) {
+      strikeT = t;
+      std::printf("[%s] tail strike at t %.1f theta %.1f ias %.0f agl %.2f onGround %g\n", r.name, t, o(OUT_THETA) * RAD, o(OUT_IAS) / KT,
+                  o(OUT_AGL), o(OUT_ON_GROUND));
+    }
     if (liftoffDist < 0 && o(OUT_ON_GROUND) < 0.5 && o(OUT_AGL) > 0.5) {
       liftoffDist = o(OUT_Y) - x0;
       liftoffIas = o(OUT_IAS);
@@ -528,6 +546,61 @@ static void testLandingSystems() {
   }
 }
 
+// Full aft stick at 450 KIAS, 15,000 ft, military power: peak load factor.
+static double gPull(int id) {
+  fleetSetup(id, 0.0);
+  sim.in[IN_GEAR_LEVER] = 0;
+  Atmosphere atm;
+  double alt = 15000 * FT;
+  sim.reset(0, 0, alt, 0, 450 * KT / osk::sqrt(atm.at(alt).rho / RHO0_ISA), false, true);
+  sim.in[IN_THROTTLE] = 0.92;
+  for (int i = 0; i < 60 * 2; i++) sim.advance(FDT);
+  sim.in[IN_PITCH] = 1.0;
+  double nzMax = 0;
+  for (int i = 0; i < 60 * 3; i++) { sim.advance(FDT); nzMax = maxf(nzMax, o(OUT_NZ)); }
+  sim.in[IN_PITCH] = 0;
+  return nzMax;
+}
+
+// Type-specific checks of the v2.1 real-type extension.
+static void testFleetExtension() {
+  double nz = gPull(AC_F16);
+  check("F-16C: full aft stick 450 KIAS, g limiter", nz, 9.0, 8.3, 9.4, "g", "ref: +9 g FLCS limit");
+  check("F-16C: 9 g pull, no structural damage", o(OUT_DMG_WING_L) + o(OUT_DMG_WING_R), 0, 0, 0.001, "");
+  // roll rate at 400 KIAS, 10,000 ft
+  fleetSetup(AC_F16, 0.0);
+  sim.in[IN_GEAR_LEVER] = 0;
+  Atmosphere atm;
+  double alt = 10000 * FT;
+  sim.reset(0, 0, alt, 0, 400 * KT / osk::sqrt(atm.at(alt).rho / RHO0_ISA), false, true);
+  sim.in[IN_THROTTLE] = 0.92;
+  for (int i = 0; i < 60; i++) sim.advance(FDT);
+  sim.in[IN_ROLL] = 1.0;
+  double pMax = 0;
+  for (int i = 0; i < 60 * 2; i++) { sim.advance(FDT); pMax = maxf(pMax, osk::fabs(o(OUT_P))); }
+  sim.in[IN_ROLL] = 0;
+  check("F-16C: full lateral stick roll rate, 400 KIAS", pMax * RAD, 300, 220, 330, "deg/s", "ref: ~300 deg/s FLCS roll-rate limit");
+  nz = gPull(AC_F18E);
+  check("F/A-18E: full aft stick 450 KIAS, g limiter", nz, 7.5, 6.9, 7.9, "g", "ref: +7.5 g FCS limit");
+  check("F/A-18E: 7.5 g pull, no structural damage", o(OUT_DMG_WING_L) + o(OUT_DMG_WING_R), 0, 0, 0.001, "");
+  nz = gPull(AC_EF2000);
+  check("Typhoon: full aft stick 450 KIAS, g limiter", nz, 9.0, 8.3, 9.4, "g", "ref: +9 g carefree handling");
+  // Typhoon supercruise: military power holds supersonic flight at FL360
+  cruiseAt(AC_EF2000, 36000, 1.3, 0.0, true);
+  sim.in[IN_AT_ENGAGED] = 0;
+  sim.in[IN_THROTTLE] = 0.92;
+  for (int i = 0; i < 60 * 120; i++) sim.advance(FDT);
+  check("Typhoon: supercruise, military power, FL360, Mach after 120 s", o(OUT_MACH), 1.3, 1.1, 1.6, "", "ref: ~M1.1-1.5 without reheat");
+  check("Typhoon: supercruise without afterburner", o(OUT_AFTERBURNER), 0, 0, 0, "");
+  // A220 fly-by-wire normal law: bank protection
+  cruiseAt(AC_A223, 35000, 0.78, 0.75, false);
+  double phiMax = 0;
+  sim.in[IN_ROLL] = 1.0;
+  for (int i = 0; i < 60 * 12; i++) { sim.advance(FDT); phiMax = maxf(phiMax, osk::fabs(o(OUT_PHI))); }
+  sim.in[IN_ROLL] = 0;
+  check("A220-300 FBW: full roll stick, bank angle protection", phiMax * RAD, 67, 60, 70, "deg");
+}
+
 static void testFleet() {
   for (const FleetRef& r : kFleetRefs) {
     fleetTakeoff(r);
@@ -537,6 +610,7 @@ static void testFleet() {
   testJetStart();
   testFbw();
   testFighters();
+  testFleetExtension();
   testDamage();
   testLandingSystems();
 }

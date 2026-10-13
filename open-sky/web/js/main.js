@@ -600,7 +600,7 @@ class Game {
         case 'throttle': case 'mixture': case 'trim': break;
         case 'gear': if (p.fleet.gearRetract) sw.gear = !sw.gear; break;
         case 'jflaps': {
-          if (p.fleet.cat === 'Fighter') { sw.flaps = sw.flaps ? 0 : 1; break; }
+          if (p.fleet.cat === 'Fighter') { sw.flaps = (sw.flaps + 1) % p.fleet.flaps.length; break; }
           const fwd = h.point.z < h.object.getWorldPosition(new THREE.Vector3()).z;  // nearer the panel = retract
           sw.flaps = Math.max(0, Math.min(p.fleet.flaps.length - 1, sw.flaps + (fwd ? -1 : 1)));
           break;

@@ -6,6 +6,7 @@ import { VIEW_NAMES } from '../camera/cameras.js';
 import { PHASE } from '../sim/traffic.js';
 import { alertsFor } from '../aircraft/displays.js';
 import { FlightDock } from './dock.js';
+import { displayName } from '../aircraft/fleet.js';
 
 const $ = (id) => document.getElementById(id);
 const D2R = Math.PI / 180;
@@ -116,7 +117,7 @@ export class Hud {
     el.innerHTML = '<div class="boot-head"></div><pre></pre><div class="rights"></div>';
     el.querySelector('.boot-head').append(badge(), gameTitle('boot'));
     el.querySelector('.rights').textContent = RIGHTS;
-    const ac = g.player && g.player.fleet ? g.player.fleet.name : 'SKYLARK T1';
+    const ac = g.player && g.player.fleet ? displayName(g.player.fleet) : 'SKYLARK T1';
     const lines = [
       `GLOBAL SKIES FLIGHT SYSTEM ${GAME.version} · ORION GAMES`,
       `FLIGHT CORE ........ C++ ${g.core.backend === 'wasm' ? 'WEBASSEMBLY' : 'JS'} OK`,

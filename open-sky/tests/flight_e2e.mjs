@@ -266,14 +266,15 @@ try {
   if (want.has('fleet')) {
     // every aircraft spawns on the runway, renders and stays put
     const spawnRes = [];
-    for (let id = 0; id <= 13; id++) {
+    const nFleet = await page.evaluate(async () => (await import('./js/aircraft/fleet.js')).FLEET.length);
+    for (let id = 0; id < nFleet; id++) {
       await page.evaluate((i) => window.__game.startFlight({ icao: 'KJFK', start: 'runway', mode: 'accessible', hour: 12, weather: 'fair', aircraft: i }), id);
       await page.waitForFunction(() => window.__game.state === 'flight', null, { timeout: 180000 });
       const r = await page.evaluate(() => { const g = window.__game; g.debugStep(1 / 30, 90); g.render(); const o = g.player.o; return { id: g.player.aircraftId, onGround: o.onGround, crashed: o.crashed, gs: +o.gs.toFixed(2), eng: o.engMask, dmg: +(o.dmgFus + o.dmgWingL + o.dmgWingR).toFixed(3) }; });
       spawnRes.push(r);
-      if (id === 7 || id === 9) { await page.evaluate(() => window.__game.rig.setView('chase', window.__game.player)); await shot(`f-spawn-${id}`, 3); }
+      if (id === 7 || id === 9 || id === 19 || id === 25) { await page.evaluate(() => window.__game.rig.setView('chase', window.__game.player)); await shot(`f-spawn-${id}`, 3); }
     }
-    record('Fleet: all 14 aircraft spawn on the runway, engines running, stable, undamaged', spawnRes.every((r) => r.onGround && !r.crashed && r.gs < 0.5 && r.eng > 0 && r.dmg === 0), spawnRes);
+    record(`Fleet: all ${nFleet} aircraft spawn on the runway, engines running, stable, undamaged`, spawnRes.length === nFleet && spawnRes.every((r) => r.onGround && !r.crashed && r.gs < 0.5 && r.eng > 0 && r.dmg === 0), spawnRes);
 
     // jet takeoff (737-800 class) with a scripted pilot
     await page.evaluate(() => window.__game.startFlight({ icao: 'KJFK', start: 'runway', mode: 'simulation', hour: 12, weather: 'fair', aircraft: 1 }));
