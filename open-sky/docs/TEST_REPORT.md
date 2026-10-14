@@ -1,13 +1,21 @@
-# Test report — v2.0 (GLOBAL SKIES: Infinite Horizon)
+# Test report — v2.2 (GLOBAL SKIES: Infinite Horizon)
 
 Two automated suites, both run on this delivery's build:
 
-1. **Native C++ calibration suite** (`cd core && make test`): **227 / 227 pass**
-   (48 trainer / traffic checks from v1 + 179 fleet, systems and damage checks).
+1. **Native C++ calibration suite** (`cd core && make test`): **368 / 368 pass**
+   (v2.0: 227; v2.1 added 141 checks for the 12 new aircraft types).
    Full tables in `FLIGHT_MODEL.md`.
 2. **Browser end-to-end suite** (`node tests/flight_e2e.mjs <url> <outdir>`): the real game in
    headless Chromium; scripted test pilots fly through `Game.debugStep` (physics, ATC, runway
    authority, AI and en-route traffic, missions, scoring). **18 / 18 pass, 0 console errors.**
+
+## Performance and bloom pass with threejs-skills (v2.2)
+
+* Canvas inspector over 11 fixed scenes (`artifacts/evidence.json`, run `pass4`): all pass,
+  0 console and 0 page errors. Draw calls: JFK runway 823 → 255, A320 cockpit on final
+  1849 → 352, LA dusk 1585 → 256. The three cockpit scenes are still slightly over the 300-call
+  starting budget. Details: [artifacts/final-evidence.md](../artifacts/final-evidence.md).
+* After the pass: native suite 368/368, browser e2e 18/18 (0 console errors).
 
 ## Graphics / UI pass with threejs-game-skills
 

@@ -1,0 +1,99 @@
+{
+  "url": "http://127.0.0.1:8123/index.html?skipintro",
+  "mode": "desktop",
+  "state": "la-downtown",
+  "requestedState": "la-downtown",
+  "appliedState": "la-downtown",
+  "runId": "pass4",
+  "seed": 42,
+  "screenshotPath": "artifacts/pass4/desktop-la-downtown.png",
+  "gpu": {
+    "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+    "vendor": "Google Inc. (Google)",
+    "softwareRendered": true
+  },
+  "result": {
+    "ok": true,
+    "reason": "nonblank",
+    "rect": {
+      "x": 0,
+      "y": 0,
+      "width": 1280,
+      "height": 720
+    },
+    "drawingBuffer": {
+      "width": 1280,
+      "height": 720
+    },
+    "alphaPixels": 4096,
+    "variance": 250,
+    "colorBuckets": 113,
+    "metrics": {
+      "colorBuckets": 173,
+      "colorEntropyBits": 4.27,
+      "edgeDensity": 0.299,
+      "luminance": {
+        "mean": 44.9,
+        "p5": 17.3,
+        "p95": 71.3,
+        "contrast": 54
+      },
+      "dominantColorShare": 0.123,
+      "nonBackgroundShare": 0.877
+    },
+    "renderBudget": {
+      "tier": "desktop",
+      "note": "starting-point budget; adjust per game and document overrides",
+      "rows": [
+        {
+          "metric": "calls",
+          "actual": 256,
+          "limit": 300,
+          "ok": true
+        },
+        {
+          "metric": "triangles",
+          "actual": 2391606,
+          "limit": 750000,
+          "ok": false
+        },
+        {
+          "metric": "geometries",
+          "actual": 244,
+          "limit": 300,
+          "ok": true
+        },
+        {
+          "metric": "textures",
+          "actual": 24,
+          "limit": 60,
+          "ok": true
+        }
+      ],
+      "withinBudget": false
+    },
+    "diagnostics": {
+      "renderer": {
+        "calls": 256,
+        "triangles": 2391606,
+        "points": 59949,
+        "lines": 0,
+        "geometries": 244,
+        "textures": 24,
+        "programs": 54,
+        "pixelRatio": 1,
+        "toneMapping": 4,
+        "exposure": 1.12,
+        "shadowMap": true,
+        "postPasses": 11
+      },
+      "state": "la-downtown",
+      "fps": 28,
+      "buildings": 215318
+    }
+  },
+  "consoleErrors": [],
+  "pageErrors": [],
+  "consoleErrorCount": 0,
+  "pageErrorCount": 0
+}

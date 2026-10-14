@@ -116,3 +116,51 @@ Regression:
 - Browser e2e 18/18 with 0 console errors, including "all 26 aircraft spawn on the runway".
 
 Previews: `previews/v21-la-downtown.jpg`, `previews/v21-cockpit-cj4.jpg`, `previews/v21-menu.jpg`.
+
+## v2.2 performance and bloom pass (run `pass4`, 11 scenes)
+
+Skill pack: [alton47/threejs-skills](https://github.com/alton47/threejs-skills) (MIT).
+- **Used:** `threejs-performance` (and PROFILING.md), `threejs-postprocessing`, `threejs-lighting` (SHADOWS.md), `threejs-core`, `threejs-materials`.
+- **Not used:**
+  - physics: the flight model is the C++ core;
+  - React / R3F;
+  - XR: not testable without a headset;
+  - audio: the game already has a Web Audio engine.
+
+The pass started by measuring which parts of the scene cost draw calls (toggling each part and reading `renderer.info`). In the A320 cockpit on final, airports were 1,305 of 1,850 calls. Airport signs were one 6-group box each; JFK alone had 147 signs, which is 882 calls.
+
+What changed:
+- **Airport signs, designators, hold-short lines:** canvas atlas plus baked geometry, 2–3 calls per airport.
+- **City:** far-LOD buildings and roads merged per 4×4 km block, with a per-tile fallback while a block rebuilds.
+- **AI airliners:** static parts merged per material (21 → 6 meshes).
+- **Cockpit:** static parts merged per material. Animated and clickable parts, and every runtime-mutated material, are kept separate.
+- **Bloom:** on the finished frame, display-referred, so the tuned tone mapping is unchanged.
+- **Shaders:** `compileAsync` precompiles them during loading.
+- **Shadows:** `normalBias` added.
+
+| Scene | Draw calls pass3 → pass4 | Triangles | Budget (300 calls) |
+|---|---|---|---|
+| jfk-runway-738 | 823 → 255 | 2.69 M | calls ok |
+| hudson-a320 | 301 → 238 | 2.74 M | calls ok |
+| a320-cockpit-final | 1849 → 352 | 4.71 M | over (calls 352) |
+| storm-cockpit | 2219 → 356 | 4.29 M | over (calls 356) |
+| f22-manhattan | 402 → 285 | 3.16 M | calls ok |
+| engine-fire-738 | 528 → 239 | 3.66 M | calls ok |
+| night-manhattan | 277 → 246 | 3.03 M | calls ok |
+| cruise-a350 | 97 → 83 | 0.04 M | ok |
+| la-downtown | 1585 → 256 | 2.39 M | calls ok |
+| cockpit-cj4 | – → 334 | 2.62 M | over (calls 334) |
+
+The pass4 counts include the 11 bloom passes.
+
+Results:
+- All 11 captures pass with 0 console errors and 0 page errors. `check_evidence.py` confirms 11 artifacts.
+- Triangles stay over the 0.75 M starting budget. This is the streamed real-building city, the same documented tradeoff as before.
+- The three cockpit scenes are 11–19 % over the call budget.
+- Night: entropy 2.48 → 2.75 and edge density 0.126 → 0.155. Nav lights, beacon and lit fan glow; daylight frames without the sun in view are unchanged (mean pixel difference 0.0).
+
+Regression after the pass:
+- Native suite 368/368.
+- Browser e2e 18/18 with 0 console errors.
+
+Previews: `previews/v22-night-manhattan.jpg`, `previews/v22-jfk-runway-738.jpg`.

@@ -1,0 +1,99 @@
+{
+  "url": "http://127.0.0.1:8123/index.html?skipintro",
+  "mode": "desktop",
+  "state": "hudson-a320",
+  "requestedState": "hudson-a320",
+  "appliedState": "hudson-a320",
+  "runId": "pass4",
+  "seed": 42,
+  "screenshotPath": "artifacts/pass4/desktop-hudson-a320.png",
+  "gpu": {
+    "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+    "vendor": "Google Inc. (Google)",
+    "softwareRendered": true
+  },
+  "result": {
+    "ok": true,
+    "reason": "nonblank",
+    "rect": {
+      "x": 0,
+      "y": 0,
+      "width": 1280,
+      "height": 720
+    },
+    "drawingBuffer": {
+      "width": 1280,
+      "height": 720
+    },
+    "alphaPixels": 4096,
+    "variance": 245,
+    "colorBuckets": 129,
+    "metrics": {
+      "colorBuckets": 161,
+      "colorEntropyBits": 5.58,
+      "edgeDensity": 0.346,
+      "luminance": {
+        "mean": 78.5,
+        "p5": 28.7,
+        "p95": 140.7,
+        "contrast": 112
+      },
+      "dominantColorShare": 0.074,
+      "nonBackgroundShare": 0.926
+    },
+    "renderBudget": {
+      "tier": "desktop",
+      "note": "starting-point budget; adjust per game and document overrides",
+      "rows": [
+        {
+          "metric": "calls",
+          "actual": 238,
+          "limit": 300,
+          "ok": true
+        },
+        {
+          "metric": "triangles",
+          "actual": 2735861,
+          "limit": 750000,
+          "ok": false
+        },
+        {
+          "metric": "geometries",
+          "actual": 226,
+          "limit": 300,
+          "ok": true
+        },
+        {
+          "metric": "textures",
+          "actual": 21,
+          "limit": 60,
+          "ok": true
+        }
+      ],
+      "withinBudget": false
+    },
+    "diagnostics": {
+      "renderer": {
+        "calls": 238,
+        "triangles": 2735861,
+        "points": 61033,
+        "lines": 268,
+        "geometries": 226,
+        "textures": 21,
+        "programs": 41,
+        "pixelRatio": 1,
+        "toneMapping": 4,
+        "exposure": 1.12,
+        "shadowMap": true,
+        "postPasses": 11
+      },
+      "state": "hudson-a320",
+      "fps": 18,
+      "buildings": 322835
+    }
+  },
+  "consoleErrors": [],
+  "pageErrors": [],
+  "consoleErrorCount": 0,
+  "pageErrorCount": 0
+}

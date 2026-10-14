@@ -1,61 +1,61 @@
 {
   "version": 1,
-  "runId": "pass3",
+  "runId": "pass4",
   "captures": [
     {
       "mode": "desktop",
       "state": "menu",
-      "report": "artifacts/pass3/desktop-menu.json"
+      "report": "artifacts/pass4/desktop-menu.json"
     },
     {
       "mode": "desktop",
       "state": "jfk-runway-738",
-      "report": "artifacts/pass3/desktop-jfk-runway-738.json"
+      "report": "artifacts/pass4/desktop-jfk-runway-738.json"
     },
     {
       "mode": "desktop",
       "state": "hudson-a320",
-      "report": "artifacts/pass3/desktop-hudson-a320.json"
+      "report": "artifacts/pass4/desktop-hudson-a320.json"
     },
     {
       "mode": "desktop",
       "state": "a320-cockpit-final",
-      "report": "artifacts/pass3/desktop-a320-cockpit-final.json"
+      "report": "artifacts/pass4/desktop-a320-cockpit-final.json"
     },
     {
       "mode": "desktop",
       "state": "storm-cockpit",
-      "report": "artifacts/pass3/desktop-storm-cockpit.json"
+      "report": "artifacts/pass4/desktop-storm-cockpit.json"
     },
     {
       "mode": "desktop",
       "state": "f22-manhattan",
-      "report": "artifacts/pass3/desktop-f22-manhattan.json"
+      "report": "artifacts/pass4/desktop-f22-manhattan.json"
     },
     {
       "mode": "desktop",
       "state": "engine-fire-738",
-      "report": "artifacts/pass3/desktop-engine-fire-738.json"
+      "report": "artifacts/pass4/desktop-engine-fire-738.json"
     },
     {
       "mode": "desktop",
       "state": "night-manhattan",
-      "report": "artifacts/pass3/desktop-night-manhattan.json"
+      "report": "artifacts/pass4/desktop-night-manhattan.json"
     },
     {
       "mode": "desktop",
       "state": "cruise-a350",
-      "report": "artifacts/pass3/desktop-cruise-a350.json"
+      "report": "artifacts/pass4/desktop-cruise-a350.json"
     },
     {
       "mode": "desktop",
       "state": "la-downtown",
-      "report": "artifacts/pass3/desktop-la-downtown.json"
+      "report": "artifacts/pass4/desktop-la-downtown.json"
     },
     {
       "mode": "desktop",
       "state": "cockpit-cj4",
-      "report": "artifacts/pass3/desktop-cockpit-cj4.json"
+      "report": "artifacts/pass4/desktop-cockpit-cj4.json"
     }
   ]
 }

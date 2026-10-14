@@ -80,8 +80,9 @@ AI traffic and car density can also be set separately in Settings.
   * Cockpits: static panel parts merged per material. Animated and clickable parts, and every
     material changed at runtime, stay separate.
 
-  Measured on the inspector scenes, desktop: JFK runway 828 → 250 calls, A320 cockpit on final
-  1,850 → 336, F-22 over Manhattan 402 → 253, Los Angeles dusk 1,585 → 268.
+  Measured by the canvas inspector (runs pass3 → pass4, desktop, bloom passes included): JFK
+  runway 823 → 255 calls, A320 cockpit on final 1,849 → 352, F-22 over Manhattan 402 → 285,
+  Los Angeles dusk 1,585 → 256.
 * **Shader precompile**: `renderer.compileAsync` runs behind the loading screen for the
   cockpit and the exterior together (bounded to 5 s), so the first frames and the first change
   of view do not stall on shader compilation.

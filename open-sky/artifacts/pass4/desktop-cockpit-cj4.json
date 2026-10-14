@@ -1,0 +1,99 @@
+{
+  "url": "http://127.0.0.1:8123/index.html?skipintro",
+  "mode": "desktop",
+  "state": "cockpit-cj4",
+  "requestedState": "cockpit-cj4",
+  "appliedState": "cockpit-cj4",
+  "runId": "pass4",
+  "seed": 42,
+  "screenshotPath": "artifacts/pass4/desktop-cockpit-cj4.png",
+  "gpu": {
+    "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+    "vendor": "Google Inc. (Google)",
+    "softwareRendered": true
+  },
+  "result": {
+    "ok": true,
+    "reason": "nonblank",
+    "rect": {
+      "x": 0,
+      "y": 0,
+      "width": 1280,
+      "height": 720
+    },
+    "drawingBuffer": {
+      "width": 1280,
+      "height": 720
+    },
+    "alphaPixels": 4096,
+    "variance": 255,
+    "colorBuckets": 134,
+    "metrics": {
+      "colorBuckets": 205,
+      "colorEntropyBits": 5.14,
+      "edgeDensity": 0.287,
+      "luminance": {
+        "mean": 84.2,
+        "p5": 7.7,
+        "p95": 181.1,
+        "contrast": 173.5
+      },
+      "dominantColorShare": 0.134,
+      "nonBackgroundShare": 0.866
+    },
+    "renderBudget": {
+      "tier": "desktop",
+      "note": "starting-point budget; adjust per game and document overrides",
+      "rows": [
+        {
+          "metric": "calls",
+          "actual": 334,
+          "limit": 300,
+          "ok": false
+        },
+        {
+          "metric": "triangles",
+          "actual": 2619647,
+          "limit": 750000,
+          "ok": false
+        },
+        {
+          "metric": "geometries",
+          "actual": 377,
+          "limit": 300,
+          "ok": false
+        },
+        {
+          "metric": "textures",
+          "actual": 38,
+          "limit": 60,
+          "ok": true
+        }
+      ],
+      "withinBudget": false
+    },
+    "diagnostics": {
+      "renderer": {
+        "calls": 334,
+        "triangles": 2619647,
+        "points": 59573,
+        "lines": 20,
+        "geometries": 377,
+        "textures": 38,
+        "programs": 41,
+        "pixelRatio": 1,
+        "toneMapping": 4,
+        "exposure": 1.12,
+        "shadowMap": true,
+        "postPasses": 11
+      },
+      "state": "cockpit-cj4",
+      "fps": 24,
+      "buildings": 253561
+    }
+  },
+  "consoleErrors": [],
+  "pageErrors": [],
+  "consoleErrorCount": 0,
+  "pageErrorCount": 0
+}

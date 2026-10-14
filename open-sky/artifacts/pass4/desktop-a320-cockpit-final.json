@@ -1,0 +1,99 @@
+{
+  "url": "http://127.0.0.1:8123/index.html?skipintro",
+  "mode": "desktop",
+  "state": "a320-cockpit-final",
+  "requestedState": "a320-cockpit-final",
+  "appliedState": "a320-cockpit-final",
+  "runId": "pass4",
+  "seed": 42,
+  "screenshotPath": "artifacts/pass4/desktop-a320-cockpit-final.png",
+  "gpu": {
+    "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+    "vendor": "Google Inc. (Google)",
+    "softwareRendered": true
+  },
+  "result": {
+    "ok": true,
+    "reason": "nonblank",
+    "rect": {
+      "x": 0,
+      "y": 0,
+      "width": 1280,
+      "height": 720
+    },
+    "drawingBuffer": {
+      "width": 1280,
+      "height": 720
+    },
+    "alphaPixels": 4096,
+    "variance": 255,
+    "colorBuckets": 145,
+    "metrics": {
+      "colorBuckets": 229,
+      "colorEntropyBits": 4.89,
+      "edgeDensity": 0.249,
+      "luminance": {
+        "mean": 82.7,
+        "p5": 7.7,
+        "p95": 169.4,
+        "contrast": 161.7
+      },
+      "dominantColorShare": 0.134,
+      "nonBackgroundShare": 0.866
+    },
+    "renderBudget": {
+      "tier": "desktop",
+      "note": "starting-point budget; adjust per game and document overrides",
+      "rows": [
+        {
+          "metric": "calls",
+          "actual": 352,
+          "limit": 300,
+          "ok": false
+        },
+        {
+          "metric": "triangles",
+          "actual": 4707614,
+          "limit": 750000,
+          "ok": false
+        },
+        {
+          "metric": "geometries",
+          "actual": 370,
+          "limit": 300,
+          "ok": false
+        },
+        {
+          "metric": "textures",
+          "actual": 38,
+          "limit": 60,
+          "ok": true
+        }
+      ],
+      "withinBudget": false
+    },
+    "diagnostics": {
+      "renderer": {
+        "calls": 352,
+        "triangles": 4707614,
+        "points": 51260,
+        "lines": 498,
+        "geometries": 370,
+        "textures": 38,
+        "programs": 40,
+        "pixelRatio": 1,
+        "toneMapping": 4,
+        "exposure": 1.12,
+        "shadowMap": true,
+        "postPasses": 11
+      },
+      "state": "a320-cockpit-final",
+      "fps": 21,
+      "buildings": 284949
+    }
+  },
+  "consoleErrors": [],
+  "pageErrors": [],
+  "consoleErrorCount": 0,
+  "pageErrorCount": 0
+}
