@@ -10,6 +10,7 @@ import { GlassCockpit } from '../aircraft/glass.js';
 import { createAircraftModel, poseAircraft } from '../aircraft/jets.js';
 import { fleetEntry, isJet } from '../aircraft/fleet.js';
 import { LightBatch } from '../world/lights.js';
+import { mergeStaticChildren, keepReferenced } from '../world/batch.js';
 
 const D2R = Math.PI / 180;
 export const OUT_NAMES = {};
@@ -109,6 +110,10 @@ export class PlayerAircraft {
         }
       }
       v.root = v.model.root;
+      // static panel parts in one draw call per material; animated / clickable parts stay
+      const ck = v.cockpit;
+      keepReferenced(ck.anim, ck.interactives, ck.screens, ck.switchMeshes, ck.yokes, ck.pedals);
+      mergeStaticChildren(ck.group);
       // the flight deck takes part in the sun shadow (frames and glareshield shade the panel)
       v.cockpit.group.traverse((c) => { if (c.isMesh) { c.receiveShadow = true; c.castShadow = !(c.material && c.material.transparent); } });
       v.root.add(v.cockpit.group);

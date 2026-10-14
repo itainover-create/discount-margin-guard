@@ -3,6 +3,7 @@
 // Body FRD (x fwd, y right, z down) maps to model (y, -z, -x).
 import * as THREE from 'three';
 import { applyMaterialKit } from './materials.js';
+import { mergeStaticChildren } from '../world/batch.js';
 
 export const B = (x, y, z) => new THREE.Vector3(y, -z, -x); // body FRD -> model
 
@@ -404,6 +405,11 @@ export function createAIAircraft(type, liveryIndex = 0) {
   g.userData.gear = gear;
   g.userData.gearHeight = R * 0.4 + gearH + R * 0.28;  // CG height above ground on gear
   applyMaterialKit(g);
+  // static parts: one draw call per material (21 meshes -> 6)
+  mergeStaticChildren(gear);
+  g.remove(gear);
+  mergeStaticChildren(g);
+  g.add(gear);
   aiCache.set(key, g);
   const c = g.clone();
   c.userData = { ...g.userData, gear: c.children[c.children.length - 1] };

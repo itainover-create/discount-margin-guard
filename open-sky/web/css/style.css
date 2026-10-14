@@ -397,4 +397,9 @@ table.keys td { padding: 5px 6px; border-bottom: 1px solid var(--line); }
 .fd-meter-bar { width: 64px; height: 8px; border-radius: 4px; background: rgba(255, 255, 255, 0.12); overflow: hidden; }
 .fd-meter-bar i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--gold-deep), var(--gold2)); }
 .fd-readout[data-state="on"] { color: #9fe0ff; }
+/* in the cockpit the strip sits over the real panel: slimmer and see-through until used */
+#hud.in-cockpit #flight-dock { bottom: calc(50px + env(safe-area-inset-bottom, 0px)); gap: 4px; padding: 3px; background: rgba(5, 10, 20, 0.32); opacity: 0.84; transition: opacity 0.2s; }
+#hud.in-cockpit #flight-dock:hover, #hud.in-cockpit #flight-dock:focus-within { opacity: 1; }
+#hud.in-cockpit .fd-btn { min-height: 32px; padding: 3px 7px; background: rgba(19, 33, 58, 0.72); }
+@media (prefers-reduced-motion: reduce) { #hud.in-cockpit #flight-dock { transition: none; } }
 @media (max-width: 760px) { #flight-dock { bottom: 112px; gap: 4px; } .fd-btn { min-width: 60px; padding: 5px 6px; } .fd-btn b { font-size: 10.5px; } }

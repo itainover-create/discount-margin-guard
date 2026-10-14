@@ -351,7 +351,7 @@ export class Hud {
     $('atc').classList.toggle('empty', !$('atc-log').children.length && !this.atcOpen);
     const rw = g.atc.activeEnd ? g.atc.activeEnd.ident : '-';
     if (g.settings.diag) {
-      $('hud-status').innerHTML = `${esc(VIEW_NAMES[g.rig.view])} · ${g.player.simMode ? 'Simulation' : 'Accessible'} · core: ${g.core.backend.toUpperCase()} · ${Math.round(g.fps.value)} fps<br>${esc(g.world.status.place)} · ATC: ${esc(st)} · runway ${esc(rw)} · AI ${g.traffic.agents.length}<br>Terrain: ${esc(g.world.status.terrain)} · F3 hides diagnostics`;
+      $('hud-status').innerHTML = `${esc(VIEW_NAMES[g.rig.view])} · ${g.player.simMode ? 'Simulation' : 'Accessible'} · core: ${g.core.backend.toUpperCase()} · ${Math.round(g.fps.value)} fps · ${g.renderer.info.render.calls} draw calls · ${(g.renderer.info.render.triangles / 1e6).toFixed(2)} M triangles${g.post.enabled ? ' · bloom' : ''}<br>${esc(g.world.status.place)} · ATC: ${esc(st)} · runway ${esc(rw)} · AI ${g.traffic.agents.length}<br>Terrain: ${esc(g.world.status.terrain)} · F3 hides diagnostics`;
     } else {
       $('hud-status').innerHTML = `<span class="ctx">${esc(VIEW_NAMES[g.rig.view])}</span><span class="ctx">${g.player.simMode ? 'Simulation' : 'Accessible'}</span><span class="ctx">RWY ${esc(rw)}</span>`;
     }

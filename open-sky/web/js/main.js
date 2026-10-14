@@ -28,6 +28,7 @@ const D2R = Math.PI / 180;
 const $ = (id) => document.getElementById(id);
 
 import { QUALITY } from './config.js';
+import { Bloom } from './world/post.js';
 
 class Events {
   constructor() { this.h = {}; }
@@ -75,6 +76,7 @@ class Game {
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     $('view').appendChild(renderer.domElement);
     this.renderer = renderer;
+    this.post = new Bloom(renderer);
     this.applyQuality(false);
     this.camera = new THREE.PerspectiveCamera(65, innerWidth / innerHeight, 0.05, 400000);
     addEventListener('resize', () => {
@@ -124,6 +126,7 @@ class Game {
     this.q = q;
     this.renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 2) * q.pixelRatio);
     this.renderer.shadowMap.enabled = (q.shadows || 0) > 0;
+    if (this.post) this.post.enabled = !!q.bloom && this.settings.bloom !== false;
     if (this.world && this.world.sky) {
       const L = this.world.sky.sunLight;
       if (q.shadows && L.shadow.mapSize.x !== q.shadows) { L.shadow.mapSize.set(q.shadows, q.shadows); if (L.shadow.map) { L.shadow.map.dispose(); L.shadow.map = null; } }
@@ -220,6 +223,7 @@ class Game {
       if (def && def.waypoints) this.updateRouteGuide();
       if (spec.dest) this.setDestination(spec.dest);
       this.rig.setView(start.onGround ? 'cockpit' : 'chase', this.player);
+      await this.precompile();
       this.simTime = 0;
       this.crashShown = false;
       $('loading').classList.remove('show');
@@ -243,6 +247,7 @@ class Game {
     L.castShadow = true;
     L.shadow.mapSize.set(this.q.shadows || 1024, this.q.shadows || 1024);
     L.shadow.bias = -0.0004;
+    L.shadow.normalBias = 0.02;   // curved fuselages: no acne along the terminator
     L.shadow.camera.near = 1;
     this.renderer.shadowMap.enabled = (this.q.shadows || 0) > 0;
   }
@@ -472,8 +477,27 @@ class Game {
     return this.player.o;
   }
 
+  // Compile every shader the flight will use behind the loading screen (the
+  // cockpit and exterior both, whatever the first view), so the first seconds
+  // of flight and the first switch of view do not stutter. Bounded in time.
+  async precompile() {
+    this.progress('Preparing shaders', 0.92);
+    const ck = this.player.cockpit && this.player.cockpit.group;
+    const hidden = [];
+    if (ck && !ck.visible) { ck.visible = true; hidden.push(ck); }
+    for (const o of this.player.exterior || []) if (!o.visible) { o.visible = true; hidden.push(o); }
+    try {
+      await Promise.race([this.renderer.compileAsync(this.world.scene, this.camera), new Promise((r) => setTimeout(r, 5000))]);
+    } catch (e) { console.warn('shader precompile', e); }
+    for (const o of hidden) o.visible = false;
+  }
+
   render() {
     this.renderer.render(this.world.scene, this.camera);
+    if (this.post.enabled) {
+      this.post.update(this.world.shared.uNight.value);
+      this.post.render();
+    }
   }
 
   // ---------------------------------------------------------------------

@@ -256,6 +256,7 @@ export class Menu {
         <div class="note">View distance ${(q.view / 1000).toFixed(0)} km · buildings full detail within ${q.near} km, simplified to ${q.mid} km, skyline to ${q.far} km · up to ${q.trees} trees per km².</div>
         <div class="row">Online terrain tiles <input type="checkbox" id="set-online" ${s.online ? 'checked' : ''}></div>
         <div class="row">HUD <input type="checkbox" id="set-hud" ${s.hud ? 'checked' : ''}></div>
+        <div class="row">Bloom: lights, sun and afterburners glow (Medium and up) <input type="checkbox" id="set-bloom" ${s.bloom !== false ? 'checked' : ''}></div>
         <button class="big-btn" id="bench">Run benchmark (60 s over New York)</button>
         <div id="bench-out" class="note"></div>
       </fieldset>
@@ -269,7 +270,7 @@ export class Menu {
         <div class="row">Taxi route line in simulation mode <input type="checkbox" id="set-route" ${s.routeInSim ? 'checked' : ''}></div>
         <div class="row">Show real aircraft type names <input type="checkbox" id="set-real" ${s.realNames ? 'checked' : ''}></div>
         <div class="row">On-screen flight buttons (thrust, gear, flaps, autopilot) <input type="checkbox" id="set-dock" ${s.dock !== false ? 'checked' : ''}></div>
-        <div class="note">Off by default: the fleet uses original names with the real type as a class reference. Turn on only if you hold the rights to use manufacturers' type names.</div>
+        <div class="note">On by default: aircraft are listed by their real type names. Turn off to show the original fleet names, with the real type as a class reference (for releases without the right to use manufacturers' type names).</div>
       </fieldset>
       <fieldset><legend>ACCOUNT &amp; CLOUD SAVE</legend>
         <div id="acct"></div>
@@ -286,6 +287,7 @@ export class Menu {
     $('set-q').onchange = (e) => { s.quality = e.target.value; s.trafficDensity = null; s.carDensity = null; save(); g.applyQuality(); this.renderSettings(); };
     $('set-online').onchange = (e) => { s.online = e.target.checked; g.world.terrainProvider.onlineEnabled = s.online; save(); };
     $('set-hud').onchange = (e) => { s.hud = e.target.checked; save(); };
+    $('set-bloom').onchange = (e) => { s.bloom = e.target.checked; save(); g.applyQuality(); };
     $('set-ai').oninput = (e) => { s.trafficDensity = +e.target.value; $('ai-v').textContent = e.target.value; save(); g.core.tfcSetDensity(s.trafficDensity, 0); };
     $('set-cars').oninput = (e) => { s.carDensity = +e.target.value; $('cars-v').textContent = e.target.value; save(); g.vehicles.setDensity(s.carDensity); };
     $('set-mode').onchange = (e) => { s.mode = e.target.value; $('mode').value = s.mode; save(); };

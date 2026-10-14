@@ -563,6 +563,9 @@ export class GlassCockpit {
     box(250, sw.apLat === 1 && o.apEngaged ? 'HDG SEL' : 'HDG', String(Math.round(ui.hdgBugDeg || 0)).padStart(3, '0'), o.apEngaged && sw.apLat === 1);
     box(520, sw.apVert === 1 && o.apEngaged ? 'ALT HOLD' : 'ALT', String(Math.round(ui.apAltFt || 0)), o.apEngaged && sw.apVert === 1);
     box(720, 'V/S', String(Math.round(ui.apVsFpm || 0)), o.apEngaged && sw.apVert === 0);
-    g.fillStyle = o.apEngaged ? '#38e86a' : '#555'; g.font = 'bold 30px Arial'; g.textAlign = 'center'; g.fillText(o.apEngaged ? 'CMD' : 'A/P', 950, 80);
+    // autopilot annunciator in the same window style as the selectors
+    g.fillStyle = '#05080c'; g.fillRect(880, 40, 124, 60);
+    g.fillStyle = o.apEngaged ? '#38e86a' : '#b0b6bd'; g.font = 'bold 22px Arial'; g.textAlign = 'center'; g.fillText('A/P', 942, 28);
+    g.fillStyle = o.apEngaged ? '#38e86a' : '#3a4048'; g.font = 'bold 34px monospace'; g.fillText(o.apEngaged ? 'CMD' : 'OFF', 942, 84);
   }
 }

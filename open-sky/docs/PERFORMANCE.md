@@ -32,11 +32,13 @@ above are design targets until the benchmark is run on real hardware. What was m
 Physics, ATC, AI traffic, cars, world streaming, terrain LOD, HUD, audio. Headless Chromium,
 `tests/flight_e2e.mjs perf` (40 frames after warm-up):
 
-| Scene | Median | 95th percentile | Triangles | Draw calls |
+| Scene | Median | 95th percentile | Triangles | Draw calls (v2.0 → v2.2) |
 |---|---|---|---|---|
-| JFK GA ramp, day | 4.0 ms | 69 ms | 0.82 M | 243 |
-| Manhattan at 1500 ft, day | 4.7 ms | 55 ms | 1.81 M | 147 |
-| JFK 5 nm final, night | 2.7 ms | 18 ms | 0.41 M | 118 |
+| JFK GA ramp, day | 4.0 ms | 51 ms | 0.87 M | 243 → 160 |
+| Manhattan at 1500 ft, day | 6.7 ms | 44 ms | 1.88 M | 147 → 151 |
+| JFK 5 nm final, night | 2.1 ms | 13 ms | 0.43 M | 118 → 115 |
+
+The v2.2 draw-call counts include the bloom passes (11 small full-screen passes).
 
 The 95th-percentile spikes are frames in which a new city or terrain tile is built while the
 camera moves into new areas. Since this delivery a dense tile is built over three frames
@@ -46,12 +48,14 @@ next step (ROADMAP stage 2).
 
 ## Quality presets (`web/js/config.js`)
 
-| Preset | Pixel ratio | Terrain detail | View distance | City detail rings (km) | Trees/tile | AI aircraft | Cars | MSAA |
-|---|---|---|---|---|---|---|---|---|
-| Low | 0.75 | 0.7 | 45 km | 1.4 / 3.5 / 10 | 600 | 6 | 60 | off |
-| Medium | 1.0 | 0.9 | 70 km | 2.0 / 5 / 16 | 1200 | 10 | 120 | on |
-| High | 1.0 | 1.1 | 95 km | 2.6 / 6.5 / 24 | 1800 | 14 | 180 | on |
-| Ultra | 1.5 | 1.35 | 130 km | 3.2 / 8 / 32 | 2500 | 20 | 220 | on |
+| Preset | Pixel ratio | Terrain detail | View distance | City detail rings (km) | Trees/tile | AI aircraft | Cars | MSAA | Sun shadows | Bloom |
+|---|---|---|---|---|---|---|---|---|---|---|
+| Low | 0.75 | 0.7 | 45 km | 1.4 / 3.5 / 10 | 600 | 6 | 60 | off | off | off |
+| Medium | 1.0 | 0.9 | 70 km | 2.0 / 5 / 16 | 1200 | 10 | 120 | on | 1024 | on |
+| High | 1.0 | 1.1 | 95 km | 2.6 / 6.5 / 24 | 1800 | 14 | 180 | on | 2048 | on |
+| Ultra | 1.5 | 1.35 | 130 km | 3.2 / 8 / 32 | 2500 | 20 | 220 | on | 2048 | on |
+
+Bloom can also be switched off on its own in Settings → Graphics.
 
 AI traffic and car density can also be set separately in Settings.
 
@@ -65,6 +69,24 @@ AI traffic and car density can also be set separately in Settings.
   * Skyline: only tiles with towers above 45 m.
 
   Tiles load from 8×8 km packs (gzip) and are released when far away.
+* **Static batching** (v2.2, following the threejs-skills performance guide):
+  * Airport signs: every sign of an airport is drawn in 2 calls (frames, and lit faces from one
+    texture atlas). Before, each sign box was 6 calls; JFK alone had 147 signs = 882 calls.
+  * Runway designators and hold-short lines: one atlas and one call per airport.
+  * Distant city tiles: the far-LOD buildings and the roads of each 4×4 km block of tiles are
+    merged into one mesh. A block whose tiles change LOD falls back to per-tile meshes until it
+    is rebuilt (at most 3 rebuilds per frame, 4 ms budget).
+  * AI aircraft: static parts merged per material (21 meshes → 6).
+  * Cockpits: static panel parts merged per material. Animated and clickable parts, and every
+    material changed at runtime, stay separate.
+
+  Measured on the inspector scenes, desktop: JFK runway 828 → 250 calls, A320 cockpit on final
+  1,850 → 336, F-22 over Manhattan 402 → 253, Los Angeles dusk 1,585 → 268.
+* **Shader precompile**: `renderer.compileAsync` runs behind the loading screen for the
+  cockpit and the exterior together (bounded to 5 s), so the first frames and the first change
+  of view do not stall on shader compilation.
+* **Bloom**: the finished frame is copied, its bright parts blurred down a 5-level mip chain
+  at half resolution and added back. About 11 small passes; off on Low.
 * **Lights**: all point lights (runway, taxiway, street, obstruction, aircraft) are batched
   per area into one draw call with a custom shader. PAPI colour, flashing and sequenced lights
   are computed on the GPU.

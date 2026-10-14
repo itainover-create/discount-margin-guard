@@ -9,6 +9,9 @@ import { buildBuildings, buildRoads, buildPiers, buildTrees, buildTowers, styleI
 import { buildingMaterial, roadMaterial } from './shaders.js';
 import { decodeImage, fetchJson, fetchGz } from '../util/net.js';
 import { LightBatch } from './lights.js';
+import { mergeTranslated } from './batch.js';
+
+const CLUSTER = 4;   // far-LOD buildings / roads of CLUSTER x CLUSTER tiles share one draw call
 
 const WATER_CLASSES = new Set([1, 3]);
 
@@ -21,6 +24,7 @@ export class Region {
     this.group = new THREE.Group();
     this.group.name = 'region:' + entry.id;
     this.tiles = new Map();
+    this.clusters = new Map();
     this.loaded = false;
     this.buildQueue = [];
     this.frame = new GeoFrame(entry.anchor.lat, entry.anchor.lon);
@@ -164,6 +168,7 @@ export class Region {
       this._applyLod(t);
       budget--;
     }
+    this._clusters();
     let nb = 0;
     for (const t of this.tiles.values()) nb += t.count || 0;
     this.stats.buildings = nb;
@@ -247,6 +252,54 @@ export class Region {
     if (t.lightIds) this.lights.setVisible(t.lightIds, t.want >= 2);
   }
 
+  // Distant tiles show only their far-LOD buildings, and every built tile has
+  // one road mesh: draw those per cluster of tiles from one merged geometry.
+  // A cluster whose membership changed falls back to the per-tile meshes
+  // until it is rebuilt (a couple per frame).
+  _clusters() {
+    const budget = { n: 3, t0: performance.now() };
+    this._clusterLayer('far', (t) => t.want === 1, (t) => t.bld.far, this.bldMat, budget);
+    this._clusterLayer('roads', (t) => t.want >= 2, (t) => t.objs.roads.geometry, this.roadMat, budget);
+  }
+
+  _clusterLayer(obj, on, geoOf, mat, budget) {
+    const T = this.manifest.tileSize;
+    const want = new Map();
+    for (const t of this.tiles.values()) {
+      if (!t.objs[obj] || !on(t)) continue;
+      const ck = `${obj}:${Math.floor(t.tx / CLUSTER)},${Math.floor(t.ty / CLUSTER)}`;
+      if (!want.has(ck)) want.set(ck, []);
+      want.get(ck).push(t);
+    }
+    for (const [ck, c] of this.clusters) if (c.obj === obj && !want.has(ck)) { this._dropCluster(c); this.clusters.delete(ck); }
+    for (const [ck, list] of want) {
+      list.sort((a, b) => (a.key < b.key ? -1 : 1));
+      const sig = list.map((t) => t.key).join(';');
+      let c = this.clusters.get(ck);
+      if (c && c.sig === sig) { for (const t of list) t.objs[obj].visible = false; continue; }
+      for (const t of list) t.objs[obj].visible = true;
+      if (c) { this._dropCluster(c); this.clusters.delete(ck); }
+      if (list.length < 2 || budget.n <= 0 || performance.now() - budget.t0 > 4) continue;
+      budget.n--;
+      const [cx, cy] = ck.slice(obj.length + 1).split(',').map(Number);
+      const ox = cx * CLUSTER * T, oy = cy * CLUSTER * T;
+      const geo = mergeTranslated(list.map((t) => ({ geo: geoOf(t), dx: t.tx * T + T / 2 - ox, dy: 0, dz: -(t.ty * T + T / 2 - oy) })));
+      if (!geo) continue;
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.position.set(ox, 0, -oy);
+      mesh.updateMatrix();
+      mesh.matrixAutoUpdate = false;
+      this.group.add(mesh);
+      this.clusters.set(ck, { obj, sig, mesh });
+      for (const t of list) t.objs[obj].visible = false;
+    }
+  }
+
+  _dropCluster(c) {
+    this.group.remove(c.mesh);
+    c.mesh.geometry.dispose();
+  }
+
   _dispose(t) {
     for (const o of Object.values(t.objs)) {
       this.group.remove(o);
@@ -264,6 +317,8 @@ export class Region {
   dispose() {
     for (const t of this.tiles.values()) this._dispose(t);
     this.tiles.clear();
+    for (const c of this.clusters.values()) this._dropCluster(c);
+    this.clusters.clear();
     this.lights.dispose();
   }
 }

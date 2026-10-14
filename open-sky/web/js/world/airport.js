@@ -8,6 +8,7 @@
 import * as THREE from 'three';
 import { roadMaterial, runwayMaterial, decalMaterial } from './shaders.js';
 import { LightBatch } from './lights.js';
+import { mergeBaked, buildAtlas, placeMatrix } from './batch.js';
 
 const D2R = Math.PI / 180;
 export const SURF = { NONE: 0, ASPHALT: 1, GRASS: 2, WATER: 3, CONCRETE: 4 };
@@ -290,7 +291,7 @@ export class Airport {
   _h(x, y) { return this.targetHeight(x, y); }
 
   _buildRunways() {
-    const pos = [], uv = [], rwA = [], idx = [];
+    const pos = [], uv = [], rwA = [], idx = [], des = [];
     for (const r of this.rw) {
       const segs = Math.max(2, Math.ceil(r.L / 150));
       const half = r.W / 2 + 7.5;
@@ -311,21 +312,18 @@ export class Airport {
           idx.push(a, a + 1, a + 2, a + 1, a + 3, a + 2);
         }
       }
-      // designators at both ends
+      // designators at both ends (one atlas, one draw call for the airport)
       for (const e of r.ends) {
         const ux = e.dir === 0 ? r.ux : -r.ux, uy = e.dir === 0 ? r.uy : -r.uy;
         const s0 = 60, len = Math.min(42, r.W * 0.9), wid = Math.min(16, r.W * 0.36);
         const cx = e.tx + ux * (s0 + len / 2), cy = e.ty + uy * (s0 + len / 2);
         const geo = new THREE.PlaneGeometry(wid, len);
         geo.rotateX(-Math.PI / 2);
-        const mesh = new THREE.Mesh(geo, decalMaterial(this.world.shared, designatorTex(e.ident)));
-        mesh.position.set(cx, this.runwayHeight(r.i, cx, cy) + 0.12, -cy);
         // plane's +y (text up) after rotateX points to -z (north); rotate to runway direction
-        mesh.rotation.y = -Math.atan2(ux, uy);
-        mesh.renderOrder = 2;
-        this.group.add(mesh);
+        des.push({ geo, matrix: placeMatrix(cx, this.runwayHeight(r.i, cx, cy) + 0.12, -cy, -Math.atan2(ux, uy)), tex: designatorTex(e.ident) });
       }
     }
+    this._decalBatch(des, 2);
     const g = new THREE.BufferGeometry();
     g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(pos), 3));
     g.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(uv), 2));
@@ -442,8 +440,8 @@ export class Airport {
 
   _buildHoldShort() {
     const nodes = this.data.graph.nodes, edges = this.data.graph.edges, names = this.data.graph.names;
-    const tex = holdShortTex();
-    const mat = decalMaterial(this.world.shared, tex);
+    const holdGeo = new THREE.PlaneGeometry(20, 3.6).rotateX(-Math.PI / 2);
+    const holdGeos = [];
     this.holds = [];
     const signs = [];
     for (let i = 0; i < nodes.length; i++) {
@@ -461,13 +459,7 @@ export class Airport {
       const dx = toward[0] - n[0], dy = toward[1] - n[1];
       const L = Math.hypot(dx, dy) || 1;
       const ux = dx / L, uy = dy / L;
-      const geo = new THREE.PlaneGeometry(20, 3.6);
-      geo.rotateX(-Math.PI / 2);
-      const m = new THREE.Mesh(geo, mat);
-      m.position.set(n[0], this._h(n[0], n[1]) + 0.1, -n[1]);
-      m.rotation.y = -Math.atan2(ux, uy);
-      m.renderOrder = 2;
-      this.group.add(m);
+      holdGeos.push({ geo: holdGeo, matrix: placeMatrix(n[0], this._h(n[0], n[1]) + 0.1, -n[1], -Math.atan2(ux, uy)) });
       this.holds.push({ node: i, x: n[0], y: n[1], ux, uy, rw: n[3], taxiway: nm });
       // signs left of the hold line, facing the holding aircraft
       const r = this.rw[n[3]];
@@ -479,7 +471,24 @@ export class Airport {
         if (nm) signs.push({ x: lx - uy * 3.2, y: ly + ux * 3.2, face, text: nm, kind: 'loc' });
       }
     }
+    const hg = mergeBaked(holdGeos, { normals: false });
+    if (hg) {
+      const m = new THREE.Mesh(hg, decalMaterial(this.world.shared, holdShortTex()));
+      m.renderOrder = 2;
+      this.group.add(m);
+    }
     this._buildSigns(signs);
+  }
+
+  // Painted decals with one canvas texture each -> one atlas + one merged mesh.
+  _decalBatch(items, renderOrder) {
+    if (!items.length) return;
+    const uniq = [...new Set(items.map((d) => d.tex))];
+    const atlas = buildAtlas(uniq.map((t) => t.image), { pad: 8 });
+    const geo = mergeBaked(items.map((d) => ({ geo: d.geo, matrix: d.matrix, rect: atlas.rects[uniq.indexOf(d.tex)] })), { normals: false });
+    const m = new THREE.Mesh(geo, decalMaterial(this.world.shared, atlas.texture));
+    m.renderOrder = renderOrder;
+    this.group.add(m);
   }
 
   _distToRunway(x, y, rw) {
@@ -490,15 +499,18 @@ export class Airport {
   }
 
   _buildSigns(signs) {
-    const frameGeo = new THREE.BoxGeometry(2.6, 1.0, 0.3);
-    for (const s of signs) {
-      const tex = signTex(s.text, s.kind);
-      const front = new THREE.MeshBasicMaterial({ map: tex });
-      const side = new THREE.MeshLambertMaterial({ color: 0x333333 });
-      const m = new THREE.Mesh(frameGeo, [side, side, side, side, front, front]);
-      m.position.set(s.x, this._h(s.x, s.y) + 0.9, -s.y);
-      m.rotation.y = s.face;
-      this.group.add(m);
+    // all sign boxes in two draw calls: the frames, and the lit faces from one atlas
+    // (BoxGeometry groups: 0-3 sides/top/bottom, 4-5 the +z / -z faces)
+    if (signs.length) {
+      const frameGeo = new THREE.BoxGeometry(2.6, 1.0, 0.3);
+      const texs = signs.map((s) => signTex(s.text, s.kind));
+      const uniq = [...new Set(texs)];
+      const atlas = buildAtlas(uniq.map((t) => t.image), { pad: 4 });
+      const mats = signs.map((s) => placeMatrix(s.x, this._h(s.x, s.y) + 0.9, -s.y, s.face));
+      const frames = mergeBaked(signs.map((s, i) => ({ geo: frameGeo, matrix: mats[i], groups: [0, 1, 2, 3] })));
+      const faces = mergeBaked(signs.map((s, i) => ({ geo: frameGeo, matrix: mats[i], groups: [4, 5], rect: atlas.rects[uniq.indexOf(texs[i])] })));
+      this.group.add(new THREE.Mesh(frames, new THREE.MeshLambertMaterial({ color: 0x333333 })));
+      this.group.add(new THREE.Mesh(faces, new THREE.MeshBasicMaterial({ map: atlas.texture })));
     }
     // sign lights (signs are internally lit at night)
     this.lights.add(signs.map((s) => [s.x, this._h(s.x, s.y) + 0.9, -s.y, 0.35, 5, 0, s.kind === 'rwy' ? [1, 0.3, 0.3] : [1, 0.9, 0.3]]));
