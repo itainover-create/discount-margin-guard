@@ -18,7 +18,7 @@ import type {
   VatMode,
 } from "../types";
 import { COST_CATEGORIES } from "../types";
-import { BP, divRound, mulDiv, sum } from "./money";
+import { BP, mulDiv, sum } from "./money";
 
 /* ------------------------------------------------------------------ VAT */
 

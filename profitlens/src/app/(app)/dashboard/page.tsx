@@ -17,12 +17,12 @@ import { warningText } from "@/lib/warning-text";
 
 function Kpi({ icon, label, value, note, tone, delay }: { icon: ReactNode; label: string; value: string; note?: string; tone?: "positive" | "negative"; delay: number }) {
   return (
-    <div className="card tile-3d rise-in p-5" style={{ animationDelay: `${delay}ms` }}>
+    <div className="card tile-3d rise-in p-4 sm:p-5" style={{ animationDelay: `${delay}ms` }}>
       <div className="flex items-start justify-between gap-3">
         <div className="text-[13px] leading-snug font-medium text-ink-2">{label}</div>
-        <div className="chip-3d size-10 shrink-0">{icon}</div>
+        <div className="hidden shrink-0 min-[420px]:block"><div className="chip-3d size-10">{icon}</div></div>
       </div>
-      <div className={cn("num mt-3 text-[26px] leading-none font-bold tracking-tight", tone === "positive" && "text-positive", tone === "negative" && "text-negative")}>
+      <div className={cn("num mt-3 text-xl leading-none font-bold tracking-tight sm:text-[26px]", tone === "positive" && "text-positive", tone === "negative" && "text-negative")}>
         {value}
       </div>
       {note && <div className="mt-2 text-xs leading-relaxed text-muted">{note}</div>}
@@ -105,7 +105,7 @@ export default function DashboardPage() {
         הנתונים מבוססים על עבודות שהושלמו בתקופה ({period}), לפי תאריך הסיום. כל הסכומים לפני מע״מ.
       </p>
 
-      <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3" aria-label="מדדים מרכזיים">
+      <section className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-3" aria-label="מדדים מרכזיים">
         <Kpi delay={0} icon={<Wallet className="size-5" />} label="סך ההכנסות שדווחו" value={formatMoney(sum.revenue)} note="לפני מע״מ" />
         <Kpi delay={50} icon={<Coins className="size-5" />} label="סך העלויות הישירות" value={formatMoney(sum.directCosts)} note="חומרים, עבודה, נסיעות, קבלנים ועוד" />
         <Kpi

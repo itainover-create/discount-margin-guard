@@ -242,7 +242,6 @@ body {
   perspective-origin: 50% 35%;
 }
 .scene-stack {
-  position: relative;
   transform-style: preserve-3d;
   transform: rotateX(54deg) rotateZ(38deg);
   animation: scene-float 9s ease-in-out infinite;
@@ -346,8 +345,9 @@ body {
   50% { transform: rotateX(54deg) rotateZ(36deg) translateZ(14px); }
 }
 @keyframes bar-rise {
-  from { transform: translateZ(0); opacity: 0; }
-  to { transform: translateZ(calc(var(--h) * 1px)); opacity: 1; }
+  /* transform only: animating opacity would flatten the bar's 3D side faces */
+  from { transform: translateZ(0) scale3d(1, 1, 0.001); }
+  to { transform: translateZ(calc(var(--h) * 1px)) scale3d(1, 1, 1); }
 }
 
 /* Screen transitions */

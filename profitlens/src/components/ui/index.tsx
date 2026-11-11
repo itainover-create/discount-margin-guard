@@ -100,8 +100,8 @@ export const UnitInput = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLIn
 ) {
   return (
     <div className="relative">
-      <input ref={ref} inputMode="decimal" autoComplete="off" dir="ltr" className={cn("input num ps-3 pe-10 text-start", className)} {...props} />
-      <span className="pointer-events-none absolute inset-y-0 end-3 grid place-items-center text-sm text-muted">{unit}</span>
+      <input ref={ref} inputMode="decimal" autoComplete="off" dir="ltr" className={cn("input num pr-11 pl-3 text-left", className)} {...props} />
+      <span className="pointer-events-none absolute inset-y-0 right-3 grid place-items-center text-sm text-muted">{unit}</span>
     </div>
   );
 });

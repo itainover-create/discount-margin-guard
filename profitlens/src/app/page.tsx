@@ -1,69 +1,121 @@
-import Image from "next/image";
+import { BarChart3, Calculator, ClipboardList, Scale, ShieldCheck, TrendingDown } from "lucide-react";
+import Link from "next/link";
+import { OrionLockup } from "@/components/brand";
+import { Scene3D } from "@/components/scene-3d";
+import { SiteFooter, SiteHeader } from "@/components/site-chrome";
+import { t } from "@/lib/i18n";
 
-export default function Home() {
+const FEATURES = [
+  { icon: Calculator, title: "מחשבון תמחור", text: "מזינים עלויות ויעד רווח ומקבלים את המחיר הנדרש — לפני ואחרי מע״מ. וגם הפוך: כמה ארוויח אם אגבה ₪1,500?" },
+  { icon: ClipboardList, title: "עלות מלאה לכל עבודה", text: "חומרים, שעות העובדים, השעות שלך, נסיעות, קבלני משנה, עמלות סליקה וחלק יחסי מהתקורה." },
+  { icon: Scale, title: "הערכה מול ביצוע", text: "כמה תכננתם שיעלה וכמה עלה באמת — בשקלים ובאחוזים, עם פירוט מה בדיוק גרם להפרש." },
+  { icon: TrendingDown, title: "התרעות על עבודות חלשות", text: "עבודה מתחת ליעד הרווח, חריגה בחומרים או בשעות, עבודה בלי עלויות רשומות — מסומנות מיד." },
+  { icon: BarChart3, title: "רווח לפי שירות ולקוח", text: "אילו שירותים ולקוחות מייצרים את הרווח — לא רק את ההכנסה הגבוהה ביותר." },
+  { icon: ShieldCheck, title: "הנתונים שלך", text: "הפרדה מלאה בין עסקים, ייצוא CSV בכל רגע, ומחיקה מלאה לפי בקשה. בלי פרטי בנק או כרטיסי אשראי." },
+];
+
+const STEPS = [
+  ["יוצרים עבודה", "לקוח, שירות ותיאור קצר."],
+  ["מעריכים עלויות", "חומרים, שעות, נסיעות וקבלנים."],
+  ["קובעים מחיר", "לפי יעד הרווח שהגדרתם."],
+  ["רושמים עלויות בפועל", "תוך כדי העבודה או בסיומה."],
+  ["מבינים את הרווח", "ומתמחרים טוב יותר בפעם הבאה."],
+];
+
+export default function LandingPage() {
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
+    <div className="flex min-h-dvh flex-col">
+      <SiteHeader />
+      <main className="flex-1">
+        <section className="relative overflow-hidden bg-linear-to-br from-navy-800 via-navy-900 to-navy-950 text-white">
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(700px_420px_at_20%_10%,rgb(211_165_127/0.16),transparent_70%)]" aria-hidden />
+          <div className="relative mx-auto grid max-w-6xl items-center gap-8 px-5 py-14 lg:grid-cols-[1.05fr_1fr] lg:py-20">
+            <div className="rise-in">
+              <p className="brand-caps text-[11px] text-gold-400" dir="ltr" style={{ textAlign: "right" }}>ProfitLens · by Orion</p>
+              <h1 className="mt-4 text-4xl leading-[1.15] font-bold tracking-tight sm:text-5xl lg:text-[56px]">
+                כמה באמת נשאר לך
+                <br />
+                <span className="bg-linear-to-l from-gold-200 via-gold-400 to-gold-300 bg-clip-text text-transparent">מכל עבודה?</span>
+              </h1>
+              <p className="mt-5 max-w-xl text-lg leading-relaxed text-slate-300">
+                ProfitLens מראה לבעלי עסקי שירות את העלות המלאה של כל עבודה, את הרווח האמיתי שלה — ומה נכון לגבות בפעם הבאה.
+              </p>
+              <div className="mt-8 flex flex-wrap gap-3">
+                <Link href="/register" className="btn btn-gold btn-lg">התחלה בחינם</Link>
+                <Link href="/login" className="btn btn-lg border border-white/20 text-white hover:bg-white/10">יש לי חשבון</Link>
+              </div>
+              <p className="mt-6 text-sm text-slate-400">{t.brand.tagline}</p>
+            </div>
+            <Scene3D className="lg:max-w-[460px]" />
+          </div>
+        </section>
+
+        <section className="mx-auto max-w-6xl px-5 py-16">
+          <div className="grid gap-8 lg:grid-cols-2 lg:items-center">
+            <div>
+              <p className="eyebrow">הבעיה</p>
+              <h2 className="mt-2 text-3xl font-bold tracking-tight">יודעים כמה גובים. לא תמיד יודעים כמה נשאר.</h2>
+              <p className="mt-4 leading-relaxed text-ink-2">
+                קל לשכוח את השעות שלך, את הדלק, את הקבלן שהוזמן ברגע האחרון ואת החלק של העבודה בהוצאות הקבועות של העסק. כך מקבלים עבודות בלי לדעת אם הן בכלל רווחיות.
+              </p>
+            </div>
+            <div className="card tile-3d card-pad">
+              <div className="text-[13px] font-semibold text-muted">דוגמה לחישוב</div>
+              <dl className="mt-3 divide-y divide-line text-sm">
+                {[
+                  ["מחיר ללקוח (כולל 18% מע״מ)", "₪1,770"],
+                  ["הכנסה לפני מע״מ", "₪1,500"],
+                  ["חומרים, עבודה, נסיעות", "−₪900"],
+                ].map(([k, v]) => (
+                  <div key={k} className="flex justify-between py-2.5"><dt className="text-ink-2">{k}</dt><dd className="num font-medium">{v}</dd></div>
+                ))}
+                <div className="flex justify-between py-3 text-base font-bold"><dt>רווח לפני תקורה</dt><dd className="num text-positive">₪600 · 40%</dd></div>
+              </dl>
+              <p className="mt-2 text-xs leading-relaxed text-muted">מע״מ לעולם אינו נספר כהכנסה. כדי להגיע ל־30% רווח על עלות של ₪900 צריך לגבות ₪1,285.71 לפני מע״מ — לא ₪1,170.</p>
+            </div>
+          </div>
+        </section>
+
+        <section className="border-y border-line bg-surface/70">
+          <div className="mx-auto max-w-6xl px-5 py-16">
+            <p className="eyebrow">הפתרון</p>
+            <h2 className="mt-2 max-w-2xl text-3xl font-bold tracking-tight">תמונה פיננסית ברורה של כל עבודה</h2>
+            <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              {FEATURES.map(({ icon: Icon, title, text }) => (
+                <div key={title} className="card tile-3d p-6">
+                  <div className="chip-3d size-12"><Icon className="size-5" strokeWidth={1.7} /></div>
+                  <h3 className="mt-4 text-lg font-semibold">{title}</h3>
+                  <p className="mt-1.5 text-sm leading-relaxed text-ink-2">{text}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="mx-auto max-w-6xl px-5 py-16">
+          <p className="eyebrow">איך זה עובד</p>
+          <h2 className="mt-2 text-3xl font-bold tracking-tight">חמישה צעדים, מעבודה חדשה ועד תמחור טוב יותר</h2>
+          <ol className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+            {STEPS.map(([title, text], index) => (
+              <li key={title} className="card p-5">
+                <span className="num grid size-9 place-items-center rounded-full bg-navy-900 text-sm font-bold text-gold-200 ring-1 ring-gold-500/40">{index + 1}</span>
+                <h3 className="mt-3 font-semibold">{title}</h3>
+                <p className="mt-1 text-[13px] leading-relaxed text-muted">{text}</p>
+              </li>
+            ))}
+          </ol>
+        </section>
+
+        <section className="bg-linear-to-br from-navy-800 to-navy-950 text-white">
+          <div className="mx-auto flex max-w-6xl flex-col items-center px-5 py-16 text-center">
+            <OrionLockup />
+            <h2 className="mt-10 text-3xl font-bold tracking-tight">מוכנים לדעת כמה מרוויחים?</h2>
+            <p className="mt-3 max-w-xl text-slate-300">מתאים לטכנאי מיזוג, חשמלאים, אינסטלטורים, עסקי ניקיון, שיפוצים, אחזקה והתקנות — עסקים של אדם אחד עד חמישה.</p>
+            <Link href="/register" className="btn btn-gold btn-lg mt-8">פתיחת חשבון</Link>
+          </div>
+        </section>
       </main>
+      <SiteFooter />
     </div>
   );
 }

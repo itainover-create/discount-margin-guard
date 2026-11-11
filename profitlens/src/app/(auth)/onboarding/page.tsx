@@ -209,12 +209,12 @@ export default function OnboardingPage() {
             </Button>
           )}
           {step < STEPS.length - 1 ? (
-            <Button onClick={next}>
+            <Button key="next" onClick={next}>
               המשך
               <ChevronLeft className="size-4" />
             </Button>
           ) : (
-            <Button type="submit" variant="gold" loading={busy}>
+            <Button key="submit" type="submit" variant="gold" loading={busy}>
               סיום והמשך ללוח הבקרה
             </Button>
           )}

@@ -84,7 +84,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [data, setData] = useState<AppData>(EMPTY);
   const orgId = workspace?.organization.id ?? null;
   const orgRef = useRef<string | null>(null);
-  orgRef.current = orgId;
+  useEffect(() => {
+    orgRef.current = orgId;
+  }, [orgId]);
 
   const loadData = useCallback(async (organizationId: string): Promise<AppData> => {
     const backend = getBackend();
