@@ -1,0 +1,97 @@
+/**
+ * Shared Hebrew dictionary: navigation, enums and financial vocabulary used across screens.
+ * To add a language, create a sibling file with the same shape and register it in ./index.ts.
+ */
+export const he = {
+  brand: {
+    product: "ProfitLens",
+    company: "ORION",
+    slogan: "WHERE GREAT MINDS SHAPE THE FUTURE.",
+    developedBy: "Developed by Alon Novitarger",
+    tagline: "לדעת כמה מרוויחים. לתמחר בביטחון.",
+  },
+  nav: {
+    dashboard: "לוח בקרה",
+    jobs: "עבודות",
+    calculator: "מחשבון תמחור",
+    analytics: "ניתוח ודוחות",
+    customers: "לקוחות",
+    team: "צוות",
+    settings: "הגדרות",
+    about: "אודות",
+    signOut: "התנתקות",
+  },
+  status: {
+    draft: "טיוטה",
+    quoted: "הצעת מחיר",
+    approved: "אושרה",
+    in_progress: "בביצוע",
+    completed: "הושלמה",
+    cancelled: "בוטלה",
+  },
+  category: {
+    materials: "חומרים",
+    labor: "עבודה",
+    transport: "נסיעות",
+    contractor: "קבלני משנה",
+    other: "הוצאות אחרות",
+  },
+  kind: { estimated: "הערכה", actual: "בפועל" },
+  role: { owner: "בעלים", admin: "מנהל/ת", member: "חבר/ת צוות" },
+  vatMode: {
+    added: "המחירים שאני מזין הם לפני מע״מ (המע״מ מתווסף)",
+    included: "המחירים שאני מזין כוללים מע״מ",
+    none: "ללא הצגת מע״מ",
+  },
+  vatModeShort: { added: "לפני מע״מ", included: "כולל מע״מ", none: "ללא מע״מ" },
+  overhead: {
+    none: "ללא העמסת תקורה",
+    fixed: "סכום קבוע לכל עבודה",
+    hours: "לפי שעות העבודה",
+    revenue_pct: "אחוז מההכנסה",
+  },
+  range: {
+    this_week: "השבוע",
+    this_month: "החודש",
+    last_month: "חודש שעבר",
+    last_90: "90 הימים האחרונים",
+    this_year: "השנה",
+    all: "כל התקופה",
+    custom: "טווח מותאם",
+  },
+  fin: {
+    revenue: "הכנסה לפני מע״מ",
+    directCosts: "עלויות ישירות",
+    profit: "רווח לפני העמסת תקורה",
+    contribution: "תרומה תפעולית לאחר תקורה",
+    margin: "שיעור רווח",
+    markup: "מרווח על העלות (Markup)",
+    overhead: "תקורה מועמסת",
+    vat: "מע״מ",
+    customerPrice: "מחיר ללקוח",
+    paymentFees: "עמלות סליקה",
+    estimateNote: "אומדן ניהולי — אינו רווח נקי חשבונאי",
+  },
+  common: {
+    save: "שמירה",
+    cancel: "ביטול",
+    delete: "מחיקה",
+    edit: "עריכה",
+    add: "הוספה",
+    search: "חיפוש",
+    all: "הכול",
+    none: "ללא",
+    loading: "טוען…",
+    sample: "דוגמה",
+    exportCsv: "ייצוא CSV",
+    back: "חזרה",
+    confirm: "אישור",
+    saved: "נשמר בהצלחה",
+    actions: "פעולות",
+    noPermission: "אין לך הרשאה לבצע את הפעולה",
+  },
+  disclaimer:
+    "ProfitLens הוא כלי לניהול עסקי ולהערכת רווחיות. הוא אינו תוכנת הנהלת חשבונות מוסמכת, אינו מפיק חשבוניות מס ואינו מהווה ייעוץ מס או דיווח רשמי.",
+} as const;
+
+export type Dictionary = typeof he;

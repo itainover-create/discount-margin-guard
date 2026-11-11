@@ -1,0 +1,399 @@
+@import "tailwindcss";
+
+/*
+ * ProfitLens design system.
+ * Brand source of truth: the ORION poster — charcoal navy ground with rose-gold / bronze marks.
+ * The UI palette below extends those two colours; semantic green/red are reserved for financial results.
+ */
+@theme {
+  --color-navy-950: #12151d;
+  --color-navy-900: #1a1e29;
+  --color-navy-800: #222736;
+  --color-navy-700: #2d3345;
+  --color-navy-600: #414960;
+  --color-navy-500: #5b6480;
+  --color-gold-100: #f6ebe0;
+  --color-gold-200: #ecd5bf;
+  --color-gold-300: #e2bf9f;
+  --color-gold-400: #d3a57f;
+  --color-gold-500: #c08a62;
+  --color-gold-600: #a26d47;
+  --color-gold-700: #7c5132;
+  --color-gold-800: #5c3b24;
+  --color-ivory: #f6f3ee;
+  --color-surface: #ffffff;
+  --color-line: #e9e4db;
+  --color-line-strong: #d9d2c6;
+  --color-ink: #1a1e29;
+  --color-ink-2: #4a5062;
+  --color-muted: #747a8c;
+  --color-positive: #177a52;
+  --color-positive-soft: #e6f4ec;
+  --color-negative: #b93a34;
+  --color-negative-soft: #fbeae8;
+  --color-warning: #9a6410;
+  --color-warning-soft: #fbf1dc;
+  --color-info: #33528f;
+  --color-info-soft: #e9eef8;
+  /* chart series — validated for colour-vision deficiency with the dataviz validator */
+  --color-series-revenue: #3b5ba5;
+  --color-series-cost: #cf7f3a;
+  --color-series-profit: #17a08c;
+
+  --font-sans: "Heebo Variable", "Heebo", "Segoe UI", Arial, sans-serif;
+  --font-brand: "Cinzel", "Times New Roman", serif;
+
+  --shadow-card: 0 1px 2px rgb(26 30 41 / 0.04), 0 10px 30px -18px rgb(26 30 41 / 0.18);
+  --shadow-lift: 0 2px 4px rgb(26 30 41 / 0.05), 0 22px 44px -22px rgb(26 30 41 / 0.32);
+  --shadow-pop: 0 24px 64px -24px rgb(18 21 29 / 0.45), 0 2px 8px rgb(18 21 29 / 0.08);
+  --radius-card: 18px;
+}
+
+html {
+  background: var(--color-ivory);
+}
+
+body {
+  background:
+    radial-gradient(1200px 600px at 100% -10%, rgb(211 165 127 / 0.1), transparent 60%),
+    radial-gradient(900px 500px at -10% 110%, rgb(59 91 165 / 0.05), transparent 60%),
+    var(--color-ivory);
+  background-attachment: fixed;
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-feature-settings: "tnum" 1;
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: var(--color-gold-200);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-gold-500);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* Numbers, prices and e-mails read left-to-right even inside Hebrew text */
+.num {
+  direction: ltr;
+  unicode-bidi: isolate;
+  font-variant-numeric: tabular-nums;
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex h-10 cursor-pointer items-center justify-center gap-2 rounded-xl px-4 text-sm font-medium whitespace-nowrap transition duration-150 select-none disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .btn-sm {
+    @apply h-8 rounded-lg px-3 text-[13px];
+  }
+  .btn-lg {
+    @apply h-12 rounded-2xl px-6 text-base;
+  }
+  .btn-primary {
+    color: var(--color-gold-200);
+    background: linear-gradient(180deg, var(--color-navy-700), var(--color-navy-900));
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.12), inset 0 0 0 1px rgb(211 165 127 / 0.28), 0 6px 16px -8px rgb(18 21 29 / 0.6);
+  }
+  .btn-primary:hover:not(:disabled) {
+    color: #fff;
+    transform: translateY(-1px);
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.16), inset 0 0 0 1px rgb(211 165 127 / 0.5), 0 12px 22px -10px rgb(18 21 29 / 0.7);
+  }
+  .btn-primary:active:not(:disabled) {
+    transform: translateY(0);
+  }
+  .btn-gold {
+    color: var(--color-navy-950);
+    background: linear-gradient(180deg, var(--color-gold-300), var(--color-gold-500));
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.45), 0 8px 20px -10px rgb(192 138 98 / 0.9);
+  }
+  .btn-gold:hover:not(:disabled) {
+    transform: translateY(-1px);
+    filter: brightness(1.05);
+  }
+  .btn-outline {
+    @apply border border-line-strong bg-surface text-ink hover:border-gold-500 hover:bg-gold-100/50;
+  }
+  .btn-ghost {
+    @apply text-ink-2 hover:bg-navy-900/5 hover:text-ink;
+  }
+  .btn-danger {
+    @apply border border-negative/30 bg-negative-soft text-negative hover:bg-negative hover:text-white;
+  }
+  .btn-icon {
+    @apply w-10 px-0;
+  }
+  .btn-icon.btn-sm {
+    @apply w-8;
+  }
+
+  .input {
+    @apply h-10 w-full rounded-xl border border-line-strong bg-surface px-3 text-sm text-ink transition placeholder:text-muted/70 hover:border-navy-500/50 focus:border-gold-500 focus:ring-3 focus:ring-gold-300/40 focus:outline-none disabled:bg-ivory disabled:text-muted;
+  }
+  textarea.input {
+    @apply h-auto min-h-24 py-2.5 leading-relaxed;
+  }
+  select.input {
+    @apply cursor-pointer appearance-none bg-no-repeat pe-9;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%23747a8c' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m4 6 4 4 4-4'/%3E%3C/svg%3E");
+    background-position: left 0.7rem center;
+  }
+  .input[aria-invalid="true"] {
+    @apply border-negative focus:ring-negative/20;
+  }
+  .label {
+    @apply mb-1.5 block text-[13px] font-medium text-ink-2;
+  }
+
+  .card {
+    @apply rounded-(--radius-card) border border-line bg-surface shadow-(--shadow-card);
+  }
+  .card-pad {
+    @apply p-5 sm:p-6;
+  }
+  .card-title {
+    @apply text-base font-semibold text-ink;
+  }
+  .card-sub {
+    @apply mt-0.5 text-[13px] text-muted;
+  }
+
+  .badge {
+    @apply inline-flex h-6 items-center gap-1 rounded-full px-2.5 text-xs font-medium whitespace-nowrap;
+  }
+
+  .table-wrap {
+    @apply overflow-x-auto;
+  }
+  .table {
+    @apply w-full border-separate border-spacing-0 text-sm;
+  }
+  .table th {
+    @apply border-b border-line bg-ivory/60 px-4 py-2.5 text-start text-xs font-semibold whitespace-nowrap text-muted first:rounded-ss-xl last:rounded-se-xl;
+  }
+  .table td {
+    @apply border-b border-line/70 px-4 py-3 align-middle;
+  }
+  .table tbody tr:last-child td {
+    @apply border-b-0;
+  }
+  .table tbody tr {
+    @apply transition-colors hover:bg-gold-100/30;
+  }
+  .table .end {
+    @apply text-end;
+  }
+  .table tfoot td {
+    @apply border-t border-line-strong bg-ivory/60 font-semibold;
+  }
+
+  .eyebrow {
+    @apply text-[11px] font-semibold tracking-[0.18em] text-gold-700 uppercase;
+  }
+  .brand-caps {
+    font-family: var(--font-brand);
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+  }
+}
+
+/* ------------------------------------------------------------ depth & 3D */
+
+/* Raised card with a physical edge: used for KPI tiles */
+.tile-3d {
+  position: relative;
+  transform: perspective(900px) translateZ(0);
+  transition: transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.35s;
+  box-shadow:
+    0 1px 0 #fff inset,
+    0 -3px 0 rgb(26 30 41 / 0.045) inset,
+    var(--shadow-card);
+}
+@media (hover: hover) {
+  .tile-3d:hover {
+    transform: perspective(900px) translateY(-4px) rotateX(2.5deg);
+    box-shadow:
+      0 1px 0 #fff inset,
+      0 -3px 0 rgb(26 30 41 / 0.045) inset,
+      var(--shadow-lift);
+  }
+}
+
+/* Embossed icon chip */
+.chip-3d {
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+  color: var(--color-gold-200);
+  background: linear-gradient(145deg, var(--color-navy-600), var(--color-navy-900));
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.22),
+    inset 0 -2px 0 rgb(0 0 0 / 0.3),
+    0 3px 0 var(--color-navy-950),
+    0 10px 16px -6px rgb(18 21 29 / 0.5);
+}
+
+/* Isometric scene (landing / auth). Pure CSS transforms — no WebGL, no library. */
+.scene {
+  perspective: 1500px;
+  perspective-origin: 50% 35%;
+}
+.scene-stack {
+  position: relative;
+  transform-style: preserve-3d;
+  transform: rotateX(54deg) rotateZ(38deg);
+  animation: scene-float 9s ease-in-out infinite;
+}
+.scene-plate {
+  position: absolute;
+  inset: 0;
+  border-radius: 28px;
+  background: linear-gradient(135deg, #2a3042, #1c2030);
+  box-shadow:
+    inset 0 0 0 1px rgb(211 165 127 / 0.35),
+    -30px 30px 60px rgb(0 0 0 / 0.45);
+  transform: translateZ(0);
+}
+.scene-plate::after {
+  /* plate thickness */
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 28px;
+  background: #0f1219;
+  transform: translateZ(-14px);
+  box-shadow: 0 0 0 1px rgb(211 165 127 / 0.15);
+}
+.scene-grid {
+  position: absolute;
+  inset: 22px;
+  border-radius: 16px;
+  background-image:
+    linear-gradient(rgb(211 165 127 / 0.12) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(211 165 127 / 0.12) 1px, transparent 1px);
+  background-size: 14.285% 14.285%;
+  transform: translateZ(1px);
+}
+/* A cuboid bar: top face + two visible sides, sized by --h */
+.bar-3d {
+  position: absolute;
+  width: 11%;
+  height: 11%;
+  transform-style: preserve-3d;
+  transform: translateZ(calc(var(--h) * 1px));
+  animation: bar-rise 1.1s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation-delay: var(--d, 0s);
+}
+.bar-3d .top,
+.bar-3d .side-a,
+.bar-3d .side-b {
+  position: absolute;
+}
+.bar-3d .top {
+  inset: 0;
+  background: linear-gradient(135deg, var(--c1), var(--c2));
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.25);
+}
+.bar-3d .side-a {
+  left: 0;
+  right: 0;
+  top: 100%;
+  height: calc(var(--h) * 1px);
+  background: linear-gradient(180deg, var(--c2), var(--c3));
+  transform-origin: top;
+  transform: rotateX(-90deg);
+}
+.bar-3d .side-b {
+  top: 0;
+  bottom: 0;
+  left: 100%;
+  width: calc(var(--h) * 1px);
+  background: linear-gradient(90deg, var(--c3), var(--c4));
+  transform-origin: left;
+  transform: rotateY(90deg);
+}
+.bar-gold {
+  --c1: #f0d2b4;
+  --c2: #d3a57f;
+  --c3: #a26d47;
+  --c4: #6f4a2d;
+}
+.bar-slate {
+  --c1: #7a86a8;
+  --c2: #56607f;
+  --c3: #3a4259;
+  --c4: #2a3042;
+}
+.bar-teal {
+  --c1: #7fdccd;
+  --c2: #2fb39f;
+  --c3: #17806f;
+  --c4: #0f5a4f;
+}
+.scene-card {
+  position: absolute;
+  border-radius: 16px;
+  background: rgb(255 255 255 / 0.96);
+  color: var(--color-ink);
+  box-shadow: -18px 18px 40px rgb(0 0 0 / 0.35), inset 0 0 0 1px rgb(255 255 255 / 0.6);
+  transform-style: preserve-3d;
+}
+@keyframes scene-float {
+  0%, 100% { transform: rotateX(54deg) rotateZ(38deg) translateZ(0); }
+  50% { transform: rotateX(54deg) rotateZ(36deg) translateZ(14px); }
+}
+@keyframes bar-rise {
+  from { transform: translateZ(0); opacity: 0; }
+  to { transform: translateZ(calc(var(--h) * 1px)); opacity: 1; }
+}
+
+/* Screen transitions */
+@keyframes rise-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+.rise-in {
+  animation: rise-in 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+@keyframes shimmer {
+  to { background-position: -200% 0; }
+}
+.skeleton {
+  border-radius: 10px;
+  background: linear-gradient(90deg, #ece7df 25%, #f6f2ec 37%, #ece7df 63%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s linear infinite;
+}
+@keyframes dialog-in {
+  from { opacity: 0; transform: translate(-50%, -46%) scale(0.97); }
+  to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+@keyframes sheet-in {
+  from { opacity: 0; transform: translateX(24px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* Fallbacks: no motion for users who ask for it; flatten 3D where it is unsupported */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+  .tile-3d:hover { transform: none; }
+}
+@supports not (transform-style: preserve-3d) {
+  .scene { display: none; }
+}
+
+/* Recharts: keep charts LTR internally, quiet focus rings */
+.recharts-wrapper { direction: ltr; }
+.recharts-surface:focus, .recharts-wrapper *:focus { outline: none; }
+
+@media print {
+  .no-print { display: none !important; }
+  body { background: #fff; }
+}
